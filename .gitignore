@@ -1,0 +1,9 @@
+# Local/editor and transient outputs only
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+.phpunit.result.cache
+# Generated local archives, not committed distribution artifacts
+dist/
