@@ -14,8 +14,9 @@ if ( ! $root || ! is_dir( $root ) ) {
 if ( ! defined( 'BDFGF_VERSION' ) || BDFGF_VERSION !== '4.2.0' ) {
     throw new RuntimeException( 'Bulk Download 4.2.0 is not active.' );
 }
-if ( ! defined( 'GFBULKRENAME_VERSION' ) || GFBULKRENAME_VERSION !== '2.0.6' ) {
-    throw new RuntimeException( 'Target 2.0.6 is not active.' );
+$expected_target_version = getenv( 'BRC_TARGET_VERSION' ) ?: '2.0.6';
+if ( ! defined( 'GFBULKRENAME_VERSION' ) || GFBULKRENAME_VERSION !== $expected_target_version ) {
+    throw new RuntimeException( 'Target package/version is not active.' );
 }
 if ( ! class_exists( 'BDFGF\\Actions\\BulkDownload' ) ) {
     throw new RuntimeException( 'Native BulkDownload action class unavailable.' );
