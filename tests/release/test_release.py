@@ -115,6 +115,20 @@ class ReleaseContract(unittest.TestCase):
         with self.assertRaisesRegex(core.ReleaseError, "not integrated"):
             core.binding(self.root, original, next_head)
 
+    def test_publication_conflict_and_partial_history_fail_closed(self):
+        core.publication_history([], [], "2.0.6")
+        core.publication_history(["v2.0.6"], [{"tag_name": "v2.0.6", "draft": False}], "2.0.7")
+        with self.assertRaisesRegex(core.ReleaseError, "version conflict"):
+            core.publication_history(["v2.0.6"], [{"tag_name": "v2.0.6", "draft": False}], "2.0.6")
+        with self.assertRaisesRegex(core.ReleaseError, "orphan"):
+            core.publication_history(["v2.0.6"], [], "2.0.7")
+        with self.assertRaisesRegex(core.ReleaseError, "orphan"):
+            core.publication_history([], [{"tag_name": "v2.0.6", "draft": False}], "2.0.7")
+        with self.assertRaisesRegex(core.ReleaseError, "draft/partial"):
+            core.publication_history(["v2.0.6"], [{"tag_name": "v2.0.6", "draft": True}], "2.0.7")
+        with self.assertRaisesRegex(core.ReleaseError, "duplicate"):
+            core.publication_history(["v2.0.6", "v2.0.6"], [], "2.0.7")
+
     def test_prepare_updates_only_version_mirrors_and_metadata(self):
         next_version = core.prepare(self.root, "patch", ["v2.0.6"], "release-candidate/v2.0.7")
         self.assertEqual(next_version, core.version(self.root))
