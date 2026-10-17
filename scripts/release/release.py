@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""Single canonical WordPress release ZIP builder and fail-closed verifier."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import zipfile
+
+SLUG = "gf-bulk-rename-counter"
+FILES = (
+    "gf-bulk-rename-counter.php",
+    "includes/class-rename_handler.php",
+    "includes/class-settings_page.php",
+    "languages/gf-bulk-rename-counter.pot",
+    "readme.txt",
+    "uninstall.php",
+)
+VERSION = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)\Z")
+SECRET_MARKERS = (b"-----BEGIN PRIVATE KEY-----", b"github_pat_", b"ghp_")
+ROOT = Path(__file__).resolve().parents[2]
+
+
+class ReleaseError(ValueError):
+    pass
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise ReleaseError(message)
+
+
+def git(root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(root), *args], text=True, capture_output=True, check=False
+    )
+    require(result.returncode == 0, f"git {' '.join(args)}: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def version(root: Path) -> str:
+    php = (root / FILES[0]).read_text(encoding="utf-8")
+    readme = (root / "readme.txt").read_text(encoding="utf-8")
+    mirrors = (
+        re.findall(r"(?m)^\s*\*\s*Version:\s*(\S+)\s*$", php),
+        re.findall(r"(?m)^define\(\s*'GFBULKRENAME_VERSION',\s*'([^']+)'\s*\);", php),
+        re.findall(r"(?m)^Stable tag:\s*(\S+)\s*$", readme),
+    )
+    require(all(len(values) == 1 for values in mirrors), "missing or duplicate version mirror")
+    v = mirrors[0][0]
+    require(bool(VERSION.fullmatch(v)), "invalid strict numeric SemVer")
+    require(all(values[0] == v for values in mirrors), "plugin header/constant/readme version mismatch")
+    return v
+
+
+def expected_payload(root: Path) -> dict[str, bytes]:
+    version(root)
+    result = {}
+    for rel in FILES:
+        path = root / rel
+        require(path.is_file() and not path.is_symlink(), f"missing or symlinked: {rel}")
+        content = path.read_bytes()
+        require(bool(content), f"empty production file: {rel}")
+        require(not any(marker in content for marker in SECRET_MARKERS), f"secret marker in: {rel}")
+        result[f"{SLUG}/{rel}"] = content
+    return result
+
+
+def sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def source_identity(root: Path, require_clean: bool = True) -> dict[str, str]:
+    head = git(root, "rev-parse", "HEAD")
+    tree = git(root, "rev-parse", "HEAD^{tree}")
+    if require_clean:
+        require(not git(root, "status", "--porcelain", "--untracked-files=all"),
+                "source working tree is dirty; refuse uncommitted build")
+    return {"commit": head, "tree": tree}
+
+
+def artifact_names(v: str) -> tuple[str, str, str]:
+    prefix = f"{SLUG}-{v}.zip"
+    return prefix, prefix + ".sha256", prefix + ".manifest.json"
+
+
+def build(root: Path, out: Path, expected_head: str | None = None) -> dict:
+    identity = source_identity(root)
+    if expected_head:
+        require(identity["commit"] == expected_head, "source HEAD differs from requested SHA")
+    v = version(root)
+    payload = expected_payload(root)
+    out.mkdir(parents=True, exist_ok=True)
+    zname, cname, mname = artifact_names(v)
+    target = out / zname
+    require(not any((out / n).exists() for n in (zname, cname, mname)),
+            "release output already exists; refusing overwrite")
+    with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED,
+                         compresslevel=9, strict_timestamps=True) as archive:
+        for name, content in sorted(payload.items()):
+            info = zipfile.ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))
+            info.create_system = 3
+            info.external_attr = (0o100644 << 16)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(info, content, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+    digest = sha(target.read_bytes())
+    (out / cname).write_text(f"{digest}  {zname}\n", encoding="ascii")
+    manifest = {
+        "schema": 1, "plugin": SLUG, "version": v, "source": identity,
+        "zip": zname, "sha256": digest,
+        "files": {name: sha(data) for name, data in sorted(payload.items())},
+    }
+    (out / mname).write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                             encoding="utf-8")
+    validate(root, target, out / cname, out / mname)
+    return manifest
+
+
+def validate(root: Path, target: Path, checksum: Path, manifest_path: Path,
+             expected_head: str | None = None) -> dict:
+    identity = source_identity(root)
+    if expected_head:
+        require(identity["commit"] == expected_head, "validation target HEAD mismatch")
+    payload = expected_payload(root)
+    v = version(root)
+    zname, cname, mname = artifact_names(v)
+    require(target.name == zname and checksum.name == cname and manifest_path.name == mname,
+            "artifact name/version mismatch")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    require(manifest == {
+        "schema": 1, "plugin": SLUG, "version": v, "source": identity,
+        "zip": zname, "sha256": sha(target.read_bytes()),
+        "files": {name: sha(data) for name, data in sorted(payload.items())},
+    }, "manifest version/source/files/checksum mismatch")
+    require(checksum.read_text(encoding="ascii") ==
+            f"{manifest['sha256']}  {zname}\n", "SHA-256 sidecar mismatch")
+    with zipfile.ZipFile(target, "r") as archive:
+        infos = archive.infolist()
+        names = [x.filename for x in infos]
+        require(len(names) == len(set(names)), "duplicate ZIP path")
+        require(set(names) == set(payload), "unexpected/missing production ZIP path")
+        require(archive.testzip() is None, "ZIP CRC/integrity failure")
+        for info in infos:
+            require(not info.is_dir(), "ZIP directory entry not on allowlist")
+            require((info.external_attr >> 16) & 0o170000 == 0o100000,
+                    "ZIP contains non-regular file")
+            require(info.compress_type == zipfile.ZIP_DEFLATED, "unexpected compression")
+            require(archive.read(info) == payload[info.filename],
+                    f"packaged bytes differ from source: {info.filename}")
+    return manifest
+
+
+def release_version(root: Path, intent: str, tags: list[str]) -> str:
+    current = version(root)
+    versions = []
+    for tag in tags:
+        require(tag.startswith("v") and VERSION.fullmatch(tag[1:]),
+                f"unexpected production tag: {tag}")
+        versions.append(tuple(map(int, tag[1:].split("."))))
+    if not versions:
+        require(intent == "first", "first release requires 'first' intent")
+        return current
+    require(intent in ("patch", "minor", "major"), "existing history forbids first intent")
+    latest = max(versions)
+    require(tuple(map(int, current.split("."))) == latest,
+            "normal source version does not match latest production tag")
+    major, minor, patch = latest
+    if intent == "patch":
+        patch += 1
+    elif intent == "minor":
+        minor, patch = minor + 1, 0
+    else:
+        major, minor, patch = major + 1, 0, 0
+    return f"{major}.{minor}.{patch}"
+
+
+def prepare(root: Path, intent: str, tags: list[str], branch: str) -> str:
+    require(not (root / "release/candidate.json").exists(),
+            "a candidate has already been integrated; do not stack preparation")
+    identity = source_identity(root)
+    new = release_version(root, intent, tags)
+    old = version(root)
+    if new != old:
+        php_path = root / FILES[0]
+        php = php_path.read_text(encoding="utf-8")
+        php = re.sub(r"(?m)^(\s*\*\s*Version:\s*)\S+(\s*)$", lambda m: m[1]+new+m[2], php)
+        php = php.replace(f"'GFBULKRENAME_VERSION', '{old}'",
+                          f"'GFBULKRENAME_VERSION', '{new}'")
+        php_path.write_text(php, encoding="utf-8")
+        readme_path = root / "readme.txt"
+        readme = readme_path.read_text(encoding="utf-8")
+        readme = readme.replace(f"Stable tag: {old}", f"Stable tag: {new}", 1)
+        require("== Changelog ==\n" in readme, "changelog section absent")
+        readme = readme.replace("== Changelog ==\n",
+                                f"== Changelog ==\n\n= {new} =\n* Release candidate; see reviewed GitHub changes for details.\n", 1)
+        readme_path.write_text(readme, encoding="utf-8")
+    require(version(root) == new, "prepared mirrors disagree")
+    (root / "release").mkdir(exist_ok=True)
+    (root / "release/candidate.json").write_text(json.dumps({
+        "schema": 1, "intent": intent, "version": new, "base": identity,
+        "branch": branch,
+    }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return new
+
+
+def binding(root: Path, reviewed_sha: str, integrated_sha: str) -> None:
+    require(re.fullmatch(r"[0-9a-f]{40}", reviewed_sha) is not None, "bad reviewed SHA")
+    require(re.fullmatch(r"[0-9a-f]{40}", integrated_sha) is not None, "bad integrated SHA")
+    require(git(root, "rev-parse", f"{reviewed_sha}^{{tree}}") ==
+            git(root, "rev-parse", f"{integrated_sha}^{{tree}}"),
+            "reviewed candidate tree is not integrated main tree")
+    require(git(root, "rev-parse", "HEAD") == integrated_sha,
+            "checkout does not match integrated HEAD")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("command", choices=("build", "validate", "version", "plan", "prepare", "bind"))
+    parser.add_argument("--root", type=Path, default=ROOT)
+    parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--zip", type=Path)
+    parser.add_argument("--checksum", type=Path)
+    parser.add_argument("--manifest", type=Path)
+    parser.add_argument("--expected-head")
+    parser.add_argument("--intent", choices=("first", "patch", "minor", "major"))
+    parser.add_argument("--tags", nargs="*", default=[])
+    parser.add_argument("--branch")
+    parser.add_argument("--reviewed")
+    parser.add_argument("--integrated")
+    args = parser.parse_args()
+    try:
+        if args.command == "version":
+            print(version(args.root))
+        elif args.command == "plan":
+            require(bool(args.intent), "--intent is required")
+            print(release_version(args.root, args.intent, args.tags))
+        elif args.command == "prepare":
+            require(bool(args.intent and args.branch), "--intent and --branch required")
+            print(prepare(args.root, args.intent, args.tags, args.branch))
+        elif args.command == "bind":
+            require(bool(args.reviewed and args.integrated), "two exact SHA values required")
+            binding(args.root, args.reviewed, args.integrated)
+            print("CANDIDATE_TO_MAIN_TREE_IDENTITY_PASS")
+        elif args.command == "build":
+            require(args.output_dir is not None, "--output-dir required")
+            print(json.dumps(build(args.root, args.output_dir, args.expected_head), sort_keys=True))
+        else:
+            require(all((args.zip, args.checksum, args.manifest)), "three artifact paths required")
+            print(json.dumps(validate(args.root, args.zip, args.checksum,
+                                      args.manifest, args.expected_head), sort_keys=True))
+    except (ReleaseError, OSError, ValueError, zipfile.BadZipFile) as error:
+        print(f"RELEASE_GATE_FAIL: {error}", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
