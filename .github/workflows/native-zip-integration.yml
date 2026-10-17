@@ -1,0 +1,204 @@
+name: Native WordPress ZIP qualification
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authentic-zip:
+    name: Native GF and Bulk Download ZIP integrity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      database:
+        image: mariadb:11.4.8@sha256:bc474f00629f0123c10f9e1bca193a45d18af15a274cf0656acda64f1086c3b6
+        env:
+          MARIADB_ROOT_PASSWORD: brc-lab-root
+          MARIADB_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -pbrc-lab-root --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      BRC_WP_PATH: /tmp/brc-wordpress
+      BRC_LAB_DIR: /tmp/brc-lab
+      BRC_WP_CLI: /tmp/brc-wp-cli.phar
+      BRC_BASE_URL: http://127.0.0.1:8080
+      GPP_FIXTURE_COMMIT: fd661f562e52b68542ea12126842709ea8916114
+      GF_SHA256: 542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b
+      GF_SIZE: '5300290'
+      # Versioned WordPress.org distribution, NOT the upstream GitHub source checkout.
+      BULK_ZIP_URL: https://downloads.wordpress.org/plugin/bulk-download-for-gravity-forms.4.2.0.zip
+      BULK_SHA256: f42355c61535c9408c2668081f86e542912752b98ea1f301aa967f91c18592a4
+      BULK_SIZE: '56915'
+    steps:
+      - name: Check out the exact proposed head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact target and canonical source checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "rezahh107/GF-Bulk-Rename-Counter"
+          test "$(git rev-parse HEAD)" = "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+          echo "Checked out target HEAD: $(git rev-parse HEAD)"
+          mkdir -p "$BRC_WP_PATH" "$BRC_LAB_DIR" "$BRC_LAB_DIR/reports"
+          chmod 700 "$BRC_LAB_DIR"
+
+      - name: Set up pinned PHP with ZIP and MySQL extensions
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: '8.2.34'
+          coverage: none
+          extensions: mysqli, zip
+
+      - name: Run existing canonical source verification
+        run: |
+          set -euo pipefail
+          test "$(php -r 'echo PHP_VERSION;')" = "8.2.34"
+          php -r 'if (!extension_loaded("zip") || !extension_loaded("mysqli")) exit(1);'
+          php tests/verify.php
+
+      - name: Install WordPress 6.8.3 and checksum-verified WP-CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -o "$BRC_WP_CLI" https://github.com/wp-cli/wp-cli/releases/download/v2.12.0/wp-cli-2.12.0.phar
+          echo "ce34ddd838f7351d6759068d09793f26755463b4a4610a5a5c0a97b68220d85c  $BRC_WP_CLI" | sha256sum -c -
+          php "$BRC_WP_CLI" core download --path="$BRC_WP_PATH" --version=6.8.3 --force
+          php "$BRC_WP_CLI" config create --path="$BRC_WP_PATH" --dbname=wordpress --dbuser=root --dbpass=brc-lab-root --dbhost=127.0.0.1:3306 --skip-check
+          php "$BRC_WP_CLI" core install --path="$BRC_WP_PATH" --url="$BRC_BASE_URL" --title="Synthetic BRC Lab" --admin_user=bootstrap_admin --admin_password="brc-ci-only-2026" --admin_email="bootstrap@example.invalid" --skip-email
+          test "$(php "$BRC_WP_CLI" core version --path="$BRC_WP_PATH")" = "6.8.3"
+
+      - name: Acquire authentic plugin distributions and assert identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          GF_ZIP=/tmp/brc-gravityforms.zip
+          BULK_ZIP=/tmp/brc-bulk-download.zip
+          curl -fsSL --retry 3 -o "$GF_ZIP" "https://raw.githubusercontent.com/rezahh107/Gravity-Presentation-Profiles/$GPP_FIXTURE_COMMIT/tests/fixtures/wu21-packages/gravityforms-3.1.1.1-owner-supplied-source-package.zip"
+          test "$(stat -c '%s' "$GF_ZIP")" = "$GF_SIZE"
+          echo "$GF_SHA256  $GF_ZIP" | sha256sum -c -
+          unzip -tq "$GF_ZIP"
+          test "$(unzip -p "$GF_ZIP" gravityforms/gravityforms.php | grep -Ec 'Version:[[:space:]]*3[.]1[.]1[.]1')" -eq 1
+          curl -fsSL --retry 3 -o "$BULK_ZIP" "$BULK_ZIP_URL"
+          test "$(stat -c '%s' "$BULK_ZIP")" = "$BULK_SIZE"
+          echo "$BULK_SHA256  $BULK_ZIP" | sha256sum -c -
+          unzip -tq "$BULK_ZIP"
+          test "$(unzip -p "$BULK_ZIP" bulk-download-for-gravity-forms/bulk-download-for-gravity-forms.php | grep -Ec 'Version:[[:space:]]*4[.]2[.]0')" -eq 1
+          test "$(unzip -p "$BULK_ZIP" bulk-download-for-gravity-forms/bulk-download-for-gravity-forms.php | grep -Fc "define( 'BDFGF_VERSION', '4.2.0' )")" -eq 1
+          unzip -l "$BULK_ZIP" | grep -q 'bulk-download-for-gravity-forms/vendor/autoload.php'
+          {
+            echo "Source: $(git rev-parse HEAD)"
+            echo "GF fixture: GPP $GPP_FIXTURE_COMMIT / 3.1.1.1 / $(sha256sum "$GF_ZIP" | cut -d' ' -f1)"
+            echo "Bulk Download distribution: $BULK_ZIP_URL"
+            echo "Bulk Download ZIP sha256: $(sha256sum "$BULK_ZIP" | cut -d' ' -f1)"
+            echo "Bulk Download ZIP bytes: $(stat -c '%s' "$BULK_ZIP")"
+          } | tee "$BRC_LAB_DIR/reports/package-identities.txt"
+          unzip -q "$GF_ZIP" -d "$BRC_WP_PATH/wp-content/plugins"
+          unzip -q "$BULK_ZIP" -d "$BRC_WP_PATH/wp-content/plugins"
+
+      - name: Activate real dependencies and current target plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          ln -s "$GITHUB_WORKSPACE" "$BRC_WP_PATH/wp-content/plugins/gf-bulk-rename-counter"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin activate gravityforms bulk-download-for-gravity-forms gf-bulk-rename-counter
+          for spec in 'gravityforms 3.1.1.1' 'bulk-download-for-gravity-forms 4.2.0' 'gf-bulk-rename-counter 2.0.6'; do
+            read -r slug expected <<< "$spec"
+            version="$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin get "$slug" --field=version)"
+            test "$version" = "$expected"
+            test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin get "$slug" --field=status)" = active
+            echo "$slug activated: $version"
+          done
+
+      - name: Provision synthetic GF fixtures and prove hook reachability
+        shell: bash
+        run: |
+          set -euo pipefail
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/setup.php
+          test -s "$BRC_LAB_DIR/manifest.json"
+
+      - name: Inspect persisted GF counter and fresh native filename filtering
+        shell: bash
+        run: |
+          set -euo pipefail
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/probe.php
+
+      - name: Exercise authenticated native single-entry HTTP download
+        shell: bash
+        run: |
+          set -euo pipefail
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/create-http-auth.php
+          php "$BRC_WP_CLI" server --path="$BRC_WP_PATH" --host=127.0.0.1 --port=8080 >"$BRC_LAB_DIR/http-server.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS "$BRC_BASE_URL/wp-login.php" -o /dev/null; then break; fi
+            sleep 1
+          done
+          url="$(php -r 'echo json_decode(file_get_contents($argv[1]), true)["url"];' "$BRC_LAB_DIR/auth.json")"
+          unauth="$(curl -sS -o "$BRC_LAB_DIR/unauthorized-response" -w '%{http_code}' "$url")"
+          echo "Anonymous download HTTP status: $unauth"
+          if test "$unauth" = 200 && file "$BRC_LAB_DIR/unauthorized-response" | grep -qi 'Zip archive'; then
+            echo "FAIL: anonymous ZIP download" >&2
+            exit 1
+          fi
+          authenticated_status="$(curl -sS -D "$BRC_LAB_DIR/http-headers" --cookie "$BRC_LAB_DIR/auth.cookies" -o "$BRC_LAB_DIR/single.zip" -w '%{http_code}' "$url")"
+          echo "Authenticated download HTTP status: $authenticated_status"
+          grep -Ei '^(HTTP/|Content-Type:|Content-Disposition:|Location:)' "$BRC_LAB_DIR/http-headers" || true
+          echo "Response size: $(stat -c '%s' "$BRC_LAB_DIR/single.zip")"
+          if test "$authenticated_status" != 200 || ! grep -qi 'Content-Disposition: attachment;' "$BRC_LAB_DIR/http-headers"; then
+            echo "FAIL: authenticated native response was not a ZIP" >&2
+            tail -n 25 "$BRC_LAB_DIR/http-server.log" >&2
+            exit 1
+          fi
+          php tests/integration/assert-zip.php "$BRC_LAB_DIR/manifest.json" single "$BRC_LAB_DIR/single.zip" | tee "$BRC_LAB_DIR/reports/single.json"
+
+      - name: Exercise native GF bulk action ZIPs (no fake handler)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for scenario in shared multiple collision_attempt; do
+            BRC_SCENARIO="$scenario" php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/download.php > "$BRC_LAB_DIR/$scenario.zip"
+            php tests/integration/assert-zip.php "$BRC_LAB_DIR/manifest.json" "$scenario" "$BRC_LAB_DIR/$scenario.zip" | tee "$BRC_LAB_DIR/reports/$scenario.json"
+          done
+
+      - name: Verify original WordPress uploads and Gravity Forms entries
+        shell: bash
+        run: |
+          set -euo pipefail
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
+          echo 'Original uploads and GF values verified unchanged on authentic runtime.'
+
+      - name: Summarize qualification evidence
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Native ZIP qualification (not production equivalence)'
+            echo "PR HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+            echo
+            if test -s "$BRC_LAB_DIR/reports/package-identities.txt"; then
+              cat "$BRC_LAB_DIR/reports/package-identities.txt"
+            else
+              echo 'Dependency acquisition/identity NOT_PROVEN'
+            fi
+            echo
+            for scenario in single shared multiple collision_attempt; do
+              if test -s "$BRC_LAB_DIR/reports/$scenario.json"; then
+                echo "$scenario: genuine ZIP integrity assertion executed"
+                cat "$BRC_LAB_DIR/reports/$scenario.json"
+              else
+                echo "$scenario: NOT_PROVEN"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

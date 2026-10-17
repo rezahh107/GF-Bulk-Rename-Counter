@@ -6,7 +6,7 @@ A WordPress add-on that renames Gravity Forms files **during bulk download**, us
 
 This repository contains the existing **Gravity Forms Bulk Rename Counter v2.0.6** plugin source. It hooks into the `bdfgf_entry_filename` filter provided by **Bulk Download for Gravity Forms**, looks up the Gravity Forms entry, and returns `d{counter}.{original-extension}`. When a generated name repeats within the same handler instance, it adds the entry ID and, if necessary, a further numeric suffix.
 
-**Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. Exact versions of the latter two are not pinned or integration-tested here.
+**Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. The supported runtime dependency range is not exhaustively pinned or certified. A bounded CI integration lane uses **Gravity Forms 3.1.1.1** and **Bulk Download for Gravity Forms 4.2.0** in a synthetic WordPress environment; see [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md).
 
 ## Install and configure
 
@@ -28,7 +28,9 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | `uninstall.php` | Deletes plugin settings on uninstall |
 | `languages/` | Supplied translation template (not regenerated) |
 | `readme.txt` | Supplied WordPress plugin readme and changelog |
-| `tests/` | Dependency-free PHP source-level verification, not a WordPress runtime harness |
+| `tests/verify.php` and `tests/rename-handler-test.php` | Canonical dependency-free PHP lint and isolated regressions |
+| `tests/integration/` | Synthetic WordPress / Gravity Forms fixtures, genuine Bulk Download ZIP checks, and negative integrity control |
+| `.github/workflows/native-zip-integration.yml` | Repeatable native ZIP qualification CI, separate from source verification |
 
 Runtime plugin files are imported from the owner-supplied `gf-bulk-rename-counter.zip` version `2.0.6`; foundational work does not intentionally change their behavior. The source contains placeholder author/website metadata. Treat these as inherited placeholders, not verified project identity.
 
@@ -40,7 +42,13 @@ Prerequisite: PHP CLI 8.0 or newer. No Composer dependencies are required for th
 php tests/verify.php
 ```
 
-The command runs PHP syntax checks across the repository's PHP files and a small, isolated regression suite for the renaming handler with controlled WordPress / Gravity Forms stubs. Run this same command locally, in AI-assisted changes and in CI. **Passing does not establish compatibility with an actual WordPress + Gravity Forms + Bulk Download installation or prove correct ZIP generation.** An integration test on the target plugin versions is required for those claims.
+The command runs PHP syntax checks across the repository's PHP files and a small, isolated regression suite for the renaming handler with controlled WordPress / Gravity Forms stubs. Run this same command locally, in AI-assisted changes and in CI. **Passing this command alone does not establish WordPress/Gravity Forms/Bulk Download integration or ZIP integrity.**
+
+### Authentic native ZIP qualification
+
+The supplemental [Native WordPress ZIP qualification workflow](.github/workflows/native-zip-integration.yml) installs real WordPress 6.8.3, Gravity Forms 3.1.1.1, Bulk Download for Gravity Forms 4.2.0, and this plugin v2.0.6. It retains `php tests/verify.php` as the canonical source check, then provisions synthetic forms, entries and uploads through WordPress/Gravity Forms APIs. It verifies one authenticated HTTP single-entry ZIP download and three native multi-file/multi-entry ZIP paths dispatched from WP-CLI, including ZIP member paths, counts, SHA-256 checksums, a deliberately wrong-checksum negative control, and persistence/upload readback.
+
+The tests **do not certify the production environment**, all custom Bulk Download folder configurations, or every possible filename collision. The multi-entry checks invoke the genuine host action in WordPress rather than browser UI selection. Exact source/dependency provenance, scenarios, observations, and evidence limits are documented in [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md). CI conclusions must be checked against the actual exercised commit; the source workflow explicitly checks out the PR Head for pull requests (and the pushed commit for `main`).
 
 ## Known behavior and limits of v2.0.6
 
