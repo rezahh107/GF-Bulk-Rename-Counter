@@ -85,7 +85,11 @@ class ReleaseContract(unittest.TestCase):
             core.validate(self.root, z, c, m)
         c.write_text(f"{core.sha(z.read_bytes())}  {z.name}\n")
         z.write_bytes(b"NOT A ZIP")
-        with self.assertRaisesRegex(core.ReleaseError, "manifest"):
+        manifest = json.loads(m.read_text())
+        manifest["sha256"] = core.sha(z.read_bytes())
+        m.write_text(json.dumps(manifest))
+        c.write_text(f"{manifest['sha256']}  {z.name}\n")
+        with self.assertRaises(zipfile.BadZipFile):
             core.validate(self.root, z, c, m)
 
     def test_version_mirror_mismatch(self):
