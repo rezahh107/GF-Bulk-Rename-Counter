@@ -95,12 +95,22 @@ foreach ( $cases as $name => $definitions ) {
                 $values[ $field_id ] = $kind === 'single' ? $urls[0] : wp_json_encode( $urls );
             }
         }
-        $entry = array_merge( [ 'form_id' => (int) $form_id ], $values );
+        // Preserve numeric GF field IDs: array_merge() would reindex field '5'.
+        $entry = [ 'form_id' => (int) $form_id ] + $values;
         $entry_id = GFAPI::add_entry( $entry );
         if ( is_wp_error( $entry_id ) ) {
             throw new RuntimeException( $entry_id->get_error_message() );
         }
         $id = (int) $entry_id;
+        $stored = GFAPI::get_entry( $id );
+        if ( is_wp_error( $stored ) || ! is_array( $stored ) ) {
+            throw new RuntimeException( 'Native GF entry did not persist: ' . $id );
+        }
+        foreach ( $values as $field_id => $expected_value ) {
+            if ( (string) ( $stored[ (string) $field_id ] ?? '' ) !== (string) $expected_value ) {
+                throw new RuntimeException( 'GF fixture field ID ' . $field_id . ' did not persist intact for entry ' . $id );
+            }
+        }
         $data['entry_ids'][] = $id;
         $data['entry_values'][ (string) $id ] = $values;
         $data['uploads'] = array_merge( $data['uploads'], $sources );
