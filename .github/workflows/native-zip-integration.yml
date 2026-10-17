@@ -88,10 +88,10 @@ jobs:
           test "$(stat -c '%s' "$GF_ZIP")" = "$GF_SIZE"
           echo "$GF_SHA256  $GF_ZIP" | sha256sum -c -
           unzip -tq "$GF_ZIP"
-          test "$(unzip -p "$GF_ZIP" gravityforms/gravityforms.php | grep -Ec '^[[:space:]]*\* Version:[[:space:]]*3\.1\.1\.1[[:space:]]*$')" -eq 1
+          test "$(unzip -p "$GF_ZIP" gravityforms/gravityforms.php | grep -Ec 'Version:[[:space:]]*3[.]1[.]1[.]1')" -eq 1
           curl -fsSL --retry 3 -o "$BULK_ZIP" "$BULK_ZIP_URL"
           unzip -tq "$BULK_ZIP"
-          test "$(unzip -p "$BULK_ZIP" bulk-download-for-gravity-forms/bulk-download-for-gravity-forms.php | grep -Ec '^[[:space:]]*\* Version:[[:space:]]*4\.2\.0[[:space:]]*$')" -eq 1
+          test "$(unzip -p "$BULK_ZIP" bulk-download-for-gravity-forms/bulk-download-for-gravity-forms.php | grep -Ec 'Version:[[:space:]]*4[.]2[.]0')" -eq 1
           test "$(unzip -p "$BULK_ZIP" bulk-download-for-gravity-forms/bulk-download-for-gravity-forms.php | grep -Fc "define( 'BDFGF_VERSION', '4.2.0' )")" -eq 1
           unzip -l "$BULK_ZIP" | grep -q 'bulk-download-for-gravity-forms/vendor/autoload.php'
           {
