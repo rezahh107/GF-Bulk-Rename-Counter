@@ -129,6 +129,12 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/setup.php
           test -s "$BRC_LAB_DIR/manifest.json"
 
+      - name: Inspect persisted GF counter and fresh native filename filtering
+        shell: bash
+        run: |
+          set -euo pipefail
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/probe.php
+
       - name: Exercise authenticated native single-entry HTTP download
         shell: bash
         run: |
