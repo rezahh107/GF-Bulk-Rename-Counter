@@ -155,6 +155,26 @@ def validate(root: Path, target: Path, checksum: Path, manifest_path: Path,
     return manifest
 
 
+def publication_history(tags: list[str], releases: list[dict],
+                        candidate: str | None = None) -> None:
+    """Reject orphan tags, draft/partial releases, duplicate and conflicting names."""
+    require(len(set(tags)) == len(tags), "duplicate history tag")
+    require(all(tag.startswith("v") and VERSION.fullmatch(tag[1:]) for tag in tags),
+            "malformed production history tag")
+    require(isinstance(releases, list), "GitHub Releases history must be a list")
+    release_tags = []
+    for item in releases:
+        require(isinstance(item, dict) and isinstance(item.get("tag_name"), str),
+                "invalid GitHub Release entry")
+        require(item.get("draft") is False, "draft/partial GitHub Release requires Owner recovery")
+        release_tags.append(item["tag_name"])
+    require(len(set(release_tags)) == len(release_tags), "duplicate GitHub Release identity")
+    require(set(tags) == set(release_tags), "orphan tag or Release indicates partial history")
+    if candidate:
+        require(VERSION.fullmatch(candidate) is not None, "invalid candidate version")
+        require(f"v{candidate}" not in tags, "production publication version conflict")
+
+
 def release_version(root: Path, intent: str, tags: list[str]) -> str:
     current = version(root)
     versions = []
@@ -220,7 +240,7 @@ def binding(root: Path, reviewed_sha: str, integrated_sha: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("build", "validate", "version", "plan", "prepare", "bind"))
+    parser.add_argument("command", choices=("build", "validate", "version", "plan", "prepare", "bind", "history"))
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--zip", type=Path)
@@ -230,6 +250,8 @@ def main() -> None:
     parser.add_argument("--intent", choices=("first", "patch", "minor", "major"))
     parser.add_argument("--tags", nargs="*", default=[])
     parser.add_argument("--branch")
+    parser.add_argument("--releases-file", type=Path)
+    parser.add_argument("--candidate-version")
     parser.add_argument("--reviewed")
     parser.add_argument("--integrated")
     args = parser.parse_args()
@@ -242,6 +264,12 @@ def main() -> None:
         elif args.command == "prepare":
             require(bool(args.intent and args.branch), "--intent and --branch required")
             print(prepare(args.root, args.intent, args.tags, args.branch))
+        elif args.command == "history":
+            require(args.releases_file is not None, "--releases-file required")
+            publication_history(args.tags,
+                                json.loads(args.releases_file.read_text(encoding="utf-8")),
+                                args.candidate_version)
+            print("RELEASE_HISTORY_CONFLICT_GATE_PASS")
         elif args.command == "bind":
             require(bool(args.reviewed and args.integrated), "two exact SHA values required")
             binding(args.root, args.reviewed, args.integrated)
