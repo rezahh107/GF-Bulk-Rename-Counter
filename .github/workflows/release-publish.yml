@@ -105,6 +105,8 @@ jobs:
           if gh release view "$BRC_TAG" >/dev/null 2>&1; then exit 1; fi
           z="$RUNNER_TEMP/release/gf-bulk-rename-counter-$BRC_VERSION.zip"
           python3 scripts/release/release.py validate --zip "$z" --checksum "$z.sha256" --manifest "$z.manifest.json" --expected-head "$GITHUB_SHA"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$BRC_TAG" -m "Reviewed $BRC_TAG" "$GITHUB_SHA"
           git push origin "refs/tags/$BRC_TAG"
           gh release create "$BRC_TAG" --verify-tag --draft --title "$BRC_TAG" --notes "Qualified and reviewed source: $GITHUB_SHA" "$z" "$z.sha256" "$z.manifest.json"
