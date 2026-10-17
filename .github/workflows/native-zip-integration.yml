@@ -108,13 +108,24 @@ jobs:
           unzip -q "$GF_ZIP" -d "$BRC_WP_PATH/wp-content/plugins"
           unzip -q "$BULK_ZIP" -d "$BRC_WP_PATH/wp-content/plugins"
 
-      - name: Activate real dependencies and current target plugin
+      - name: Build real installable target ZIP and assert its source binding
         shell: bash
         run: |
           set -euo pipefail
-          ln -s "$GITHUB_WORKSPACE" "$BRC_WP_PATH/wp-content/plugins/gf-bulk-rename-counter"
-          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin activate gravityforms bulk-download-for-gravity-forms gf-bulk-rename-counter
-          for spec in 'gravityforms 3.1.1.1' 'bulk-download-for-gravity-forms 4.2.0' 'gf-bulk-rename-counter 2.0.6'; do
+          python3 scripts/release/release.py build --output-dir "$BRC_LAB_DIR/target-package" --expected-head "$(git rev-parse HEAD)"
+          target_version="$(python3 scripts/release/release.py version)"
+          zip="$BRC_LAB_DIR/target-package/gf-bulk-rename-counter-$target_version.zip"
+          python3 scripts/release/release.py validate --zip "$zip" --checksum "$zip.sha256" --manifest "$zip.manifest.json" --expected-head "$(git rev-parse HEAD)"
+          echo "BRC_TARGET_ZIP=$zip" >> "$GITHUB_ENV"
+          echo "BRC_TARGET_VERSION=$target_version" >> "$GITHUB_ENV"
+
+      - name: Activate real dependencies and install the generated target ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin activate gravityforms bulk-download-for-gravity-forms
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin install "$BRC_TARGET_ZIP" --activate
+          for spec in "gravityforms 3.1.1.1" "bulk-download-for-gravity-forms 4.2.0" "gf-bulk-rename-counter $BRC_TARGET_VERSION"; do
             read -r slug expected <<< "$spec"
             version="$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin get "$slug" --field=version)"
             test "$version" = "$expected"
