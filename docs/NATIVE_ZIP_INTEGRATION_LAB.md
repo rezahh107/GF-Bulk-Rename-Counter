@@ -14,9 +14,11 @@ integration workflow. Source PASS is not native ZIP PASS.
   SHA-256 `542f56ae0747f3661d1474996527298027db3fb8ed3e6469a6391aaabf61069b`.
 - Bulk Download for Gravity Forms: WordPress.org installable *version-specific*
   `https://downloads.wordpress.org/plugin/bulk-download-for-gravity-forms.4.2.0.zip`.
-  Its ZIP SHA-256/size are computed and logged by the workflow after download;
-  a stable immutable checksum has **not yet** been promoted into the workflow
-  until confirmed from a successful authentic run. The upstream GitHub commit
+  WordPress.org installable package identity was observed in authentic CI acquisition:
+  56,915 bytes, SHA-256
+  `f42355c61535c9408c2668081f86e542912752b98ea1f301aa967f91c18592a4`.
+  These exact bytes and SHA-256 are now checked **before extraction**.
+  This is a distribution-package identity, not the upstream GitHub source commit identity. The upstream GitHub commit
   `7cfc67ac0728ecbfb4c12cf812f9a0f70230ec79` is a **source reference**,
   not a substitute for the WordPress.org distributable.
 - No licensed Gravity Forms package is committed to this repository. The GPP
@@ -25,7 +27,7 @@ integration workflow. Source PASS is not native ZIP PASS.
 
 ## Tested interfaces and scenarios
 
-WordPress core and authentic plugins initialize normally. The setup code asserts
+WordPress core and authentic plugins initialize normally. A fresh native GF readback and filename-filter probe confirms that numeric field IDs and the configured counter survived synthetic fixture creation. The setup code asserts
 the actual registered `BDFGF\Actions\BulkDownload` action and
 `GFBulkRename\Rename_Handler` filename filter, then creates four synthetic
 forms and entries via `GFAPI::add_form()` / `GFAPI::add_entry()` and synthetic
