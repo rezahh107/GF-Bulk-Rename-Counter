@@ -23,6 +23,7 @@ jobs:
     permissions:
       contents: write
       actions: read
+      pull-requests: read
     env:
       GH_TOKEN: ${{ github.token }}
       BRC_ADMIN_READ_TOKEN: ${{ secrets.BRC_RELEASE_ADMIN_READ_TOKEN }}
