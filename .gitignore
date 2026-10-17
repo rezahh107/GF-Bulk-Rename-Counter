@@ -7,3 +7,7 @@ Thumbs.db
 .phpunit.result.cache
 # Generated local archives, not committed distribution artifacts
 dist/
+
+# Python unittest/import byproducts; never release sources
+__pycache__/
+*.py[cod]
