@@ -1,0 +1,63 @@
+# This is a POT file template for GF Bulk Rename Counter.
+msgid ""
+msgstr ""
+"Project-Id-Version: GF Bulk Rename Counter 2.0.6\n"
+"Report-Msgid-Bugs-To: https://your-website.com\n"
+"Last-Translator: Your Name <you@example.com>\n"
+"Language-Team: Your Team <team@example.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2025-05-17\n"
+
+#: includes/class-settings_page.php:47
+msgid "Bulk Download Rename Settings"
+msgstr ""
+
+#: includes/class-settings_page.php:55
+msgid "Target Form"
+msgstr ""
+
+#: includes/class-settings_page.php:63
+msgid "Counter Field ID"
+msgstr ""
+
+#: includes/class-settings_page.php:76
+msgid "Configure which form and which field holds the unique counter number. The downloaded files will be renamed to d[COUNTER].extension"
+msgstr ""
+
+#: includes/class-settings_page.php:89
+msgid "— Apply to all forms —"
+msgstr ""
+
+#: includes/class-settings_page.php:96
+msgid "Select a specific Gravity Form or leave as "All forms"."
+msgstr ""
+
+#: includes/class-settings_page.php:106
+msgid "Enter the ID of the field that stores the unique counter number (e.g., 5)."
+msgstr ""
+
+#: includes/class-settings_page.php:115
+msgid "You do not have sufficient permissions to access this page."
+msgstr ""
+
+#: includes/class-settings_page.php:121
+msgid "Gravity Forms Bulk Rename Settings"
+msgstr ""
+
+#: gf-bulk-rename-counter.php:98
+msgid "Gravity Forms Bulk Rename Counter requires Gravity Forms to be installed and active."
+msgstr ""
+
+#: gf-bulk-rename-counter.php:106
+msgid "Gravity Forms Bulk Rename Counter requires "Bulk Download for Gravity Forms" plugin to be installed and active."
+msgstr ""
+
+#: gf-bulk-rename-counter.php:117
+msgid "Gravity Forms Bulk Rename Settings"
+msgstr ""
+
+#: gf-bulk-rename-counter.php:118
+msgid "GF Bulk Rename"
+msgstr ""
