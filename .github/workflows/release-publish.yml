@@ -69,9 +69,9 @@ jobs:
           test -z "$(git ls-remote --tags origin "refs/tags/v$v")"
           if gh release view "v$v" >/dev/null 2>&1; then exit 1; fi
           mapfile -t tags < <(git tag -l 'v*' | LC_ALL=C sort)
-          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate --jq '.[].tag_name' | LC_ALL=C sort > "$RUNNER_TEMP/releases"
-          printf '%s\n' "${tags[@]}" | sed '/^$/d' | LC_ALL=C sort > "$RUNNER_TEMP/tags"
-          diff -u "$RUNNER_TEMP/tags" "$RUNNER_TEMP/releases"
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate > "$RUNNER_TEMP/release-pages.json"
+          jq -s 'add' "$RUNNER_TEMP/release-pages.json" > "$RUNNER_TEMP/releases.json"
+          python3 scripts/release/release.py history --tags "${tags[@]}" --releases-file "$RUNNER_TEMP/releases.json" --candidate-version "$v"
           git worktree add --detach "$RUNNER_TEMP/release-base" "$base"
           planned="$(python3 scripts/release/release.py plan --root "$RUNNER_TEMP/release-base" --intent "$intent" --tags "${tags[@]}")"
           test "$planned" = "$v"
