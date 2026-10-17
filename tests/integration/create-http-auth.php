@@ -21,7 +21,12 @@ $logged_in = wp_generate_auth_cookie( (int) $admin->ID, $expires, 'logged_in', $
 $_COOKIE[ LOGGED_IN_COOKIE ] = $logged_in;
 $entry_id = $case['entry_ids'][0];
 $nonce = wp_create_nonce( 'bdfgf_bulk_download_entry_' . $entry_id );
-$url = admin_url( 'admin.php?action=gf_bulk_download&gf_form_id=' . $case['form_id'] . '&gf_entry_id=' . $entry_id . '&_wpnonce=' . rawurlencode( $nonce ) );
+$url = rtrim( (string) getenv( 'BRC_BASE_URL' ), '/' ) . '/wp-admin/admin.php?' . http_build_query( [
+    'action' => 'gf_bulk_download',
+    'gf_form_id' => $case['form_id'],
+    'gf_entry_id' => $entry_id,
+    '_wpnonce' => $nonce,
+], '', '&', PHP_QUERY_RFC3986 );
 $cookie_jar = "# Netscape HTTP Cookie File\n";
 foreach ( [ AUTH_COOKIE => $auth, LOGGED_IN_COOKIE => $logged_in ] as $name => $value ) {
     $cookie_jar .= "127.0.0.1\tFALSE\t/\tFALSE\t" . $expires . "\t" . $name . "\t" . $value . "\n";
