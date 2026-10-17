@@ -144,7 +144,6 @@ def validate(root: Path, target: Path, checksum: Path, manifest_path: Path,
         names = [x.filename for x in infos]
         require(len(names) == len(set(names)), "duplicate ZIP path")
         require(set(names) == set(payload), "unexpected/missing production ZIP path")
-        require(archive.testzip() is None, "ZIP CRC/integrity failure")
         for info in infos:
             require(not info.is_dir(), "ZIP directory entry not on allowlist")
             require((info.external_attr >> 16) & 0o170000 == 0o100000,
@@ -152,6 +151,8 @@ def validate(root: Path, target: Path, checksum: Path, manifest_path: Path,
             require(info.compress_type == zipfile.ZIP_DEFLATED, "unexpected compression")
             require(info.file_size == len(payload[info.filename]), "archive expanded-size mismatch")
             require(not info.flag_bits & 1, "encrypted ZIP entry")
+        require(archive.testzip() is None, "ZIP CRC/integrity failure")
+        for info in infos:
             require(archive.read(info) == payload[info.filename],
                     f"packaged bytes differ from source: {info.filename}")
     return manifest
