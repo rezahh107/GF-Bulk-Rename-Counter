@@ -36,6 +36,8 @@ jobs:
       GF_SIZE: '5300290'
       # Versioned WordPress.org distribution, NOT the upstream GitHub source checkout.
       BULK_ZIP_URL: https://downloads.wordpress.org/plugin/bulk-download-for-gravity-forms.4.2.0.zip
+      BULK_SHA256: f42355c61535c9408c2668081f86e542912752b98ea1f301aa967f91c18592a4
+      BULK_SIZE: '56915'
     steps:
       - name: Check out the exact proposed head
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -90,6 +92,8 @@ jobs:
           unzip -tq "$GF_ZIP"
           test "$(unzip -p "$GF_ZIP" gravityforms/gravityforms.php | grep -Ec 'Version:[[:space:]]*3[.]1[.]1[.]1')" -eq 1
           curl -fsSL --retry 3 -o "$BULK_ZIP" "$BULK_ZIP_URL"
+          test "$(stat -c '%s' "$BULK_ZIP")" = "$BULK_SIZE"
+          echo "$BULK_SHA256  $BULK_ZIP" | sha256sum -c -
           unzip -tq "$BULK_ZIP"
           test "$(unzip -p "$BULK_ZIP" bulk-download-for-gravity-forms/bulk-download-for-gravity-forms.php | grep -Ec 'Version:[[:space:]]*4[.]2[.]0')" -eq 1
           test "$(unzip -p "$BULK_ZIP" bulk-download-for-gravity-forms/bulk-download-for-gravity-forms.php | grep -Fc "define( 'BDFGF_VERSION', '4.2.0' )")" -eq 1
@@ -137,12 +141,20 @@ jobs:
           done
           url="$(php -r 'echo json_decode(file_get_contents($argv[1]), true)["url"];' "$BRC_LAB_DIR/auth.json")"
           unauth="$(curl -sS -o "$BRC_LAB_DIR/unauthorized-response" -w '%{http_code}' "$url")"
+          echo "Anonymous download HTTP status: $unauth"
           if test "$unauth" = 200 && file "$BRC_LAB_DIR/unauthorized-response" | grep -qi 'Zip archive'; then
             echo "FAIL: anonymous ZIP download" >&2
             exit 1
           fi
-          curl -fsS -D "$BRC_LAB_DIR/http-headers" --cookie "$BRC_LAB_DIR/auth.cookies" -o "$BRC_LAB_DIR/single.zip" "$url"
-          grep -qi 'Content-Disposition: attachment;' "$BRC_LAB_DIR/http-headers"
+          authenticated_status="$(curl -sS -D "$BRC_LAB_DIR/http-headers" --cookie "$BRC_LAB_DIR/auth.cookies" -o "$BRC_LAB_DIR/single.zip" -w '%{http_code}' "$url")"
+          echo "Authenticated download HTTP status: $authenticated_status"
+          grep -Ei '^(HTTP/|Content-Type:|Content-Disposition:|Location:)' "$BRC_LAB_DIR/http-headers" || true
+          echo "Response size: $(stat -c '%s' "$BRC_LAB_DIR/single.zip")"
+          if test "$authenticated_status" != 200 || ! grep -qi 'Content-Disposition: attachment;' "$BRC_LAB_DIR/http-headers"; then
+            echo "FAIL: authenticated native response was not a ZIP" >&2
+            tail -n 25 "$BRC_LAB_DIR/http-server.log" >&2
+            exit 1
+          fi
           php tests/integration/assert-zip.php "$BRC_LAB_DIR/manifest.json" single "$BRC_LAB_DIR/single.zip" | tee "$BRC_LAB_DIR/reports/single.json"
 
       - name: Exercise native GF bulk action ZIPs (no fake handler)
