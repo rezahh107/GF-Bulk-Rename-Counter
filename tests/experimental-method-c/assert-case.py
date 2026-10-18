@@ -89,12 +89,14 @@ def main():
         "extra": members + [("unregistered.txt", b"extra")],
         "duplicate": members + [members[0]],
     }
-    if len(members) > 1:
+    if len(members) > 1 and members[0][1] != members[1][1]:
         cases["misattributed"] = [
             (name, members[1][1]) if i == 0 else
             (name, members[0][1]) if i == 1 else (name, data)
             for i, (name, data) in enumerate(members)
         ]
+    if len(members) > 1 and members[0][1] == members[1][1]:
+        print('NOT_OBSERVABLE_EQUAL_BYTES_ATTRIBUTION: path/hash cannot identify which occurrence physically supplied bytes')
     for label, mutation in cases.items():
         out = io.BytesIO()
         with warnings.catch_warnings():
