@@ -129,13 +129,32 @@ multiset of original upload SHA-256 values and the number of original uploads,
 not merely the key/value map of expected paths. This protects against two
 different source files being collapsed into one ZIP member. Non-collision
 scenarios additionally check every exact member path and the standard
-incorrect-digest negative control. A genuine host-folder collision is
-**diagnostic-only**: the checker reports
-`NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED` with actual paths and counts,
-without changing the expected sources or accepting an overwritten file as a
-correct archive. A green workflow with that state is **not** a green integrity
-result for the diagnostic case. Original GF entries and uploads are read back
-after all downloads as before.
+incorrect-digest negative control. The host-folder collision is **diagnostic-only**, and its acceptance
+is bound to an exact conformance gate: exactly two independent, distinct
+source SHA-256 digests from different uploaded `same.jpg` paths and two
+entries; precisely one readable ZIP member named `shared/same.jpg`; and
+that member's uncompressed SHA-256 equal to exactly one of the two genuine
+source hashes. Duplicate member paths, missing/ambiguous source evidence,
+unexpected paths or bytes, empty/malformed archives and any other
+nonconformance fail closed. A fully conserving, two-member ZIP is recorded as
+`NOT_REPRODUCED` with nonzero exit so that the earlier host finding must be
+reassessed rather than falsely reported as reproduced.
+
+`NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED` remains evidence of a real
+host-owned loss, **not** evidence of integrity safety. The existing
+`PASS_NATIVE_ZIP` branch continues to demand exact paths, member count,
+uncompressed hash multiset and wrong-digest negative control.
+
+The workflow runs `tests/integration/falsify-zip.py` against the **actual
+downloaded host collision ZIP** and its original uploaded source bytes.
+Temporary offline ZIP mutations falsify wrong folder, wrong/extra payload,
+zero files, duplicate internal paths, malformed ZIP, a fully conserving ZIP,
+and source-manifest incompleteness/ambiguity. These mutations are assertion
+tests, not fabricated WordPress collisions; no test-only hooks exist.
+The host-only check now requires both separately verified
+`NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED` reports and identical actual
+member/hash maps before equivalence can pass. Original GF entries and uploads
+are read back after all downloads as before.
 
 ### Decision boundary
 
