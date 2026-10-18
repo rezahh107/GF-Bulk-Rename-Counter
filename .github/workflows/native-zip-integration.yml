@@ -321,6 +321,7 @@ jobs:
               php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
               eval-file tests/experimental-staged-flatten/run-case.php > "$outfile" \
               2> "$BRC_LAB_DIR/sf-$scenario.err" || rc=$?
+            printf '%s\\n' "$rc" > "$BRC_LAB_DIR/sf-$scenario.exit"
             echo "Adversarial native host case=$scenario php_exit=$rc"
           done
           python3 tests/experimental-staged-flatten/assert-adversarial.py "$BRC_LAB_DIR"
