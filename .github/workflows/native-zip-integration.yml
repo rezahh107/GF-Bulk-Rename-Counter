@@ -315,19 +315,19 @@ jobs:
               eval-file tests/experimental-staged-flatten/run-case.php \
               > "$BRC_LAB_DIR/sf-failure-$scenario.out" 2> "$BRC_LAB_DIR/sf-failure-$scenario.err" || rc=$?
             python3 - "$BRC_LAB_DIR" "$scenario" "$error" "$rc" <<'PY'
-            import json,sys,zipfile
-            from pathlib import Path
-            base,case,expected,rc = Path(sys.argv[1]),sys.argv[2],sys.argv[3],sys.argv[4]
-            out=(base/('sf-failure-'+case+'.out')).read_bytes()
-            err=(base/('sf-failure-'+case+'.err')).read_text(errors='replace')
-            probe=base/('sf-hook-start-'+case+'.json')
-            changed=base/('sf-hook-'+case+'.txt')
-            print('FAILURE_DIAGNOSTIC',json.dumps({
-                'scenario':case,'expected':expected,'rc':rc,'out_is_zip':zipfile.is_zipfile(base/('sf-failure-'+case+'.out')),
-                'stdout_head':out[:180].decode(errors='replace'),'stderr_head':err[:180],
-                'hook_start':probe.read_text() if probe.exists() else None,
-                'hook_end':changed.read_text() if changed.exists() else None}))
-            PY
+          import json,sys,zipfile
+          from pathlib import Path
+          base,case,expected,rc = Path(sys.argv[1]),sys.argv[2],sys.argv[3],sys.argv[4]
+          out=(base/('sf-failure-'+case+'.out')).read_bytes()
+          err=(base/('sf-failure-'+case+'.err')).read_text(errors='replace')
+          probe=base/('sf-hook-start-'+case+'.json')
+          changed=base/('sf-hook-'+case+'.txt')
+          print('FAILURE_DIAGNOSTIC',json.dumps({
+              'scenario':case,'expected':expected,'rc':rc,'out_is_zip':zipfile.is_zipfile(base/('sf-failure-'+case+'.out')),
+              'stdout_head':out[:180].decode(errors='replace'),'stderr_head':err[:180],
+              'hook_start':probe.read_text() if probe.exists() else None,
+              'hook_end':changed.read_text() if changed.exists() else None}))
+          PY
             if grep -aq "$error" "$BRC_LAB_DIR/sf-failure-$scenario.out" "$BRC_LAB_DIR/sf-failure-$scenario.err"; then
               echo "VISIBLE_FAILURE_SIGNATURE $scenario"
             else
