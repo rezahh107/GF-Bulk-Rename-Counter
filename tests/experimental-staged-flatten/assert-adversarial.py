@@ -130,6 +130,23 @@ def main():
     temp_cleanup(lab, scenario)
     print("NOT_PROVEN_CAUSAL_PROVENANCE: same-byte post-hook overwrite is indistinguishable")
 
+    # A mixed valid+unresolvable GF entry successfully downloads only one
+    # member: matching the collector's reduced output can never prove
+    # complete entry source eligibility by itself.
+    scenario = "sf_mixed_missing"
+    item = manifest["scenarios"][scenario]
+    stored_values = next(iter(item["entry_values"].values()))
+    require(stored_values["1"] and len(json.loads(stored_values["2"])) == 1,
+            "GF mixed Entry must contain both valid and unresolvable URLs")
+    path = lab / f"sf-{scenario}.zip"
+    names, _ = archive_info(path)
+    require(len(names) == 1 and "/" not in names[0],
+            "native mixed collector did not silently emit a one-member ZIP")
+    journal = json.loads((lab / f"sf-{scenario}.json").read_text())
+    module.check(manifest, scenario, journal, path, scenario)
+    temp_cleanup(lab, scenario)
+    print("FALSIFIED_COLLECTOR_COMPLETENESS_VIA_PUBLIC_HOOK: GF Entry contains 2 referenced URLs, downloaded ZIP has 1")
+
     # The host's get_uploaded_files() can silently drop an unresolved URL
     # before any filename filter is called.
     missing = lab / "sf-missing.out"
