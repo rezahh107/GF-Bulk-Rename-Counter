@@ -34,7 +34,8 @@ $url = $first['1'];
 $add_case('zero_counter', ['1' => $url, '5' => '0']);
 $add_case('empty_counter', ['1' => $url, '5' => '']);
 $add_case('repeated_physical', ['1' => $url, '2' => wp_json_encode([$url, $url]), '5' => '125']);
-$add_case('previously_deleted', ['1' => $url, '2' => wp_json_encode([$url]), '5' => '125'], [$url]);
+$other = $manifest['scenarios']['shared']['uploads'][0]['url'];
+$add_case('previously_deleted', ['1' => $url, '2' => wp_json_encode([$other]), '5' => '125'], [$url]);
 $add_case('all_deleted', ['1' => $url, '5' => '125'], [$url]);
 $missing = str_replace('/single-a.jpg', '/does-not-exist.jpg', $url);
 if ($missing === $url) { throw new RuntimeException('Missing fixture malformed'); }
