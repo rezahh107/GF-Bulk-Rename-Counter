@@ -19,6 +19,20 @@ const {chromium} = require('playwright-core');
     const context = await browser.newContext({acceptDownloads:true});
     await context.addCookies(cookies);
     const page = await context.newPage(), formId = meta.cases.one.form_id;
+    const diagnostic = [];
+    page.on('dialog', async d => {diagnostic.push('dialog='+d.message()); await d.dismiss();});
+    page.on('pageerror', e => diagnostic.push('pageerror='+String(e.message).slice(0,200)));
+    page.on('request', req => {
+      if (req.url().includes('admin-post.php')) {
+        const body = new URLSearchParams(req.postData() || '');
+        diagnostic.push('endpoint-request='+req.method()+' entry_count='+body.getAll('entry_ids[]').length+
+          ' body_keys='+Array.from(new Set(body.keys())).join(','));
+      }
+    });
+    page.on('response', response => {
+      if (response.url().includes('admin-post.php'))
+        diagnostic.push('endpoint-response='+response.status());
+    });
     await page.goto(base + '/wp-admin/admin.php?page=gf_entries&id=' + formId,
       {waitUntil:'domcontentloaded', timeout:25000});
     const list = page.locator('select[name="action"]');
@@ -30,11 +44,19 @@ const {chromium} = require('playwright-core');
     if (!visible) throw Error('No real selectable entry checkbox in admin list');
     await rows.first().check();
     const id = await rows.first().inputValue();
+    console.log('BROWSER_SELECTED_GENUINE_GF_ROW value='+id+' visible_rows='+visible);
     await list.selectOption('gfbrc_independent_flat_zip');
-    const [download] = await Promise.all([
-      page.waitForEvent('download',{timeout:25000}),
-      page.locator('#doaction').click(),
-    ]);
+    let download;
+    try {
+      [download] = await Promise.all([
+        page.waitForEvent('download',{timeout:12000}),
+        page.locator('#doaction').click(),
+      ]);
+    } catch (e) {
+      console.error('BROWSER_EVENT_DIAGNOSTIC',diagnostic);
+      console.error('BROWSER_FINAL_PAGE_URL',page.url());
+      throw e;
+    }
     const saved = path.join(lab,'browser-one.zip');
     await download.saveAs(saved);
     const bytes = fs.readFileSync(saved);
