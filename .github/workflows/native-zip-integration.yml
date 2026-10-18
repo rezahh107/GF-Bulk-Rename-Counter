@@ -251,6 +251,119 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Original uploads and GF values verified unchanged on authentic runtime.'
 
+      - name: Apply Method C ONLY to disposable pinned host after existing native baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          host="$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDownload.php"
+          php -r 'if (!class_exists("ZipArchive")) exit(1); echo "Real ZipArchive: ".ZipArchive::LIBZIP_VERSION.PHP_EOL;'
+          python3 tests/experimental-method-c/patch-host.py "$host" tests/experimental-method-c/MethodC.php
+          php -l "$host"
+          php -l "$(dirname "$host")/MethodC.php"
+          php -l tests/experimental-method-c/prepare.php
+          php -l tests/experimental-method-c/run-case.php
+          python3 -m py_compile tests/experimental-method-c/*.py
+          # Independent real GF entries and uploads; no existing source mutated.
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-method-c/prepare.php
+
+      - name: Exercise experimental flat native ZIPs and source-occurrence conservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          while read -r scenario fixture; do
+            test -n "$scenario"
+            BRC_SCENARIO="$fixture" BRC_MC_SCENARIO="$scenario" \
+              php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+              eval-file tests/experimental-method-c/run-case.php > "$BRC_LAB_DIR/mc-$scenario.zip"
+            python3 tests/experimental-method-c/assert-case.py "$BRC_LAB_DIR/manifest.json" \
+              "$fixture" "$BRC_LAB_DIR/mc-$scenario.json" "$BRC_LAB_DIR/mc-$scenario.zip" "$scenario"
+          done <<'SCENARIOS'
+          single single
+          shared shared
+          multiple multiple
+          sanitized_equal sanitized_equal
+          multi_entry_files multi_entry_files
+          custom_folder_mixed custom_folder_mixed
+          host_folder_collision host_folder_collision
+          default_equal_entries default_equal_entries
+          default_equal_within_entry default_equal_within_entry
+          entry_folder_equal_entries entry_folder_equal_entries
+          entry_folder_equal_within_entry entry_folder_equal_within_entry
+          shared_sanitized_upload_collision shared_sanitized_upload_collision
+          entry_folder_mixed_multi entry_folder_mixed_multi
+          mc_duplicate_physical mc_duplicate_physical
+          mc_deleted_exclusion mc_deleted_exclusion
+          mc_late_filter shared
+          SCENARIOS
+          # No post-hook source registry exists. A same-byte destructive
+          # overwrite can be invisible even to complete count/hash checks.
+          BRC_SCENARIO=shared BRC_MC_SCENARIO=mc_hook_same_bytes \
+            php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+            eval-file tests/experimental-method-c/run-case.php > "$BRC_LAB_DIR/mc-mc_hook_same_bytes.zip"
+          python3 tests/experimental-method-c/assert-case.py "$BRC_LAB_DIR/manifest.json" \
+            shared "$BRC_LAB_DIR/mc-mc_hook_same_bytes.json" \
+            "$BRC_LAB_DIR/mc-mc_hook_same_bytes.zip" mc_hook_same_bytes
+
+      - name: Exercise visible fail-closed boundaries and temporary cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Truly unreadable synthetic source (restore mode before source immutability check).
+          php -r '$m=json_decode(file_get_contents($argv[1]),true);chmod($m["unreadable_fixture"]["path"],0000);' "$BRC_LAB_DIR/manifest.json"
+          while read -r experiment fixture error injection; do
+            test -n "$experiment"
+            rm -f "$BRC_LAB_DIR/mc-temp-path.txt"
+            rc=0
+            BRC_SCENARIO="$fixture" BRC_MC_SCENARIO="$experiment" \
+              BRC_MC_FAIL_ADD="$([ "$injection" = add ] && echo 1 || echo 0)" \
+              BRC_MC_FAIL_CLOSE="$([ "$injection" = close ] && echo 1 || echo 0)" \
+              php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+              eval-file tests/experimental-method-c/run-case.php \
+              > "$BRC_LAB_DIR/mc-fail-$experiment.out" 2>"$BRC_LAB_DIR/mc-fail-$experiment.err" || rc=$?
+            if grep -aq 'PK' "$BRC_LAB_DIR/mc-fail-$experiment.out"; then
+              # Check actual ZIP signature (error HTML may contain other text).
+              python3 -c 'from pathlib import Path;import sys;assert not Path(sys.argv[1]).read_bytes().startswith(b"PK\x03\x04")' \
+                "$BRC_LAB_DIR/mc-fail-$experiment.out"
+            fi
+            if ! grep -aq "$error" "$BRC_LAB_DIR/mc-fail-$experiment.out" "$BRC_LAB_DIR/mc-fail-$experiment.err"; then
+              echo "FAIL: expected visible error absent: $experiment $error exit=$rc" >&2
+              cat "$BRC_LAB_DIR/mc-fail-$experiment.err" >&2
+              exit 1
+            fi
+            if test -s "$BRC_LAB_DIR/mc-temp-path.txt"; then
+              temp="$(cat "$BRC_LAB_DIR/mc-temp-path.txt")"
+              if test -e "$temp"; then
+                echo "FAIL: temporary ZIP leaked: $experiment" >&2
+                exit 1
+              fi
+            fi
+            echo "PASS_FAILURE_NO_ZIP_AND_CLEANUP $experiment rc=$rc error=$error"
+          done <<'FAILURES'
+          mc_hook_extra shared METHOD_C_POST_HOOK_UNREGISTERED_OR_MISSING_MEMBER none
+          mc_hook_overwrite shared METHOD_C_POST_HOOK_HASH_OR_SOURCE_MISMATCH none
+          mc_hook_unregistered shared METHOD_C_POST_HOOK_UNREGISTERED_OR_MISSING_MEMBER none
+          mc_missing_source mc_missing_source METHOD_C_SOURCE_UNAVAILABLE none
+          mc_invalid_source mc_invalid_source METHOD_C_SOURCE_UNAVAILABLE none
+          mc_unreadable_source mc_unreadable_source METHOD_C_SOURCE_UNAVAILABLE none
+          mc_fail_add single METHOD_C_INJECTED_ADD_FAILURE add
+          mc_fail_close single METHOD_C_INJECTED_CLOSE_FAILURE close
+          FAILURES
+          php -r '$m=json_decode(file_get_contents($argv[1]),true);chmod($m["unreadable_fixture"]["path"],0644);' "$BRC_LAB_DIR/manifest.json"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval '
+            $m=json_decode(file_get_contents(getenv("BRC_LAB_DIR")."/manifest.json"),true);
+            $s=$m["scenarios"]["mc_deleted_exclusion"];
+            if (gform_get_meta($s["entry_ids"][0],"bdfgf_deleted_file_urls") !== $s["deleted_urls"]) {
+              throw new Exception("Deleted eligibility metadata mutated");
+            }
+            foreach ($s["excluded_uploads"] as $u) {
+              if (hash_file("sha256",$u["path"]) !== $u["sha256"]) {
+                throw new Exception("Excluded original upload mutated");
+              }
+            }
+            echo "Deleted originals and deletion metadata preserved\n";
+          '
+
       - name: Summarize qualification evidence
         if: always()
         shell: bash
