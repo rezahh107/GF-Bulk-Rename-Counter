@@ -70,10 +70,14 @@ $put('sf_casefold', [
 // 64 KiB each; verify integrity using streaming digests.
 $bulk = [];
 for ($i = 0; $i < 50; $i++) {
-    $bytes = str_repeat(chr(65 + $i % 26), 65536) . ':' . $i;
-    $u = wp_upload_bits(sprintf('sf-perf-%03d.bin', $i), null, $bytes);
-    if (!empty($u['error']) || !is_file($u['file'])) {
-        throw new RuntimeException('SF_PERF_UPLOAD_FAILED');
+    $bytes = '';
+    for ($block = 0; $block < 2048; $block++) {
+        $bytes .= hash('sha256', $i . ':' . $block, true);
+    }
+    // Use a WP-allowed upload extension; this fixture tests ZIP bytes, not image decoding.
+    $u = wp_upload_bits(sprintf('sf-perf-%03d.jpg', $i), null, $bytes);
+    if (!empty($u['error']) || empty($u['file']) || !is_file($u['file'])) {
+        throw new RuntimeException('SF_PERF_UPLOAD_FAILED i=' . $i . ' reason=' . ($u['error'] ?? 'no path'));
     }
     $bulk[] = [
         'url' => $u['url'], 'path' => $u['file'],
