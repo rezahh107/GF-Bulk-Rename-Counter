@@ -277,6 +277,8 @@ jobs:
           fi
           php -l tests/experimental-independent/faults.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/faults.php
+          php -l tests/experimental-independent/verify-sources.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/verify-sources.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Original native GFBRC and Bulk Download integration tests ran before isolated mu-plugin.'
           echo 'Independent experiment has no production plugin PHP modification.'
