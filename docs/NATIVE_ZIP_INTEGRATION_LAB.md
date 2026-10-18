@@ -89,8 +89,11 @@ Its installed `lib/Actions/BulkDownload.php` file is checked for existence,
 its SHA-256 is logged, and a fresh WP-CLI bootstrap reflects the actual loaded
 `BDFGF\\Actions\\BulkDownload` class. The upstream
 [4.2.0 source-reference implementation](https://github.com/VCATconsulting/bulk-download-for-gravity-forms/blob/7cfc67ac0728ecbfb4c12cf812f9a0f70230ec79/lib/Actions/BulkDownload.php)
-was inspected separately; **upstream commit identity is not substituted for
-the pinned distributed ZIP**.
+was inspected separately. The native CI additionally requires the **installed
+action file bytes** to have the upstream Git blob identity
+`77df109a1ad6d74c019f37bd419d178cae64d9e5`; it fails closed if the
+distribution and examined source differ. **Upstream commit identity is not
+substituted for the pinned distributed ZIP**.
 
 In the examined host code, each file starts as
 `{entry-id}/{sanitized-basename}`. With per-form
