@@ -17,10 +17,6 @@ def require(ok, message):
         raise AssertionError("SF_NEGATIVE_PROOF_INVALID: " + message)
 
 
-def marker(folder, prefix, name, suffix):
-    return folder / f"{prefix}-{name}.{suffix}"
-
-
 def read_json_if_exists(path):
     return json.loads(path.read_text()) if path.exists() else None
 
@@ -149,12 +145,22 @@ def main():
 
     # The host's get_uploaded_files() can silently drop an unresolved URL
     # before any filename filter is called.
-    missing = lab / "sf-missing.out"
-    require(missing.exists() and b"No files found" in missing.read_bytes(),
-            "missing upload collector behavior not reproduced")
-    require(not (lab / "sf-sf_missing_source.json").exists(),
-            "unexpected journal for a source never reaching the filename filter")
-    print("NOT_PROVEN_COLLECTOR_COMPLETENESS: an unresolved referenced URL never reaches the staging hook")
+    scenario = "sf_missing_source"
+    source = manifest["scenarios"][scenario]
+    stored_values = next(iter(source["entry_values"].values()))
+    require(stored_values["1"] and not source["uploads"],
+            "missing-source fixture must retain an unresolved GF URL but no accessible file")
+    response = lab / "sf-missing.out"
+    failure = lab / f"sf-{scenario}.exit"
+    require(response.exists() and failure.exists(),
+            "native missing-source request and exit status not recorded")
+    require(int(failure.read_text().strip()) != 0 and not zipfile.is_zipfile(response),
+            "host must reject the all-unresolved case without returning a ZIP")
+    require(not (lab / f"sf-{scenario}.json").exists(),
+            "unavailable source unexpectedly reached the staging hook")
+    require(not (lab / f"sf-flatten-start-{scenario}.json").exists(),
+            "all-missing case unexpectedly reached the final flatten hook")
+    print("NOT_PROVEN_COLLECTOR_COMPLETENESS: unresolved GF URL never reaches the public filename/finalizer hooks")
 
 
 if __name__ == "__main__":
