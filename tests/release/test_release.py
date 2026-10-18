@@ -1,9 +1,12 @@
 """Release contract: positive packaging and meaningful fail-closed mutation controls."""
 import importlib.util
 import json
+import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -41,6 +44,53 @@ class ReleaseContract(unittest.TestCase):
         manifest = core.build(self.root, self.out, self.identity["commit"])
         z, c, m = core.artifact_names(self.version)
         return manifest, self.out / z, self.out / c, self.out / m
+
+    @unittest.skipIf(os.environ.get("BRC_VERSION_REGRESSION_CHILD") == "1",
+                     "avoid recursion inside version-bumped isolated suite")
+    def test_complete_suite_against_clean_bumped_source(self):
+        # A distinct clean Git checkout, not a mutation of the Owner's source.
+        major, minor, patch = map(int, self.version.split("."))
+        bumped = f"{major}.{minor}.{patch + 1}"
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = Path(temporary)
+            for relative in (*core.FILES, ".gitignore", "scripts/release/release.py",
+                             "tests/release/test_release.py"):
+                target = fixture / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(HERE / relative, target)
+            php_path = fixture / core.FILES[0]
+            php = php_path.read_text(encoding="utf-8")
+            php, header_count = re.subn(
+                r"(?m)^(\\s*\\*\\s*Version:\\s*)" + re.escape(self.version) + r"(\\s*)$",
+                lambda match: match[1] + bumped + match[2], php,
+            )
+            before = f"'GFBULKRENAME_VERSION', '{self.version}'"
+            after = f"'GFBULKRENAME_VERSION', '{bumped}'"
+            self.assertEqual((header_count, php.count(before)), (1, 1))
+            php_path.write_text(php.replace(before, after, 1), encoding="utf-8")
+            readme_path = fixture / "readme.txt"
+            readme = readme_path.read_text(encoding="utf-8")
+            before = f"Stable tag: {self.version}"
+            self.assertEqual(readme.count(before), 1)
+            readme_path.write_text(readme.replace(before, f"Stable tag: {bumped}", 1),
+                                   encoding="utf-8")
+            git(fixture, "init", "-q")
+            git(fixture, "add", ".")
+            git(fixture, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                "commit", "-qm", "independent clean version-bumped candidate")
+            self.assertEqual(core.version(fixture), bumped)
+            env = os.environ.copy()
+            env["BRC_VERSION_REGRESSION_CHILD"] = "1"
+            env["PYTHONDONTWRITEBYTECODE"] = "1"
+            result = subprocess.run(
+                [sys.executable, "-m", "unittest", "discover",
+                 "-s", "tests/release", "-p", "test_*.py", "-v"],
+                cwd=fixture, env=env, capture_output=True, text=True,
+                check=False, timeout=60,
+            )
+            self.assertEqual(result.returncode, 0,
+                             "The required release suite failed on a genuine "
+                             f"{bumped} source fixture:\n{result.stdout}\n{result.stderr}")
 
     def test_first_release_and_version_intents(self):
         self.assertEqual(self.version, core.release_version(self.root, "first", []))
