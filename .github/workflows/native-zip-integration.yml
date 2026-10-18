@@ -305,9 +305,8 @@ jobs:
           # Last filter can defeat unique staging BEFORE native addFile(); fail
           # visibly rather than misreporting a two-source ZIP as complete.
           for spec in \
-            'sf_post_stage_filename shared SF_' \
             'sf_hook_early_extra shared SF_PRE_FLATTEN_MEMBER_COUNT_MISMATCH' \
-            'sf_fail_rename single SF_INJECTED_RENAME_FAILURE'; do
+            'sf_fail_rename shared SF_RENAME_INDEX_FAILED_OCCUPIED'; do
             read -r scenario fixture error <<< "$spec"
             rc=0
             TMPDIR="$BRC_LAB_DIR/sf-tmp" BRC_SCENARIO="$fixture" BRC_SF_SCENARIO="$scenario" \
@@ -327,6 +326,29 @@ jobs:
             fi
             echo "PASS_VISIBLE_FAILURE_NO_ZIP scenario=$scenario rc=$rc"
           done
+          # A higher-priority filename filter executes *after* the staging
+          # filter but before the native writer. Capture actual host members
+          # before the flatten callback. Never classify prehook overwrite as PASS.
+          rc=0
+          BRC_SCENARIO=shared BRC_SF_SCENARIO=sf_post_stage_filename \
+            php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+            eval-file tests/experimental-staged-flatten/run-case.php \
+            > "$BRC_LAB_DIR/sf-post-stage.out" 2> "$BRC_LAB_DIR/sf-post-stage.err" || rc=$?
+          python3 - "$BRC_LAB_DIR/sf-post-stage-paths.txt" \
+            "$BRC_LAB_DIR/sf-post-stage-before.json" "$BRC_LAB_DIR/sf-post-stage.out" <<'PY'
+          import json, sys
+          from pathlib import Path
+          changes = Path(sys.argv[1]).read_text().splitlines()
+          before = json.loads(Path(sys.argv[2]).read_text())
+          output = Path(sys.argv[3]).read_bytes()
+          assert len(changes) == 2 and all(" -> collapsed.jpg" in x for x in changes), changes
+          assert before["count"] == 1 and before["names"] == ["collapsed.jpg"], before
+          assert not output.startswith(bytes.fromhex("504b0304")), "A ZIP was delivered after prehook overwrite!"
+          print("FALSIFIED_UNBOUNDED_STAGING: 2 source occurrences collapsed to 1 BEFORE final callback")
+          PY
+          echo "post-stage-hook rc=$rc"
+          # This failure is a real public-hook contract limitation, not a
+          # successful full-provenance outcome.
           # Post-flatten additions/overwrites and early same-count mutations
           # can escape the adapter; independent closed-ZIP checks MUST reject.
           for scenario in sf_hook_early_overwrite sf_hook_late_extra sf_hook_late_overwrite; do
