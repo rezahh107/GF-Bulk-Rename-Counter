@@ -55,6 +55,26 @@ $cases = [
         [ 'counter' => '125', 'single' => [ 'collision-a.jpg' ] ],
         [ 'counter' => '0', 'single' => [ 'd125.jpg' ] ],
     ],
+    'sanitized_equal' => [
+        [ 'counter' => 'A?B', 'single' => [ 'sanitized-a.jpg' ] ],
+        [ 'counter' => 'AB', 'single' => [ 'sanitized-b.jpg' ] ],
+    ],
+    'multi_entry_files' => [
+        [ 'counter' => '125', 'single' => [ 'many-a.jpg' ], 'multi' => [ 'many-b.jpg', 'many-c.jpg' ] ],
+        [ 'counter' => '125', 'single' => [ 'many-d.jpg' ], 'multi' => [ 'many-e.jpg' ] ],
+    ],
+    'custom_folder_mixed' => [
+        [ 'counter' => '125', 'single' => [ 'folder-renamed.jpg' ] ],
+        [ 'counter' => '0', 'single' => [ 'folder-original.jpg' ] ],
+    ],
+    // Same basename in two *real* WP upload month directories; no test-only filter.
+    // Both entries are unrenamed and use one host-supported custom static folder.
+    'host_folder_collision' => [
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/01' ] ] ],
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/02' ] ] ],
+    ],
+    'independent_form_a' => [ [ 'counter' => '125', 'single' => [ 'form-a.jpg' ] ] ],
+    'independent_form_b' => [ [ 'counter' => '125', 'single' => [ 'form-b.jpg' ] ] ],
 ];
 $manifest = [ 'schema' => '1', 'scenarios' => [] ];
 foreach ( $cases as $name => $definitions ) {
@@ -67,9 +87,23 @@ foreach ( $cases as $name => $definitions ) {
         ],
         'button' => [ 'type' => 'text', 'text' => 'Submit' ],
     ];
+    if ( in_array( $name, [ 'custom_folder_mixed', 'host_folder_collision' ], true ) ) {
+        $form['bulkDownloadSettings'] = [
+            'customFoldername' => true,
+            'downloadFoldername' => 'shared',
+        ];
+    }
     $form_id = GFAPI::add_form( $form );
     if ( is_wp_error( $form_id ) ) {
         throw new RuntimeException( $form_id->get_error_message() );
+    }
+    $persisted_form = GFAPI::get_form( $form_id );
+    if ( is_wp_error( $persisted_form ) || ! is_array( $persisted_form ) ) {
+        throw new RuntimeException( 'Created native GF form unavailable.' );
+    }
+    if ( isset( $form['bulkDownloadSettings'] ) &&
+        ( $persisted_form['bulkDownloadSettings'] ?? null ) !== $form['bulkDownloadSettings'] ) {
+        throw new RuntimeException( 'Native GF form did not preserve host folder configuration.' );
     }
     $data = [ 'form_id' => (int) $form_id, 'entry_ids' => [], 'entry_values' => [], 'uploads' => [], 'expected' => [] ];
     $ordered = [];
@@ -78,11 +112,16 @@ foreach ( $cases as $name => $definitions ) {
         $sources = [];
         foreach ( [ 'single' => '1', 'multi' => '2' ] as $kind => $field_id ) {
             $urls = [];
-            foreach ( $definition[ $kind ] ?? [] as $filename ) {
-                $bytes = 'brc-fixture|' . $name . '|' . $kind . '|' . $filename . '|END';
-                $uploaded = wp_upload_bits( $filename, null, $bytes );
+            foreach ( $definition[ $kind ] ?? [] as $file_spec ) {
+                $filename = is_array( $file_spec ) ? $file_spec['name'] : $file_spec;
+                $upload_time = is_array( $file_spec ) ? $file_spec['time'] : null;
+                $bytes = 'brc-fixture|' . $name . '|' . $kind . '|' . $filename . '|' . ( $upload_time ?? 'default' ) . '|END';
+                $uploaded = wp_upload_bits( $filename, null, $bytes, $upload_time );
                 if ( ! empty( $uploaded['error'] ) || ! is_file( $uploaded['file'] ) ) {
                     throw new RuntimeException( 'wp_upload_bits failed: ' . ( $uploaded['error'] ?? 'missing file' ) );
+                }
+                if ( $upload_time !== null && wp_basename( $uploaded['file'] ) !== $filename ) {
+                    throw new RuntimeException( 'WordPress changed collision fixture basename; cannot qualify native folder collision.' );
                 }
                 $urls[] = $uploaded['url'];
                 $sources[] = [
@@ -130,10 +169,32 @@ foreach ( $cases as $name => $definitions ) {
         $data['expected']['d125.jpg'] = $first['sources'][0]['sha256'];
         $data['expected']['d125-' . $id . '.jpg'] = $first['sources'][1]['sha256'];
         $data['expected']['d125-' . $id . '-1.jpg'] = $first['sources'][2]['sha256'];
-    } else {
+    } elseif ( $name === 'collision_attempt' ) {
         $second = $ordered[1];
         $data['expected']['d125.jpg'] = $first['sources'][0]['sha256'];
         $data['expected'][ $second['entry_id'] . '/d125.jpg' ] = $second['sources'][0]['sha256'];
+    } elseif ( $name === 'sanitized_equal' ) {
+        $second = $ordered[1];
+        $data['expected']['dAB.jpg'] = $first['sources'][0]['sha256'];
+        $data['expected']['dAB-' . $second['entry_id'] . '.jpg'] = $second['sources'][0]['sha256'];
+    } elseif ( $name === 'multi_entry_files' ) {
+        $second = $ordered[1];
+        $data['expected']['d125.jpg'] = $first['sources'][0]['sha256'];
+        $data['expected']['d125-' . $first['entry_id'] . '.jpg'] = $first['sources'][1]['sha256'];
+        $data['expected']['d125-' . $first['entry_id'] . '-1.jpg'] = $first['sources'][2]['sha256'];
+        $data['expected']['d125-' . $second['entry_id'] . '.jpg'] = $second['sources'][0]['sha256'];
+        $data['expected']['d125-' . $second['entry_id'] . '-1.jpg'] = $second['sources'][1]['sha256'];
+    } elseif ( $name === 'custom_folder_mixed' ) {
+        $second = $ordered[1];
+        $data['expected']['d125.jpg'] = $first['sources'][0]['sha256'];
+        $data['expected']['shared/folder-original.jpg'] = $second['sources'][0]['sha256'];
+    } elseif ( $name === 'host_folder_collision' ) {
+        // No approved collision naming policy. Require conservation of BOTH source
+        // payloads; never bless a one-member overwritten ZIP as an expected output.
+        $data['diagnostic_collision'] = true;
+        $data['expected_path_prefix'] = 'shared/';
+    } else {
+        $data['expected']['d125.jpg'] = $first['sources'][0]['sha256'];
     }
     $manifest['scenarios'][ $name ] = $data;
 }
