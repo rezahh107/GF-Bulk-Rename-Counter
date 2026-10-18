@@ -275,6 +275,8 @@ jobs:
             python3 -c 'from pathlib import Path; p=Path("/tmp/brc-lab/one.body"); b=p.read_text(errors="replace"); a=b.lower().find("<body"); print("Body error:",b[a:a+900] if a>=0 else b[-1200:])' >&2 || true
             exit 1
           fi
+          php -l tests/experimental-independent/faults.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/faults.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Original native GFBRC and Bulk Download integration tests ran before isolated mu-plugin.'
           echo 'Independent experiment has no production plugin PHP modification.'
