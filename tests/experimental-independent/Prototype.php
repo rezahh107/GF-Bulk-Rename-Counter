@@ -276,6 +276,15 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
     }
 
     public static function download(): void {
+        if (getenv('BRC_LAB_DIR')) {
+            error_log('IFZ_HTTP_DIAGNOSTIC ' . wp_json_encode([
+                'method' => $_SERVER['REQUEST_METHOD'] ?? '', 'user_id' => get_current_user_id(),
+                'gf_authorized' => (int) \GFCommon::current_user_can_any('gravityforms_view_entries'),
+                'keys' => array_keys($_POST),
+                'entry_ids_type' => gettype($_POST['entry_ids'] ?? null),
+                'entry_ids_count' => is_array($_POST['entry_ids'] ?? null) ? count($_POST['entry_ids']) : 0,
+            ]));
+        }
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') { self::fail('POST required', 405); }
         if (!\GFCommon::current_user_can_any('gravityforms_view_entries')) { self::fail('Not authorized', 403); }
         $form_id = isset($_POST['form_id']) && is_scalar($_POST['form_id']) ? absint($_POST['form_id']) : 0;
