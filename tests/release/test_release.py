@@ -61,7 +61,7 @@ class ReleaseContract(unittest.TestCase):
             php_path = fixture / core.FILES[0]
             php = php_path.read_text(encoding="utf-8")
             php, header_count = re.subn(
-                r"(?m)^(\\s*\\*\\s*Version:\\s*)" + re.escape(self.version) + r"(\\s*)$",
+                r"(?m)^(\s*\*\s*Version:\s*)" + re.escape(self.version) + r"(\s*)$",
                 lambda match: match[1] + bumped + match[2], php,
             )
             before = f"'GFBULKRENAME_VERSION', '{self.version}'"
