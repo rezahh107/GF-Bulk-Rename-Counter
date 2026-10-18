@@ -62,6 +62,13 @@ jobs:
           coverage: none
           extensions: mysqli, zip
 
+      - name: Probe native ZipArchive renameIndex before WordPress fixture execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/experimental-staged-flatten/probe-zip.php
+          php tests/experimental-staged-flatten/probe-zip.php | tee /tmp/staged-flatten-probe.json
+
       - name: Run existing canonical source verification
         run: |
           set -euo pipefail
