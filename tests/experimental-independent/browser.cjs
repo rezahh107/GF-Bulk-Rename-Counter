@@ -69,6 +69,38 @@ const {chromium} = require('playwright-core');
     }));
     console.log('PASS_REAL_CHROMIUM_GF_ENTRY_LIST_DOWNLOAD selected='+id+
       ' zip_bytes='+bytes.length+' visible_rows='+visible);
+    // Select TWO known valid entries on the actual visible page and verify
+    // both IDs survive the native checkbox -> dedicated POST boundary.
+    await page.goto(base + '/wp-admin/admin.php?page=gf_entries&id=' + formId,
+      {waitUntil:'domcontentloaded', timeout:25000});
+    const twoIds = [
+      String(meta.cases.larger_workload.entry_ids[0]),
+      String(meta.cases.previously_deleted.entry_ids[0])
+    ];
+    if (twoIds[0] === twoIds[1]) throw Error('Two-row fixture IDs must be distinct');
+    for (const id2 of twoIds) {
+      // Match the real GF row by its exact, already-persisted Entry ID.
+      const match = page.locator('input[type="checkbox"][name="entry[]"][value="' + id2 + '"]');
+      if (await match.count() !== 1) throw Error('Expected valid Entry not visible in actual GF list: '+id2);
+      await match.check();
+    }
+    await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
+    const [downloadTwo] = await Promise.all([
+      page.waitForEvent('download',{timeout:25000}),
+      page.locator('#doaction').click(),
+    ]);
+    const savedTwo = path.join(lab,'browser-two.zip');
+    await downloadTwo.saveAs(savedTwo);
+    const bTwo = fs.readFileSync(savedTwo);
+    if (!downloadTwo.suggestedFilename().endsWith('.zip') ||
+        bTwo.length < 30 || bTwo[0] !== 0x50 || bTwo[1] !== 0x4b) {
+      throw Error('Browser did not receive valid two-entry ZIP');
+    }
+    fs.writeFileSync(path.join(lab,'browser-two-selected.json'), JSON.stringify({
+      selected_ids:twoIds, form_id:formId, browser_zip_bytes:bTwo.length
+    }));
+    console.log('PASS_REAL_CHROMIUM_TWO_ENTRY_DOWNLOAD ids='+twoIds.join(',')+
+      ' zip_bytes='+bTwo.length);
     await context.close();
   } finally {await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1);});
