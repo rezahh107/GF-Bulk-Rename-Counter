@@ -326,6 +326,15 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
             $plan = self::plan($form_id, array_values($ids));
             $temp = self::write_verified_zip($plan);
             $size = filesize($temp);
+            if (count($plan) >= 24 && getenv('BRC_LAB_DIR')) {
+                $usage = function_exists('getrusage') ? getrusage() : [];
+                error_log('IFZ_RESOURCE_LAB ' . wp_json_encode([
+                    'members' => count($plan),
+                    'zip_temp_bytes' => $size,
+                    'php_peak_allocated_bytes' => memory_get_peak_usage(true),
+                    'process_max_rss_kib_linux' => $usage['ru_maxrss'] ?? null,
+                ]));
+            }
             if ($size === false || $size <= 0 || headers_sent()) {
                 throw new RuntimeException('Validated ZIP response unavailable');
             }
