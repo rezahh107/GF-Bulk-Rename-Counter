@@ -244,6 +244,23 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
             if (getenv('BRC_IFZ_CORRUPT') === '1') {
                 file_put_contents($temp, 'corrupt', LOCK_EX);
             }
+            // Bounded fault injection against the REAL CLOSED archive, before
+            // production-equivalent pre-response verification. TEST-ONLY.
+            $mutation = getenv('BRC_IFZ_MUTATE_CLOSED');
+            if (in_array($mutation, ['missing', 'extra', 'overwrite'], true)) {
+                $alter = new ZipArchive();
+                if ($alter->open($temp) !== true) { throw new RuntimeException('Mutation setup failed'); }
+                if ($mutation === 'missing' && !$alter->deleteName($plan[0]['name'])) {
+                    throw new RuntimeException('Missing-member injection failed');
+                }
+                if ($mutation === 'extra' && !$alter->addFromString('unregistered.txt', 'extra')) {
+                    throw new RuntimeException('Extra-member injection failed');
+                }
+                if ($mutation === 'overwrite' && !$alter->addFromString($plan[0]['name'], 'wrong bytes')) {
+                    throw new RuntimeException('Overwrite injection failed');
+                }
+                if (!$alter->close()) { throw new RuntimeException('Mutation finalize failed'); }
+            }
             $read = new ZipArchive();
             if ($read->open($temp) !== true) { throw new RuntimeException('Closed ZIP unreadable'); }
             try {
@@ -313,14 +330,16 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
             if ($size === false || $size <= 0 || headers_sent()) {
                 throw new RuntimeException('Validated ZIP response unavailable');
             }
+            // Open before emitting headers; preparation failures must yield an
+            // ordinary error page, not a promised but missing attachment.
+            $f = fopen($temp, 'rb');
+            if (!$f) { throw new RuntimeException('Cannot open ZIP for delivery'); }
             while (ob_get_level()) { ob_end_clean(); }
             nocache_headers();
             header('Cache-Control: private, no-store, max-age=0');
             header('Content-Type: application/zip');
             header('Content-Disposition: attachment; filename="gfbrc-flat-' . $form_id . '.zip"');
             header('Content-Length: ' . $size);
-            $f = fopen($temp, 'rb');
-            if (!$f) { throw new RuntimeException('Cannot open ZIP for delivery'); }
             while (!feof($f)) {
                 $bytes = fread($f, 65536);
                 if ($bytes === false) { fclose($f); throw new RuntimeException('ZIP response read failed'); }
@@ -329,6 +348,8 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
             fclose($f);
         } catch (Throwable $e) {
             if (!$temp || !headers_sent()) {
+                // wp_die() exits the process, so clean up BEFORE invoking it.
+                if ($temp && is_file($temp)) { @unlink($temp); }
                 self::fail('Cannot prepare flat ZIP: ' . $e->getMessage(), 422);
             }
             error_log('GFBRC experimental stream error: ' . $e->getMessage());
