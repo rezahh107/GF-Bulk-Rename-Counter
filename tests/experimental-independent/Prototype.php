@@ -28,7 +28,6 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
         if (!$form_id) { return; }
         $config = [
             'action' => self::ACTION,
-            'endpoint' => admin_url('admin-post.php'),
             'postAction' => self::ENDPOINT,
             'formId' => $form_id,
             'nonce' => wp_create_nonce('gfbrc_independent_flat_zip_' . $form_id),
@@ -64,7 +63,7 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
     if (!ids.length) { window.alert('Select at least one entry.'); return; }
     var form = document.createElement('form');
     form.method = 'POST';
-    form.action = config.endpoint;
+    form.action = new URL('admin-post.php', window.location.href).href;
     function hidden(name, value) {
       var input = document.createElement('input');
       input.type = 'hidden'; input.name = name; input.value = value; form.appendChild(input);
