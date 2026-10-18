@@ -305,9 +305,11 @@ jobs:
           mkdir -p "$BRC_LAB_DIR/sf-tmp"
           for scenario in sf_hook_early_extra sf_fail_rename sf_post_stage_filename \
                           sf_hook_early_overwrite sf_hook_late_extra \
-                          sf_hook_late_overwrite sf_hook_late_same_bytes sf_missing_source; do
+                          sf_hook_late_overwrite sf_hook_late_same_bytes \
+                          sf_missing_source sf_mixed_missing; do
             fixture=shared
             test "$scenario" = sf_missing_source && fixture=sf_missing_source
+            test "$scenario" = sf_mixed_missing && fixture=sf_mixed_missing
             outfile="$BRC_LAB_DIR/sf-$scenario.zip"
             test "$scenario" = sf_fail_rename && outfile="$BRC_LAB_DIR/sf-failure-$scenario.out"
             test "$scenario" = sf_hook_early_extra && outfile="$BRC_LAB_DIR/sf-failure-$scenario.out"
