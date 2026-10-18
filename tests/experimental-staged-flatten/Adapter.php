@@ -47,6 +47,16 @@ final class GFBRC_Staged_Flatten_Experiment {
     }
 
     public function flatten($zip, $uploaded_files, $form): void {
+        $lab = getenv('BRC_LAB_DIR');
+        if ($lab && preg_match('/^[a-z0-9_]+$/D', $this->scenario)) {
+            file_put_contents($lab . '/sf-flatten-start-' . $this->scenario . '.json',
+                json_encode(['zip' => $zip instanceof ZipArchive,
+                    'count' => $zip instanceof ZipArchive ? $zip->numFiles : null,
+                    'plan_count' => count($this->plan)]));
+            if ($zip instanceof ZipArchive && $zip->filename) {
+                file_put_contents($lab . '/sf-temp-path-' . $this->scenario . '.txt', $zip->filename);
+            }
+        }
         if (!$zip instanceof ZipArchive) {
             throw new RuntimeException('SF_NOT_NATIVE_ZIP');
         }
@@ -183,6 +193,9 @@ final class GFBRC_Staged_Flatten_Experiment {
         }
         if (array_diff(array_column($this->plan, 'member'), array_keys($names))) {
             throw new RuntimeException('SF_POST_FLATTEN_MEMBER_MISSING');
+        }
+        if ($lab && preg_match('/^[a-z0-9_]+$/D', $this->scenario)) {
+            file_put_contents($lab . '/sf-flatten-success-' . $this->scenario . '.txt', 'done');
         }
     }
 }
