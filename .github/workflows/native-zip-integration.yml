@@ -271,7 +271,11 @@ jobs:
             if curl -fsS http://127.0.0.1:8081/wp-login.php -o /dev/null; then break; fi
             sleep 1
           done
-          python3 tests/experimental-independent/verify-http.py "$BRC_LAB_DIR"
+          if ! python3 tests/experimental-independent/verify-http.py "$BRC_LAB_DIR"; then
+            echo "Independent HTTP request failed; redacted server diagnostics:" >&2
+            grep -E "IFZ_HTTP_DIAGNOSTIC|PHP Fatal|Uncaught|\[.*\]: [0-9]+ \[" "$BRC_LAB_DIR/independent-server.log" | tail -n 50 >&2 || true
+            exit 1
+          fi
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Original native GFBRC and Bulk Download integration tests ran before isolated mu-plugin.'
           echo 'Independent experiment has no production plugin PHP modification.'
