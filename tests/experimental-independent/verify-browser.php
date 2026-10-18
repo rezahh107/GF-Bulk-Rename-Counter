@@ -2,12 +2,13 @@
 /** Read a ZIP saved by real Chromium and compare to selected GF source bytes. */
 if (!defined('ABSPATH') || !class_exists('GFAPI')) { throw new RuntimeException('Real WP/GF unavailable'); }
 $root = getenv('BRC_LAB_DIR');
-$meta = json_decode(file_get_contents($root . '/browser-selected.json'), true, 512, JSON_THROW_ON_ERROR);
-$entry = (int)$meta['selected_id'];
+foreach ([['browser-selected.json','browser-one.zip'], ['browser-two-selected.json','browser-two.zip']] as [$meta_file, $zip_file]) {
+$meta = json_decode(file_get_contents($root . '/' . $meta_file), true, 512, JSON_THROW_ON_ERROR);
+$ids = isset($meta['selected_ids']) ? array_map('intval', $meta['selected_ids']) : [(int)$meta['selected_id']];
 $form_id = (int)$meta['form_id'];
-$plan = GFBRC_Independent_Flat_Zip_Experiment::plan($form_id, [$entry]);
+$plan = GFBRC_Independent_Flat_Zip_Experiment::plan($form_id, $ids);
 $zip = new ZipArchive();
-if ($zip->open($root . '/browser-one.zip') !== true) { throw new RuntimeException('Browser ZIP invalid'); }
+if ($zip->open($root . '/' . $zip_file) !== true) { throw new RuntimeException('Browser ZIP invalid'); }
 try {
     if ($zip->numFiles !== count($plan)) { throw new RuntimeException('Browser ZIP lost occurrences'); }
     $observed = [];
@@ -33,6 +34,7 @@ try {
             throw new RuntimeException('Browser ZIP content differed from original GF source');
         }
     }
-    echo 'PASS_BROWSER_ZIP_SOURCE_OCCURRENCES entry=' . $entry .
+    echo 'PASS_BROWSER_ZIP_SOURCE_OCCURRENCES entry_ids=' . implode(',', $ids) .
         ' members=' . count($plan) . PHP_EOL;
 } finally { $zip->close(); }
+}
