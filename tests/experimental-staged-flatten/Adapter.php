@@ -83,9 +83,10 @@ final class GFBRC_Staged_Flatten_Experiment {
             }
             $indices[$index] = true;
         }
+        $stage_names = array_fill_keys(array_column($this->plan, 'stage'), true);
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
-            if (!is_string($name) || !in_array($name, array_column($this->plan, 'stage'), true)) {
+            if (!is_string($name) || !isset($stage_names[$name])) {
                 throw new RuntimeException('SF_UNREGISTERED_PRE_FLATTEN_MEMBER');
             }
         }
@@ -141,7 +142,25 @@ final class GFBRC_Staged_Flatten_Experiment {
                 throw new RuntimeException('SF_ROOT_ALREADY_OCCUPIED');
             }
             if (getenv('BRC_SF_INJECT_RENAME_FAILURE') === '1') {
-                throw new RuntimeException('SF_INJECTED_RENAME_FAILURE');
+                // Exercise a *real* libzip renameIndex(false), not a stand-in
+                // exception: target an occupied second staged ZIP member.
+                $occupied = false;
+                foreach ($this->plan as $other) {
+                    if ($other['stage'] !== $item['stage']) {
+                        $occupied = $zip->locateName($other['stage']);
+                        if ($occupied !== false) {
+                            break;
+                        }
+                    }
+                }
+                if ($occupied === false || $occupied === $index) {
+                    throw new RuntimeException('SF_INVALID_RENAME_FAILURE_FIXTURE');
+                }
+                $collision_name = $zip->getNameIndex($occupied);
+                if (@$zip->renameIndex($index, $collision_name) !== false) {
+                    throw new RuntimeException('SF_UNEXPECTED_OCCUPIED_RENAME_SUCCESS');
+                }
+                throw new RuntimeException('SF_RENAME_INDEX_FAILED_OCCUPIED');
             }
             if (!$zip->renameIndex($index, $item['member'])) {
                 throw new RuntimeException('SF_RENAME_INDEX_FAILED');
