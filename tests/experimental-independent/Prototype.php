@@ -16,14 +16,14 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
     }
 
     public static function add_action($actions, $form_id) {
-        if (!is_array($actions) || !current_user_can('gravityforms_view_entries')) { return $actions; }
+        if (!is_array($actions) || !\GFCommon::current_user_can_any('gravityforms_view_entries')) { return $actions; }
         $actions[self::ACTION] = 'Download Flat ZIP with Rename';
         return $actions;
     }
 
     public static function footer(): void {
         if (!isset($_GET['page']) || $_GET['page'] !== 'gf_entries' ||
-            !current_user_can('gravityforms_view_entries')) { return; }
+            !\GFCommon::current_user_can_any('gravityforms_view_entries')) { return; }
         $form_id = isset($_GET['id']) ? absint($_GET['id']) : 0;
         if (!$form_id) { return; }
         $config = [
@@ -277,7 +277,7 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
 
     public static function download(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') { self::fail('POST required', 405); }
-        if (!current_user_can('gravityforms_view_entries')) { self::fail('Not authorized', 403); }
+        if (!\GFCommon::current_user_can_any('gravityforms_view_entries')) { self::fail('Not authorized', 403); }
         $form_id = isset($_POST['form_id']) && is_scalar($_POST['form_id']) ? absint($_POST['form_id']) : 0;
         if (!$form_id || !isset($_POST['_wpnonce']) ||
             !is_string($_POST['_wpnonce']) ||
