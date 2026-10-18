@@ -293,6 +293,9 @@ jobs:
           BRC_CHROME="$chrome" node tests/experimental-independent/browser.cjs
           php -l tests/experimental-independent/verify-browser.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/verify-browser.php
+          # The HTTP process logs bounded resource measurements for the
+          # 24-file workload; no extra temporary ZIP copy is made.
+          grep 'IFZ_RESOURCE_LAB ' "$BRC_LAB_DIR/http-server.log" | tail -n 3
           php -l tests/experimental-independent/faults.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/faults.php
           php -l tests/experimental-independent/verify-sources.php
