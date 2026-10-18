@@ -16,7 +16,7 @@ if ($scenario === 'sf_late_filter') {
 if ($scenario === 'sf_post_stage_filename') {
     add_filter('bdfgf_entry_filename', static function($path) {
         file_put_contents(getenv('BRC_LAB_DIR') . '/sf-post-stage-paths.txt',
-            (string)$path . " -> collapsed.jpg\\n", FILE_APPEND);
+            (string)$path . " -> collapsed.jpg\n", FILE_APPEND);
         return 'collapsed.jpg';
     }, 1001, 3);
     add_action('bdfgf_after_uploaded_files', static function($zip) {
@@ -37,6 +37,9 @@ if (str_starts_with($scenario, 'sf_hook_')) {
     add_action('bdfgf_after_uploaded_files', static function($zip) use ($scenario) {
         $lab = getenv('BRC_LAB_DIR');
         $file = $lab . '/sf-' . $scenario . '.json';
+        file_put_contents($lab . '/sf-hook-start-' . $scenario . '.json',
+            json_encode(['initial_count' => $zip instanceof ZipArchive ? $zip->numFiles : null,
+                'priority' => current_filter()]));
         if (!$zip instanceof ZipArchive) {
             throw new RuntimeException('SF_HOOK_NOT_NATIVE_ZIP');
         }
@@ -66,7 +69,8 @@ if (str_starts_with($scenario, 'sf_hook_')) {
         if (!$result) {
             throw new RuntimeException('SF_THIRD_PARTY_INJECTION_FAILED');
         }
-        file_put_contents($lab . '/sf-hook-' . $scenario . '.txt', 'invoked');
+        file_put_contents($lab . '/sf-hook-' . $scenario . '.txt',
+            json_encode(['after_count' => $zip->numFiles, 'result' => $result]));
     }, $priority, 3);
 }
 require __DIR__ . '/../integration/download.php';
