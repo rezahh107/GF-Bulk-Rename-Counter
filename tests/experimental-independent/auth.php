@@ -12,7 +12,11 @@ foreach ($lines as $line) {
     $parts = preg_split('/\s+/', trim($line));
     if (count($parts) >= 7) { $_COOKIE[$parts[5]] = $parts[6]; }
 }
-$data['nonce'] = wp_create_nonce('gfbrc_independent_flat_zip_' . $data['cases']['one']['form_id']);
+$data['nonces'] = [];
+foreach ($data['cases'] as $case) {
+    $id = (int)$case['form_id'];
+    $data['nonces'][(string)$id] = wp_create_nonce('gfbrc_independent_flat_zip_' . $id);
+}
 $data['endpoint'] = rtrim(getenv('BRC_BASE_URL'), '/') . '/wp-admin/admin-post.php';
 file_put_contents($root . '/independent.json', wp_json_encode($data, JSON_PRETTY_PRINT));
 echo 'CI admin authenticated nonce bound to existing ephemeral HTTP session.' . PHP_EOL;
