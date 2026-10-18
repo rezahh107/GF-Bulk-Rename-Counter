@@ -109,6 +109,10 @@ jobs:
           unzip -q "$BULK_ZIP" -d "$BRC_WP_PATH/wp-content/plugins"
           host_source="$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDownload.php"
           test -s "$host_source"
+          # GitHub blob identity of the exact upstream 4.2.0 source examined.
+          # Fail closed if the installed WordPress.org distribution differs.
+          test "$(git hash-object "$host_source")" = "77df109a1ad6d74c019f37bd419d178cae64d9e5"
+          echo "Installed BulkDownload.php upstream Git blob: $(git hash-object "$host_source")" | tee -a "$BRC_LAB_DIR/reports/package-identities.txt"
           echo "Installed BulkDownload.php sha256: $(sha256sum "$host_source" | cut -d' ' -f1)" | tee -a "$BRC_LAB_DIR/reports/package-identities.txt"
 
       - name: Build real installable target ZIP and assert its source binding
