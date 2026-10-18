@@ -127,5 +127,11 @@ args = ["curl", "-fsSL", "--cookie", str(cookies),
 page = subprocess.run(args, capture_output=True, text=True, check=True).stdout
 assert "gfbrc-independent-flat-zip" in page, "Independent interception script absent from actual list"
 assert "Download Flat ZIP with Rename" in page, "Bulk menu action absent from actual entry-list page"
+names = sorted({n for n in re.findall(r'\bname=["\x27]([^"\x27]+)', page)
+                if any(word in n.lower() for word in ("entry", "lead", "action", "bulk"))})
+ids = sorted({n for n in re.findall(r'\bid=["\x27]([^"\x27]+)', page)
+              if any(word in n.lower() for word in ("action", "apply", "bulk"))})
+print("GF_ENTRY_LIST_CONTROL_NAMES", names[:30], flush=True)
+print("GF_ENTRY_LIST_CONTROL_IDS", ids[:30], flush=True)
 print("PASS_AUTHENTIC_ENTRY_LIST_RENDERED", flush=True)
 print("NATIVE_GF_THRESHOLD_100_BOUNDARY: separate synchronous POST endpoint exercised for 99/100/101", flush=True)
