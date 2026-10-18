@@ -265,15 +265,14 @@ jobs:
           php -l tests/experimental-independent/plans.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/prepare.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/plans.php
-          BRC_BASE_URL=http://127.0.0.1:8081 php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/auth.php
-          php "$BRC_WP_CLI" server --path="$BRC_WP_PATH" --host=127.0.0.1 --port=8081 >"$BRC_LAB_DIR/independent-server.log" 2>&1 &
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8081/wp-login.php -o /dev/null; then break; fi
-            sleep 1
-          done
+          # Reuse the exact 8080 server + cookie pair that already delivered
+          # the authenticated native single-entry HTTP ZIP above.
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/auth.php
+          curl -fsS "$BRC_BASE_URL/wp-login.php" -o /dev/null
           if ! python3 tests/experimental-independent/verify-http.py "$BRC_LAB_DIR"; then
             echo "Independent HTTP request failed; redacted server diagnostics:" >&2
-            grep -E "IFZ_HTTP_DIAGNOSTIC|PHP Fatal|Uncaught|\[.*\]: [0-9]+ \[" "$BRC_LAB_DIR/independent-server.log" | tail -n 50 >&2 || true
+            tail -n 65 "$BRC_LAB_DIR/http-server.log" >&2 || true
+            python3 -c 'from pathlib import Path; p=Path("/tmp/brc-lab/one.body"); b=p.read_text(errors="replace"); a=b.lower().find("<body"); print("Body error:",b[a:a+900] if a>=0 else b[-1200:])' >&2 || true
             exit 1
           fi
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
