@@ -322,7 +322,16 @@ jobs:
           err=(base/('sf-failure-'+case+'.err')).read_text(errors='replace')
           probe=base/('sf-hook-start-'+case+'.json')
           changed=base/('sf-hook-'+case+'.txt')
+          flatten=base/('sf-flatten-start-'+case+'.json')
+          success=base/('sf-flatten-success-'+case+'.txt')
+          znames=None
+          if zipfile.is_zipfile(base/('sf-failure-'+case+'.out')):
+              with zipfile.ZipFile(base/('sf-failure-'+case+'.out')) as zipped:
+                  znames=zipped.namelist()
           print('FAILURE_DIAGNOSTIC',json.dumps({
+              'zip_members':znames,
+              'flatten_start':flatten.read_text() if flatten.exists() else None,
+              'flatten_success':success.exists(),
               'scenario':case,'expected':expected,'rc':rc,'out_is_zip':zipfile.is_zipfile(base/('sf-failure-'+case+'.out')),
               'stdout_head':out[:180].decode(errors='replace'),'stderr_head':err[:180],
               'hook_start':probe.read_text() if probe.exists() else None,
