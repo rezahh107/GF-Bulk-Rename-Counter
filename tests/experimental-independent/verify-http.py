@@ -19,10 +19,13 @@ successes = {
     "one": 1, "n99": 99, "n100": 100, "n101": 101,
     "multiple": 3, "shared": 2, "sanitized_equal": 2,
     "multi_entry_files": 5, "host_folder_collision": 2,
-    "zero_counter": 1, "empty_counter": 1,
+    "custom_folder_mixed": 2, "entry_folder_mixed_multi": 5,
+    "zero_counter": 1, "empty_counter": 1, "missing_counter": 1,
+    "malformed_counter": 1, "larger_workload": 24,
     "repeated_physical": 3, "previously_deleted": 1,
 }
-failures = {"all_deleted", "missing_mixed", "traversal", "remote_url"}
+failures = {"all_deleted", "missing_mixed", "traversal", "remote_url",
+            "unreadable", "cross_form", "duplicate_selected_id"}
 assert meta["threshold"] == 100, f"GF background threshold changed: {meta['threshold']}"
 assert set(successes) | failures == set(meta["cases"]), "Unexpected scenario inventory"
 
@@ -79,7 +82,9 @@ def check_zip(label, case, body):
             assert hashlib.sha256(pathlib.Path(source["source"]).read_bytes()).hexdigest() == source["sha256"]
     # Explicit independent behavioral expectations beyond same-code plan checks.
     if case == "one": assert actual == ["d125.jpg"]
-    if case in ("zero_counter", "empty_counter"): assert actual == ["single-a.jpg"]
+    if case in ("zero_counter", "empty_counter", "missing_counter"): assert actual == ["single-a.jpg"]
+    if case == "malformed_counter": assert actual == ["dAB.jpg"]
+    if case == "larger_workload": assert len(actual) == 24 and sum(m.file_size for m in members) == 24 * 262144
     if case == "repeated_physical": assert len(set(actual)) == 3
     if case == "sanitized_equal": assert "dAB.jpg" in actual and len(actual) == 2
     if case == "host_folder_collision": assert len(actual) == 2 and len(set(actual)) == 2
@@ -94,7 +99,8 @@ for case in successes:
           f"members={count} response_bytes={byte_count} time_s={sec:.3f}", flush=True)
 
 for case in failures:
-    assert "error" in plans[case], (case, plans[case])
+    if case != "duplicate_selected_id":
+        assert "error" in plans[case], (case, plans[case])
     filename, byte_count, status, sec = request(case, case, cookies, meta["nonces"][str(meta["cases"][case]["form_id"])], expect_zip=False)
     print(f"PASS_NO_INCOMPLETE_ZIP {case} status={status} body_bytes={byte_count}", flush=True)
 
