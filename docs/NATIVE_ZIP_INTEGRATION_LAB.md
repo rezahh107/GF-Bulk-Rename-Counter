@@ -136,6 +136,21 @@ after all downloads as before.
 
 ### Decision boundary
 
+An additional host-only control deactivates GFBRC **only in disposable CI
+WordPress**, executes the same genuine native bulk action and ZIP checker, and
+compares exact observed member-path/hash maps against the target-enabled
+download. The target filter must be absent for this control, and GFBRC is
+reactivated before final source-preservation readback. This establishes whether
+the target plugin is causally needed for an observed host-folder collision;
+it never asserts that the resulting archive loss is acceptable.
+
+The native host action accepts one form ID and restricts eligible entries to
+that form. The two independent-form cases are separate native requests; they
+do **not** claim that a single cross-form ZIP operation is supported. Host
+`bulk_download()` terminates the request after streaming, so each genuine
+request gets a new GFBRC filename-handler instance and a fresh collision
+registry.
+
 If the custom-folder archive loses an unchanged file, the reproducible
 condition is overlapping *host-generated* internal paths, rather than a
 counter-based renaming collision. Whether to change host settings, request an
