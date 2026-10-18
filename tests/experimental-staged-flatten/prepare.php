@@ -59,5 +59,31 @@ $put('sf_invalid_source', ['5' => '0', '1' => 'https://untrusted.invalid/invalid
 $unreadable = $made('mc-no-read.jpg', 'unreadable');
 $put('sf_unreadable_source', ['5' => '0', '1' => $unreadable['url']], [$unreadable]);
 $manifest['unreadable_fixture'] = $unreadable;
+// Case-insensitive root collision between two eligible files in one Entry.
+$case_a = $made('SF-CASE.jpg', 'upper-case');
+$case_b = $made('sf-case.jpg', 'lower-case');
+$put('sf_casefold', [
+    '5' => '0', '1' => '', '2' => wp_json_encode([$case_a['url'], $case_b['url']]),
+], [$case_a, $case_b]);
+
+// Bounded performance fixture: native GF Entry and 50 original uploaded files,
+// 64 KiB each; verify integrity using streaming digests.
+$bulk = [];
+for ($i = 0; $i < 50; $i++) {
+    $bytes = str_repeat(chr(65 + $i % 26), 65536) . ':' . $i;
+    $u = wp_upload_bits(sprintf('sf-perf-%03d.bin', $i), null, $bytes);
+    if (!empty($u['error']) || !is_file($u['file'])) {
+        throw new RuntimeException('SF_PERF_UPLOAD_FAILED');
+    }
+    $bulk[] = [
+        'url' => $u['url'], 'path' => $u['file'],
+        'sha256' => hash_file('sha256', $u['file']), 'size' => filesize($u['file']),
+    ];
+}
+$put('sf_perf_50', [
+    '5' => '0', '1' => '',
+    '2' => wp_json_encode(array_column($bulk, 'url')),
+], $bulk);
+
 file_put_contents($location, wp_json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 echo "Staged-flat authentic fixture cases provisioned\n";
