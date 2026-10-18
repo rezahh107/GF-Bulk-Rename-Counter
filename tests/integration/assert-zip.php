@@ -127,7 +127,7 @@ try {
         // Both actual bytes and genuine source hashes control this decision.
         // A clean archive means the expected collision was NOT reproduced.
         foreach ( array_keys( $actual ) as $name ) {
-            if ( ! str_starts_with( $name, 'shared/' ) ) {
+            if ( ! str_starts_with( $name, $case['expected_path_prefix'] ) ) {
                 throw new RuntimeException( 'Unexpected diagnostic ZIP member path: ' . $name );
             }
         }
