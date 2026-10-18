@@ -112,6 +112,12 @@ filename, _, status, _ = request("anonymous", "one", "/dev/null", meta["nonces"]
 assert status in {"302", "403", "200", "404"}, status
 print("PASS_ANONYMOUS_NO_ZIP", flush=True)
 
+filename, _, status, _ = request("authenticated-subscriber", "one",
+                                 lab / "subscriber.cookies", meta["unauthorized_nonce"], expect_zip=False)
+assert status == "403", status
+print("PASS_VALID_NONCE_BUT_UNAUTHORIZED_SUBSCRIBER_REJECTED", flush=True)
+
+
 # Read the authenticated Entry list and assert that this test-only feature is
 # truly present on its real admin HTML surface rather than just a filter probe.
 list_url = endpoint.replace("/admin-post.php", "/admin.php")
