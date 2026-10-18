@@ -32,19 +32,42 @@ if ( isset( $case['diagnostic_collision'] ) && ! $diagnostic ) {
     throw new RuntimeException( 'Invalid diagnostic flag' );
 }
 if ( $diagnostic ) {
-    // Scope guard: the expected native host collision, never arbitrary ZIP loss.
+    // Exact, independently named host defects. A diagnostic must never silently
+    // admit arbitrary archive loss or become an ordinary integrity PASS.
+    $ids = $case['entry_ids'] ?? [];
+    $first_id = $ids[0] ?? null;
+    $diagnostic_specs = [
+        'host_folder_collision' => [ 'path' => 'shared/same.jpg', 'basename' => 'same.jpg', 'entry_count' => 2 ],
+        'default_equal_within_entry' => [ 'path' => $first_id . '/same.jpg', 'basename' => 'same.jpg', 'entry_count' => 1 ],
+        'entry_folder_equal_within_entry' => [ 'path' => 'shared-' . $first_id . '/same.jpg', 'basename' => 'same.jpg', 'entry_count' => 1 ],
+        'shared_sanitized_upload_collision' => [ 'path' => 'shared/ab.jpg', 'basename' => 'ab.jpg', 'entry_count' => 2 ],
+    ];
+    $diagnostic_spec = $diagnostic_specs[ $argv[2] ] ?? null;
     $paths = array_column( $case['uploads'], 'path' );
-    if ( $argv[2] !== 'host_folder_collision' ||
+    if ( ! $diagnostic_spec ||
         $case['expected'] !== [] ||
-        ( $case['expected_path_prefix'] ?? null ) !== 'shared/' ||
+        ! is_int( $first_id ) || $first_id <= 0 ||
+        count( $ids ) !== $diagnostic_spec['entry_count'] ||
+        count( array_unique( $ids ) ) !== $diagnostic_spec['entry_count'] ||
+        ( $case['expected_path_prefix'] ?? null ) !== dirname( $diagnostic_spec['path'] ) . '/' ||
         count( $source_hashes ) !== 2 || count( array_unique( $source_hashes ) ) !== 2 ||
-        count( $case['entry_ids'] ?? [] ) !== 2 ||
-        count( array_unique( $case['entry_ids'] ) ) !== 2 ||
         count( $paths ) !== 2 || count( array_unique( $paths ) ) !== 2 ||
         ! is_string( $paths[0] ) || ! is_string( $paths[1] ) ||
-        basename( $paths[0] ) !== 'same.jpg' || basename( $paths[1] ) !== 'same.jpg' ||
+        basename( $paths[0] ) !== $diagnostic_spec['basename'] ||
+        basename( $paths[1] ) !== $diagnostic_spec['basename'] ||
         dirname( $paths[0] ) === dirname( $paths[1] ) ) {
         throw new RuntimeException( 'Diagnostic source identity/conformance not proven' );
+    }
+    $submitted_names = array_column( $case['uploads'], 'submitted_name' );
+    if ( $argv[2] === 'shared_sanitized_upload_collision' ) {
+        if ( $submitted_names !== [ 'a+b.jpg', 'ab.jpg' ] ) {
+            throw new RuntimeException( 'Distinct pre-sanitization source names not proven' );
+        }
+    } elseif ( $submitted_names !== [ 'same.jpg', 'same.jpg' ] &&
+        // Old PR #4 source manifest did not require submitted_name;
+        // the old exact host diagnostic already proves stored basenames.
+        !( $argv[2] === 'host_folder_collision' && $submitted_names === [] ) ) {
+        throw new RuntimeException( 'Diagnostic supplied-basename provenance not proven' );
     }
 } elseif ( ! $case['expected'] ) {
     throw new RuntimeException( 'Ordinary ZIP has no exact path expectations' );
@@ -117,8 +140,8 @@ try {
             $state = 'NOT_REPRODUCED';
             $violation = 'Both distinct original uploads survived; requalify the expected host collision';
             $exit_code = 1;
-        } elseif ( $zip->numFiles === 1 && array_keys( $actual ) === [ 'shared/same.jpg' ] &&
-            in_array( $actual['shared/same.jpg'], $source_hashes, true ) ) {
+        } elseif ( $zip->numFiles === 1 && array_keys( $actual ) === [ $diagnostic_spec['path'] ] &&
+            in_array( $actual[ $diagnostic_spec['path'] ], $source_hashes, true ) ) {
             $state = 'NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED';
             $violation = 'Missing / overwritten source uploads: expected 2, observed 1';
         } else {
@@ -152,6 +175,7 @@ try {
         'archive_sha256' => hash_file( 'sha256', $argv[3] ),
         'negative_wrong_checksum_rejected' => $negative_detected,
         'diagnostic_only' => $diagnostic,
+        'expected_collision_member' => $diagnostic ? $diagnostic_spec['path'] : null,
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 } finally {
     $zip->close();
