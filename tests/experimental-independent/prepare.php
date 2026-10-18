@@ -46,9 +46,9 @@ $add_case('traversal', ['1' => dirname($url) . '/%2e%2e/secret.jpg', '5' => '125
 $add_case('remote_url', ['1' => 'https://example.invalid/private.jpg', '5' => '125']);
 
 // Real filesystem unreadability: the synthetic test upload is CI-only.
-$unreadable = wp_upload_bits('independent-unreadable.bin', null, 'only-in-ci-unreadable');
+$unreadable = wp_upload_bits('independent-unreadable.jpg', null, 'only-in-ci-unreadable');
 if (!empty($unreadable['error']) || !is_file($unreadable['file'])) {
-    throw new RuntimeException('Unable to create unreadable file fixture');
+    throw new RuntimeException('Unable to create unreadable fixture: ' . ($unreadable['error'] ?? 'missing file'));
 }
 $add_case('unreadable', ['1' => $unreadable['url'], '5' => '125']);
 if (!chmod($unreadable['file'], 0000) || is_readable($unreadable['file'])) {
@@ -64,7 +64,7 @@ $cases['duplicate_selected_id'] = ['form_id' => $form_id, 'entry_ids' => [$first
 // held in an aggregate in-memory array by the writer.
 $large_urls = [];
 for ($i = 0; $i < 24; $i++) {
-    $uploaded = wp_upload_bits(sprintf('large-%03d.bin', $i), null, random_bytes(262144));
+    $uploaded = wp_upload_bits(sprintf('large-%03d.jpg', $i), null, random_bytes(262144));
     if (!empty($uploaded['error']) || !is_file($uploaded['file'])) {
         throw new RuntimeException('Unable to provision representative large upload');
     }
