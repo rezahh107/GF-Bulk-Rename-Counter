@@ -55,6 +55,9 @@ $put('sf_deleted_exclusion', [
 
 $missing = wp_upload_dir()['baseurl'] . '/2025/01/no-such-stage-flat-file.jpg';
 $put('sf_missing_source', ['5' => '0', '1' => $missing], []);
+$put('sf_mixed_missing', [
+    '5' => '0', '1' => $valid['url'], '2' => wp_json_encode([$missing]),
+], [$valid]);
 $put('sf_invalid_source', ['5' => '0', '1' => 'https://untrusted.invalid/invalid.jpg'], []);
 $unreadable = $made('mc-no-read.jpg', 'unreadable');
 $put('sf_unreadable_source', ['5' => '0', '1' => $unreadable['url']], [$unreadable]);
