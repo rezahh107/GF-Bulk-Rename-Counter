@@ -19,7 +19,7 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def check(manifest, scenario, plan, raw):
+def check(manifest, scenario, plan, raw, experiment):
     original = manifest["scenarios"][scenario]
     provenance = plan["occurrences"]
     expected = collections.Counter((x["path"], x["sha256"]) for x in original["uploads"])
@@ -47,13 +47,13 @@ def check(manifest, scenario, plan, raw):
         require(collections.Counter(digest(archive.read(n)) for n in names) ==
                 collections.Counter(x["sha256"] for x in original["uploads"]),
                 "original / archived hash multisets differ")
-    if scenario in ("single", "shared", "multiple", "sanitized_equal", "multi_entry_files"):
+    if experiment != "mc_late_filter" and scenario in ("single", "shared", "multiple", "sanitized_equal", "multi_entry_files"):
         # Existing counter naming remains unchanged for all already-flat members.
         for name, sha in original["expected"].items():
             if "/" not in name:
                 require(any(x["member"] == name and x["sha256"] == sha for x in provenance),
                         "legacy d+Counter naming drift: " + name)
-    if scenario == "mc_late_filter":
+    if experiment == "mc_late_filter":
         require(any(x["member"] == "forced-same.jpg" for x in provenance),
                 "later filter did not reach host")
         require(all(x["candidate"] == "forced-same.jpg" for x in provenance),
@@ -68,7 +68,7 @@ def main():
     manifest = json.loads(Path(manifest_path).read_text())
     plan = json.loads(Path(journal).read_text())
     raw = Path(archive).read_bytes()
-    count = check(manifest, fixture, plan, raw)
+    count = check(manifest, fixture, plan, raw, experiment)
     if experiment == "mc_hook_same_bytes":
         require(Path(Path(journal).parent / ("mc-hook-" + experiment + ".txt")).is_file(),
                 "final hook did not execute")
@@ -103,7 +103,7 @@ def main():
                 for name, data in mutation:
                     z.writestr(name, data)
         try:
-            check(manifest, fixture, plan, out.getvalue())
+            check(manifest, fixture, plan, out.getvalue(), experiment)
         except (RuntimeError, zipfile.BadZipFile):
             print("PASS_NEGATIVE_CONTROL_REJECTED", label, experiment)
         else:
