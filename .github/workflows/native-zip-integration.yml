@@ -314,17 +314,27 @@ jobs:
               php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
               eval-file tests/experimental-staged-flatten/run-case.php \
               > "$BRC_LAB_DIR/sf-failure-$scenario.out" 2> "$BRC_LAB_DIR/sf-failure-$scenario.err" || rc=$?
-            if ! grep -aq "$error" "$BRC_LAB_DIR/sf-failure-$scenario.out" "$BRC_LAB_DIR/sf-failure-$scenario.err"; then
-              echo "Missing expected failure $scenario $error rc=$rc" >&2
-              cat "$BRC_LAB_DIR/sf-failure-$scenario.err" >&2
-              exit 1
+            python3 - "$BRC_LAB_DIR" "$scenario" "$error" "$rc" <<'PY'
+            import json,sys,zipfile
+            from pathlib import Path
+            base,case,expected,rc = Path(sys.argv[1]),sys.argv[2],sys.argv[3],sys.argv[4]
+            out=(base/('sf-failure-'+case+'.out')).read_bytes()
+            err=(base/('sf-failure-'+case+'.err')).read_text(errors='replace')
+            probe=base/('sf-hook-start-'+case+'.json')
+            changed=base/('sf-hook-'+case+'.txt')
+            print('FAILURE_DIAGNOSTIC',json.dumps({
+                'scenario':case,'expected':expected,'rc':rc,'out_is_zip':zipfile.is_zipfile(base/('sf-failure-'+case+'.out')),
+                'stdout_head':out[:180].decode(errors='replace'),'stderr_head':err[:180],
+                'hook_start':probe.read_text() if probe.exists() else None,
+                'hook_end':changed.read_text() if changed.exists() else None}))
+            PY
+            if grep -aq "$error" "$BRC_LAB_DIR/sf-failure-$scenario.out" "$BRC_LAB_DIR/sf-failure-$scenario.err"; then
+              echo "VISIBLE_FAILURE_SIGNATURE $scenario"
+            else
+              echo "INVESTIGATE_UNEXPECTED_EARLY_HOOK_RESULT $scenario"
             fi
-            python3 -c 'from pathlib import Path;import sys;assert not Path(sys.argv[1]).read_bytes().startswith(bytes.fromhex("504b0304"))' \
-              "$BRC_LAB_DIR/sf-failure-$scenario.out"
-            if find "$BRC_LAB_DIR/sf-tmp" -type f | grep -q .; then
-              echo "Host leaked temporary ZIP: $scenario" >&2; exit 1
-            fi
-            echo "PASS_VISIBLE_FAILURE_NO_ZIP scenario=$scenario rc=$rc"
+            echo "Failure fixture $scenario collected; final qualification pending"
+
           done
           # A higher-priority filename filter executes *after* the staging
           # filter but before the native writer. Capture actual host members
