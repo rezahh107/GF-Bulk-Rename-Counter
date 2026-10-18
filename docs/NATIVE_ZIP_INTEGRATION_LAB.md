@@ -76,3 +76,70 @@ Passing proves the exercised synthetic paths in the identified runtime only;
 it does not prove real user data, the production site, external hosting
 configuration, or arbitrary filename/collision cases. No merge, tag, release
 or deployment belongs to this lane.
+
+## Follow-up: collision and archive-conservation qualification
+
+This bounded successor **extends the same native WordPress lab**; it does not
+change production v2.0.6 PHP or authorize a naming-policy change.
+
+### Host contract examined
+
+The WordPress.org **4.2.0** ZIP is pinned by byte size and SHA-256 above.
+Its installed `lib/Actions/BulkDownload.php` file is checked for existence,
+its SHA-256 is logged, and a fresh WP-CLI bootstrap reflects the actual loaded
+`BDFGF\\Actions\\BulkDownload` class. The upstream
+[4.2.0 source-reference implementation](https://github.com/VCATconsulting/bulk-download-for-gravity-forms/blob/7cfc67ac0728ecbfb4c12cf812f9a0f70230ec79/lib/Actions/BulkDownload.php)
+was inspected separately; **upstream commit identity is not substituted for
+the pinned distributed ZIP**.
+
+In the examined host code, each file starts as
+`{entry-id}/{sanitized-basename}`. With per-form
+`bulkDownloadSettings.customFoldername = true`, a valid static/merge-tagged
+`downloadFoldername` instead supplies the single folder component (basename
+sanitized). Then `gf_apply_filters(['bdfgf_entry_filename', form-id],
+entry-path, entry-id, absolute-upload-path)` runs, followed by a second
+host-side path sanitizer and `ZipArchive::addFile(path, member-path)`.
+No explicit final-member-path uniqueness check is visible before `addFile`.
+The host owns archive creation/finalization and the single-entry HTTP and
+`gform_entry_list_action` bulk lifecycles. GFBRC's handler keeps its
+`used_filenames` array per instantiated object; it tracks renamed returns
+only. This source reading identifies a collision **hypothesis** until the
+actual ZIP data below is inspected.
+
+### Added authentic scenarios
+
+| Scenario | Real input/configuration | Independent integrity requirement |
+| --- | --- | --- |
+| `sanitized_equal` | Distinct counters `A?B`, `AB` | `dAB.jpg` and `dAB-{second-entry-id}.jpg`, both distinct bytes |
+| `multi_entry_files` | Repeated counter across two entries with 3+2 attachments | Exactly five suffix-resolved member paths and five source hashes |
+| `custom_folder_mixed` | Host static folder `shared`, renamed vs unrenamed | Flat `d125.jpg` plus `shared/folder-original.jpg` |
+| `host_folder_collision` | Two unrenamed files with basename `same.jpg`, uploaded by genuine `wp_upload_bits` into separate month directories; host static folder `shared` | **Both** original source hashes and **two** unique ZIP members required; no approved winner/suffix policy |
+| `independent_form_a`, `independent_form_b` | Two distinct GF forms, separate native bulk-action invocations | Each ZIP contains only that form's original payload with `d125.jpg` |
+| Existing `single`, `shared`, `multiple`, `collision_attempt` | Original authentic baseline | All prior exact member paths remain checked |
+
+The two dated WordPress upload directories are supported inputs to
+`wp_upload_bits`, not a fake filename filter. The real GF form-settings
+metadata is persisted and read back before testing the custom-folder cases.
+
+For **every** archive, the existing checker now also compares the complete
+multiset of original upload SHA-256 values and the number of original uploads,
+not merely the key/value map of expected paths. This protects against two
+different source files being collapsed into one ZIP member. Non-collision
+scenarios additionally check every exact member path and the standard
+incorrect-digest negative control. A genuine host-folder collision is
+**diagnostic-only**: the checker reports
+`NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED` with actual paths and counts,
+without changing the expected sources or accepting an overwritten file as a
+correct archive. A green workflow with that state is **not** a green integrity
+result for the diagnostic case. Original GF entries and uploads are read back
+after all downloads as before.
+
+### Decision boundary
+
+If the custom-folder archive loses an unchanged file, the reproducible
+condition is overlapping *host-generated* internal paths, rather than a
+counter-based renaming collision. Whether to change host settings, request an
+upstream uniqueness guard, or deliberately apply a new target-side naming
+policy is an **Owner decision**. The v2.0.6 handler must not silently start
+renaming unaffected originals or altering folder semantics in this test PR.
+A passing bounded scenario never proves universal collision safety.
