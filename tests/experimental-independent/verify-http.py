@@ -45,7 +45,7 @@ def request(label, case, cookie_file, nonce, *, expect_zip):
     hdr = headers.read_text(errors="replace").lower()
     payload = body.read_bytes()
     if expect_zip:
-        assert status == "200", (label, status, payload[:256])
+        assert status == "200", (label, status, re.sub(r"<[^>]+>", " ", payload.decode("utf-8", "replace"))[-800:])
         assert "content-disposition: attachment;" in hdr, (label, hdr[-500:])
         assert "content-type: application/zip" in hdr
         assert payload[:2] == b"PK", (label, payload[:100])
