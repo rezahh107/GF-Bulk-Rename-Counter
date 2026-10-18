@@ -5,6 +5,8 @@ $root = getenv('BRC_LAB_DIR');
 $data = json_decode(file_get_contents($root . '/independent.json'), true, 512, JSON_THROW_ON_ERROR);
 $case = $data['cases']['one'];
 $plan = GFBRC_Independent_Flat_Zip_Experiment::plan($case['form_id'], $case['entry_ids']);
+$multi = $data['cases']['multiple'];
+$multi_plan = GFBRC_Independent_Flat_Zip_Experiment::plan($multi['form_id'], $multi['entry_ids']);
 $prefix = rtrim(get_temp_dir(), '/\\') . '/gfbrc-independent-flat*';
 $before = glob($prefix) ?: [];
 if ($before) { throw new RuntimeException('Prior successful downloads left temporary ZIP files'); }
@@ -19,7 +21,9 @@ foreach ([
     putenv($key . '=' . $value);
     $caught = null;
     try {
-        $result = GFBRC_Independent_Flat_Zip_Experiment::write_verified_zip($plan);
+        $result = GFBRC_Independent_Flat_Zip_Experiment::write_verified_zip(
+            $key === 'BRC_IFZ_MUTATE_CLOSED' ? $multi_plan : $plan
+        );
         @unlink($result);
     } catch (Throwable $e) { $caught = $e->getMessage(); }
     putenv($key);
