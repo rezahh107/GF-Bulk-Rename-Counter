@@ -186,6 +186,30 @@ jobs:
             php tests/integration/assert-zip.php "$BRC_LAB_DIR/manifest.json" "$scenario" "$BRC_LAB_DIR/$scenario.zip" | tee "$BRC_LAB_DIR/reports/$scenario.json"
           done
 
+      - name: Reproduce native host-only folder collision without the target plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          # This changes only disposable CI WordPress plugin activation state.
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin deactivate gf-bulk-rename-counter
+          test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin get gf-bulk-rename-counter --field=status)" = inactive
+          BRC_SCENARIO=host_folder_collision BRC_HOST_ONLY=1 php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/download.php > "$BRC_LAB_DIR/host-only.zip"
+          php tests/integration/assert-zip.php "$BRC_LAB_DIR/manifest.json" host_folder_collision "$BRC_LAB_DIR/host-only.zip" | tee "$BRC_LAB_DIR/reports/host-only.json"
+          # Prove the native host result is identical with and without the
+          # target filter; do not assert that the observed loss is acceptable.
+          php -r '
+            $a = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
+            $b = json_decode(file_get_contents($argv[2]), true, 512, JSON_THROW_ON_ERROR);
+            if ($a["state"] !== $b["state"] || $a["members"] !== $b["members"] ||
+                $a["required_source_count"] !== $b["required_source_count"]) {
+                fwrite(STDERR, "Host-only / target-enabled ZIP behavior differs\n");
+                exit(1);
+            }
+            echo "Host-only and target-enabled native ZIP payloads match\n";
+          ' "$BRC_LAB_DIR/reports/host_folder_collision.json" "$BRC_LAB_DIR/reports/host-only.json"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin activate gf-bulk-rename-counter
+          test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin get gf-bulk-rename-counter --field=status)" = active
+
       - name: Verify original WordPress uploads and Gravity Forms entries
         shell: bash
         run: |
@@ -207,7 +231,7 @@ jobs:
               echo 'Dependency acquisition/identity NOT_PROVEN'
             fi
             echo
-            for scenario in single shared multiple collision_attempt sanitized_equal multi_entry_files custom_folder_mixed host_folder_collision independent_form_a independent_form_b; do
+            for scenario in single shared multiple collision_attempt sanitized_equal multi_entry_files custom_folder_mixed host_folder_collision independent_form_a independent_form_b host-only; do
               if test -s "$BRC_LAB_DIR/reports/$scenario.json"; then
                 echo "$scenario: genuine ZIP integrity assertion executed (diagnostic collisions are NOT successful integrity results)"
                 cat "$BRC_LAB_DIR/reports/$scenario.json"
