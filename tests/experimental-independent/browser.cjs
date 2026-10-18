@@ -39,6 +39,30 @@ const {chromium} = require('playwright-core');
     const options = await list.locator('option').evaluateAll(nodes => nodes.map(n=>n.value));
     if (!options.includes('gfbrc_independent_flat_zip') || !options.includes('gf_bulk_download'))
       throw Error('Both actions not available on actual form: '+JSON.stringify(options));
+    // Guard both Apply selectors: native Bulk Download must not be hijacked
+    // just because the OTHER dropdown is set to our independent action.
+    const isolated = await page.evaluate(action => {
+      const top = document.querySelector('select[name="action"]');
+      const bottom = document.querySelector('select[name="action2"]');
+      if (!top || !bottom) return false;
+      const probe = document.createElement('button');
+      probe.type = 'button';
+      document.body.appendChild(probe);
+      top.value = action;
+      bottom.value = 'gf_bulk_download';
+      probe.id = 'doaction2';
+      const nativeBottom = new MouseEvent('click', {bubbles:true,cancelable:true});
+      const bottomAllowed = probe.dispatchEvent(nativeBottom) && !nativeBottom.defaultPrevented;
+      top.value = 'gf_bulk_download';
+      bottom.value = action;
+      probe.id = 'doaction';
+      const nativeTop = new MouseEvent('click', {bubbles:true,cancelable:true});
+      const topAllowed = probe.dispatchEvent(nativeTop) && !nativeTop.defaultPrevented;
+      probe.remove();
+      return bottomAllowed && topAllowed;
+    }, 'gfbrc_independent_flat_zip');
+    if (!isolated) throw Error('Independent control intercepted native other-selector Apply');
+    console.log('PASS_BROWSER_NATIVE_BULK_ACTION_ISOLATION_TOP_BOTTOM');
     const rows = page.locator('input[type="checkbox"][name="entry[]"]');
     const visible = await rows.count();
     if (!visible) throw Error('No real selectable entry checkbox in admin list');
