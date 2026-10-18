@@ -251,6 +251,31 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Original uploads and GF values verified unchanged on authentic runtime.'
 
+      - name: Qualify independent flat-ZIP action in genuine WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only disposable CI mu-plugin installation; the production GFBRC ZIP
+          # was built and installed separately from its unchanged release allowlist.
+          mkdir -p "$BRC_WP_PATH/wp-content/mu-plugins"
+          cp tests/experimental-independent/Prototype.php "$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-experiment.php"
+          php -l tests/experimental-independent/Prototype.php
+          php -l tests/experimental-independent/prepare.php
+          php -l tests/experimental-independent/auth.php
+          php -l tests/experimental-independent/plans.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/prepare.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/plans.php
+          BRC_BASE_URL=http://127.0.0.1:8081 php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/auth.php
+          php "$BRC_WP_CLI" server --path="$BRC_WP_PATH" --host=127.0.0.1 --port=8081 >"$BRC_LAB_DIR/independent-server.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8081/wp-login.php -o /dev/null; then break; fi
+            sleep 1
+          done
+          python3 tests/experimental-independent/verify-http.py "$BRC_LAB_DIR"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
+          echo 'Original native GFBRC and Bulk Download integration tests ran before isolated mu-plugin.'
+          echo 'Independent experiment has no production plugin PHP modification.'
+
       - name: Summarize qualification evidence
         if: always()
         shell: bash
