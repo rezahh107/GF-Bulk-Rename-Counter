@@ -204,8 +204,11 @@ jobs:
           php -r '
             $a = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
             $b = json_decode(file_get_contents($argv[2]), true, 512, JSON_THROW_ON_ERROR);
-            if ($a["state"] !== $b["state"] || $a["members"] !== $b["members"] ||
-                $a["required_source_count"] !== $b["required_source_count"]) {
+            if ($a["state"] !== "NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED" ||
+                $b["state"] !== "NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED" ||
+                $a["members"] !== $b["members"] ||
+                $a["count"] !== 1 || $b["count"] !== 1 ||
+                $a["required_source_count"] !== 2 || $b["required_source_count"] !== 2) {
                 fwrite(STDERR, "Host-only / target-enabled ZIP behavior differs\n");
                 exit(1);
             }
@@ -213,6 +216,15 @@ jobs:
           ' "$BRC_LAB_DIR/reports/host_folder_collision.json" "$BRC_LAB_DIR/reports/host-only.json"
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin activate gf-bulk-rename-counter
           test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin get gf-bulk-rename-counter --field=status)" = active
+
+      - name: Falsify exact diagnostic gate against real source bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/integration/falsify-zip.py \
+            "$BRC_LAB_DIR/manifest.json" \
+            "$BRC_LAB_DIR/host_folder_collision.zip" \
+            tests/integration/assert-zip.php
 
       - name: Verify original WordPress uploads and Gravity Forms entries
         shell: bash
