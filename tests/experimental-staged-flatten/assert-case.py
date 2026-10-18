@@ -42,7 +42,7 @@ def check(manifest, fixture, journal, path, scenario):
         require(len(names) == len(set(names)), "duplicate exact member paths")
         require(len({name.casefold() for name in names}) == len(names),
                 "case-insensitive member collision")
-        require(all("/" not in n and "\\\\" not in n and n not in ("", ".", "..")
+        require(all("/" not in n and "\\" not in n and n not in ("", ".", "..")
                     for n in names), "internal ZIP folder")
         require(set(names) == {x["member"] for x in plan}, "source/member mapping")
         for item in plan:
