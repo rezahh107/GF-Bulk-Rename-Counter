@@ -8,7 +8,7 @@ $plan = GFBRC_Independent_Flat_Zip_Experiment::plan($case['form_id'], $case['ent
 $prefix = rtrim(get_temp_dir(), '/\\') . '/gfbrc-independent-flat*';
 $before = glob($prefix) ?: [];
 foreach ([
-    ['BRC_IFZ_FAIL_ADD', '1', 'add failed'],
+    ['BRC_IFZ_FAIL_ADD', '1', 'Injected add failure'],
     ['BRC_IFZ_FAIL_CLOSE', '1', 'finalization failed'],
     ['BRC_IFZ_CORRUPT', '1', 'unreadable'],
     ['BRC_IFZ_MUTATE_CLOSED', 'missing', 'count mismatch'],
