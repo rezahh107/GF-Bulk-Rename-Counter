@@ -185,7 +185,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for scenario in shared multiple collision_attempt sanitized_equal multi_entry_files custom_folder_mixed host_folder_collision independent_form_a independent_form_b; do
+          for scenario in shared multiple collision_attempt sanitized_equal multi_entry_files custom_folder_mixed host_folder_collision independent_form_a independent_form_b default_equal_entries default_equal_within_entry entry_folder_equal_entries entry_folder_equal_within_entry shared_sanitized_upload_collision entry_folder_mixed_multi; do
             BRC_SCENARIO="$scenario" php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/download.php > "$BRC_LAB_DIR/$scenario.zip"
             php tests/integration/assert-zip.php "$BRC_LAB_DIR/manifest.json" "$scenario" "$BRC_LAB_DIR/$scenario.zip" | tee "$BRC_LAB_DIR/reports/$scenario.json"
           done
@@ -214,6 +214,22 @@ jobs:
             }
             echo "Host-only and target-enabled native ZIP payloads match\n";
           ' "$BRC_LAB_DIR/reports/host_folder_collision.json" "$BRC_LAB_DIR/reports/host-only.json"
+          # Configuration-only mitigation independent of the target filter.
+          for scenario in default_equal_entries entry_folder_equal_entries; do
+            BRC_SCENARIO="$scenario" BRC_HOST_ONLY=1 php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/download.php > "$BRC_LAB_DIR/host-only-$scenario.zip"
+            php tests/integration/assert-zip.php "$BRC_LAB_DIR/manifest.json" "$scenario" "$BRC_LAB_DIR/host-only-$scenario.zip" | tee "$BRC_LAB_DIR/reports/host-only-$scenario.json"
+            php -r '
+              $a = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
+              $b = json_decode(file_get_contents($argv[2]), true, 512, JSON_THROW_ON_ERROR);
+              if ($a["state"] !== "PASS_NATIVE_ZIP" ||
+                  $b["state"] !== "PASS_NATIVE_ZIP" ||
+                  $a["members"] !== $b["members"] ||
+                  $a["count"] !== 2 || $b["count"] !== 2) {
+                  fwrite(STDERR, "Host-only configuration conservation mismatch\\n"); exit(1);
+              }
+              echo "PASS host-only configuration source conservation\\n";
+            ' "$BRC_LAB_DIR/reports/$scenario.json" "$BRC_LAB_DIR/reports/host-only-$scenario.json"
+          done
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin activate gf-bulk-rename-counter
           test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin get gf-bulk-rename-counter --field=status)" = active
 
@@ -221,10 +237,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 tests/integration/falsify-zip.py \
-            "$BRC_LAB_DIR/manifest.json" \
-            "$BRC_LAB_DIR/host_folder_collision.zip" \
-            tests/integration/assert-zip.php
+          for scenario in host_folder_collision default_equal_within_entry entry_folder_equal_within_entry shared_sanitized_upload_collision; do
+            python3 tests/integration/falsify-zip.py \
+              "$BRC_LAB_DIR/manifest.json" \
+              "$BRC_LAB_DIR/$scenario.zip" \
+              tests/integration/assert-zip.php "$scenario"
+          done
 
       - name: Verify original WordPress uploads and Gravity Forms entries
         shell: bash
@@ -247,7 +265,7 @@ jobs:
               echo 'Dependency acquisition/identity NOT_PROVEN'
             fi
             echo
-            for scenario in single shared multiple collision_attempt sanitized_equal multi_entry_files custom_folder_mixed host_folder_collision independent_form_a independent_form_b host-only; do
+            for scenario in single shared multiple collision_attempt sanitized_equal multi_entry_files custom_folder_mixed host_folder_collision independent_form_a independent_form_b default_equal_entries default_equal_within_entry entry_folder_equal_entries entry_folder_equal_within_entry shared_sanitized_upload_collision entry_folder_mixed_multi host-only host-only-default_equal_entries host-only-entry_folder_equal_entries; do
               if test -s "$BRC_LAB_DIR/reports/$scenario.json"; then
                 echo "$scenario: genuine ZIP integrity assertion executed (diagnostic collisions are NOT successful integrity results)"
                 cat "$BRC_LAB_DIR/reports/$scenario.json"
