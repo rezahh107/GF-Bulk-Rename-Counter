@@ -170,6 +170,10 @@ final class GFBRC_Staged_Flatten_Experiment {
                 if (@$zip->renameIndex($index, $collision_name) !== false) {
                     throw new RuntimeException('SF_UNEXPECTED_OCCUPIED_RENAME_SUCCESS');
                 }
+                if ($lab && preg_match('/^[a-z0-9_]+$/D', $this->scenario)) {
+                    file_put_contents($lab . '/sf-real-rename-failed-' . $this->scenario . '.txt',
+                        'ZipArchive::renameIndex returned false on occupied target');
+                }
                 throw new RuntimeException('SF_RENAME_INDEX_FAILED_OCCUPIED');
             }
             if (!$zip->renameIndex($index, $item['member'])) {
