@@ -40,17 +40,17 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
   var script = document.getElementById('gfbrc-independent-flat-zip');
   if (!script) return;
   var config = JSON.parse(script.dataset.config);
-  function getAction() {
-    var selects = document.querySelectorAll('select[name="action"], select[name="action2"]');
-    for (var i = 0; i < selects.length; i++) {
-      if (selects[i].value === config.action) return selects[i];
-    }
-    return null;
+  function isSelectedAction(button) {
+    // Top and bottom selectors are independent controls. Never hijack a
+    // native Apply click because the OTHER selector contains our action.
+    var name = button.id === 'doaction' ? 'action' : 'action2';
+    var select = document.querySelector('select[name="' + name + '"]');
+    return !!select && select.value === config.action;
   }
   function intercept(ev) {
     var button = ev.target.closest('input,button');
     if (!button || !/^(doaction|doaction2)$/.test(button.id)) return;
-    if (!getAction()) return;
+    if (!isSelectedAction(button)) return;
     ev.preventDefault();
     ev.stopImmediatePropagation();
     var checked = document.querySelectorAll(
