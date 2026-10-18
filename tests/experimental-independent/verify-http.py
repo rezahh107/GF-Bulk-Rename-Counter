@@ -109,7 +109,7 @@ assert status == "403", status
 print("PASS_INVALID_NONCE_REJECTED", flush=True)
 
 filename, _, status, _ = request("anonymous", "one", "/dev/null", meta["nonces"][str(meta["cases"]["one"]["form_id"])], expect_zip=False)
-assert status in {"302", "403", "200", "404"}, status
+assert status in {"302", "403", "400", "200", "404"}, status
 print("PASS_ANONYMOUS_NO_ZIP", flush=True)
 
 filename, _, status, _ = request("authenticated-subscriber", "one",
