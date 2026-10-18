@@ -251,6 +251,117 @@ jobs:
               tests/integration/assert-zip.php "$scenario"
           done
 
+      - name: Prepare staged-flatten test-only native GF fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/experimental-staged-flatten/Adapter.php
+          php -l tests/experimental-staged-flatten/prepare.php
+          php -l tests/experimental-staged-flatten/run-case.php
+          python3 -m py_compile tests/experimental-staged-flatten/assert-case.py
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-staged-flatten/prepare.php
+
+      - name: Exercise same-archive staging and flattening with original source conservation
+        shell: bash
+        run: |
+          set -euo pipefail
+          while read -r experiment fixture; do
+            test -n "$experiment"
+            /usr/bin/time -f 'experiment=%C max_rss_kib=%M elapsed_sec=%e' \
+              -o "$BRC_LAB_DIR/sf-$experiment.time" \
+              env BRC_SCENARIO="$fixture" BRC_SF_SCENARIO="$experiment" \
+              php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+              eval-file tests/experimental-staged-flatten/run-case.php > "$BRC_LAB_DIR/sf-$experiment.zip"
+            python3 tests/experimental-staged-flatten/assert-case.py \
+              "$BRC_LAB_DIR/manifest.json" "$fixture" \
+              "$BRC_LAB_DIR/sf-$experiment.json" "$BRC_LAB_DIR/sf-$experiment.zip" "$experiment"
+            cat "$BRC_LAB_DIR/sf-$experiment.time"
+          done <<'STAGED_CASES'
+          single single
+          shared shared
+          multiple multiple
+          sanitized_equal sanitized_equal
+          multi_entry_files multi_entry_files
+          custom_folder_mixed custom_folder_mixed
+          host_folder_collision host_folder_collision
+          default_equal_entries default_equal_entries
+          default_equal_within_entry default_equal_within_entry
+          entry_folder_equal_entries entry_folder_equal_entries
+          entry_folder_equal_within_entry entry_folder_equal_within_entry
+          shared_sanitized_upload_collision shared_sanitized_upload_collision
+          entry_folder_mixed_multi entry_folder_mixed_multi
+          sf_duplicate_physical sf_duplicate_physical
+          sf_deleted_exclusion sf_deleted_exclusion
+          sf_casefold sf_casefold
+          sf_late_filter shared
+          sf_perf_50 sf_perf_50
+          STAGED_CASES
+
+      - name: Demonstrate public-hook integrity limits and failure cleanup (not admissible)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$BRC_LAB_DIR/sf-tmp"
+          # Last filter can defeat unique staging BEFORE native addFile(); fail
+          # visibly rather than misreporting a two-source ZIP as complete.
+          for spec in \
+            'sf_post_stage_filename shared SF_' \
+            'sf_hook_early_extra shared SF_PRE_FLATTEN_MEMBER_COUNT_MISMATCH' \
+            'sf_fail_rename single SF_INJECTED_RENAME_FAILURE'; do
+            read -r scenario fixture error <<< "$spec"
+            rc=0
+            TMPDIR="$BRC_LAB_DIR/sf-tmp" BRC_SCENARIO="$fixture" BRC_SF_SCENARIO="$scenario" \
+              BRC_SF_INJECT_RENAME_FAILURE="$([ "$scenario" = sf_fail_rename ] && echo 1 || echo 0)" \
+              php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+              eval-file tests/experimental-staged-flatten/run-case.php \
+              > "$BRC_LAB_DIR/sf-failure-$scenario.out" 2> "$BRC_LAB_DIR/sf-failure-$scenario.err" || rc=$?
+            if ! grep -aq "$error" "$BRC_LAB_DIR/sf-failure-$scenario.out" "$BRC_LAB_DIR/sf-failure-$scenario.err"; then
+              echo "Missing expected failure $scenario $error rc=$rc" >&2
+              cat "$BRC_LAB_DIR/sf-failure-$scenario.err" >&2
+              exit 1
+            fi
+            python3 -c 'from pathlib import Path;import sys;assert not Path(sys.argv[1]).read_bytes().startswith(b"PK\\x03\\x04")' \
+              "$BRC_LAB_DIR/sf-failure-$scenario.out"
+            if find "$BRC_LAB_DIR/sf-tmp" -type f | grep -q .; then
+              echo "Host leaked temporary ZIP: $scenario" >&2; exit 1
+            fi
+            echo "PASS_VISIBLE_FAILURE_NO_ZIP scenario=$scenario rc=$rc"
+          done
+          # Post-flatten additions/overwrites and early same-count mutations
+          # can escape the adapter; independent closed-ZIP checks MUST reject.
+          for scenario in sf_hook_early_overwrite sf_hook_late_extra sf_hook_late_overwrite; do
+            BRC_SCENARIO=shared BRC_SF_SCENARIO="$scenario" \
+              php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+              eval-file tests/experimental-staged-flatten/run-case.php > "$BRC_LAB_DIR/sf-$scenario.zip"
+            if python3 tests/experimental-staged-flatten/assert-case.py \
+              "$BRC_LAB_DIR/manifest.json" shared "$BRC_LAB_DIR/sf-$scenario.json" \
+              "$BRC_LAB_DIR/sf-$scenario.zip" "$scenario"; then
+              echo "FAIL: corruption/extra member accepted: $scenario" >&2; exit 1
+            fi
+            test -s "$BRC_LAB_DIR/sf-hook-$scenario.txt"
+            echo "FALSIFIED_END_TO_END_POST_HOOK_SAFETY $scenario"
+          done
+          # Replacing with the same bytes is not causally detectable even
+          # with exact source hashes and member counts.
+          scenario=sf_hook_late_same_bytes
+          BRC_SCENARIO=shared BRC_SF_SCENARIO="$scenario" \
+            php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+            eval-file tests/experimental-staged-flatten/run-case.php > "$BRC_LAB_DIR/sf-$scenario.zip"
+          python3 tests/experimental-staged-flatten/assert-case.py \
+            "$BRC_LAB_DIR/manifest.json" shared "$BRC_LAB_DIR/sf-$scenario.json" \
+            "$BRC_LAB_DIR/sf-$scenario.zip" "$scenario"
+          test -s "$BRC_LAB_DIR/sf-hook-$scenario.txt"
+          echo 'NOT_PROVEN_CAUSAL_PROVENANCE: same-byte post-hook overwrite passed content checks'
+          # No filename callback can detect what the host's original collector
+          # silently discarded before staging.
+          BRC_SCENARIO=sf_missing_source BRC_SF_SCENARIO=sf_missing_source \
+            php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
+            eval-file tests/experimental-staged-flatten/run-case.php \
+            > "$BRC_LAB_DIR/sf-missing.out" 2> "$BRC_LAB_DIR/sf-missing.err" || true
+          grep -aq 'No files found' "$BRC_LAB_DIR/sf-missing.out" "$BRC_LAB_DIR/sf-missing.err"
+          test ! -f "$BRC_LAB_DIR/sf-sf_missing_source.json"
+          echo 'NOT_PROVEN_COLLECTOR_COMPLETENESS: eligible unresolved files never enter the filters'
+
       - name: Verify original WordPress uploads and Gravity Forms entries
         shell: bash
         run: |
