@@ -275,6 +275,15 @@ jobs:
             python3 -c 'from pathlib import Path; p=Path("/tmp/brc-lab/one.body"); b=p.read_text(errors="replace"); a=b.lower().find("<body"); print("Body error:",b[a:a+900] if a>=0 else b[-1200:])' >&2 || true
             exit 1
           fi
+          # Cross-check an independent source-manifest-derived occurrence
+          # multiset, not solely the prototype's own filename plan.
+          for scenario in one n99 n100 n101 multiple shared sanitized_equal multi_entry_files host_folder_collision zero_counter empty_counter repeated_physical previously_deleted; do
+            python3 tests/experimental-independent/assert-zip.py \
+              "$BRC_LAB_DIR/manifest.json" \
+              "$BRC_LAB_DIR/independent.json" \
+              "$scenario" "$BRC_LAB_DIR/$scenario.body"
+          done
+
           # A real browser selects an actual Gravity Forms Entry row, clicks
           # the custom item in the native bulk dropdown, and saves its ZIP.
           chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
