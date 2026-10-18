@@ -88,21 +88,21 @@ def check_zip(label, case, body):
     return len(actual)
 
 for case in successes:
-    filename, byte_count, status, sec = request(case, case, cookies, meta["nonce"], expect_zip=True)
+    filename, byte_count, status, sec = request(case, case, cookies, meta["nonces"][str(meta["cases"][case]["form_id"])], expect_zip=True)
     count = check_zip(case, case, filename)
     print(f"PASS_HTTP_FLAT_ZIP {case} entries={len(meta['cases'][case]['entry_ids'])} "
           f"members={count} response_bytes={byte_count} time_s={sec:.3f}", flush=True)
 
 for case in failures:
     assert "error" in plans[case], (case, plans[case])
-    filename, byte_count, status, sec = request(case, case, cookies, meta["nonce"], expect_zip=False)
+    filename, byte_count, status, sec = request(case, case, cookies, meta["nonces"][str(meta["cases"][case]["form_id"])], expect_zip=False)
     print(f"PASS_NO_INCOMPLETE_ZIP {case} status={status} body_bytes={byte_count}", flush=True)
 
 filename, _, status, _ = request("bad-nonce", "one", cookies, "invalid-nonce", expect_zip=False)
 assert status == "403", status
 print("PASS_INVALID_NONCE_REJECTED", flush=True)
 
-filename, _, status, _ = request("anonymous", "one", "/dev/null", meta["nonce"], expect_zip=False)
+filename, _, status, _ = request("anonymous", "one", "/dev/null", meta["nonces"][str(meta["cases"]["one"]["form_id"])], expect_zip=False)
 assert status in {"302", "403", "200", "404"}, status
 print("PASS_ANONYMOUS_NO_ZIP", flush=True)
 
