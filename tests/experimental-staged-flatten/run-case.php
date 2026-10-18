@@ -14,7 +14,19 @@ if ($scenario === 'sf_late_filter') {
 // This is a deliberately competing filter applied AFTER staging. The host
 // may overwrite its first member before the final callback sees the ZIP.
 if ($scenario === 'sf_post_stage_filename') {
-    add_filter('bdfgf_entry_filename', static fn($path) => 'collapsed.jpg', 1001, 3);
+    add_filter('bdfgf_entry_filename', static function($path) {
+        file_put_contents(getenv('BRC_LAB_DIR') . '/sf-post-stage-paths.txt',
+            (string)$path . " -> collapsed.jpg\\n", FILE_APPEND);
+        return 'collapsed.jpg';
+    }, 1001, 3);
+    add_action('bdfgf_after_uploaded_files', static function($zip) {
+        $names = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $names[] = $zip->getNameIndex($i);
+        }
+        file_put_contents(getenv('BRC_LAB_DIR') . '/sf-post-stage-before.json',
+            json_encode(['count' => $zip->numFiles, 'names' => $names]));
+    }, 5, 3);
 }
 require __DIR__ . '/Adapter.php';
 $adapter = new GFBRC_Staged_Flatten_Experiment($scenario);
