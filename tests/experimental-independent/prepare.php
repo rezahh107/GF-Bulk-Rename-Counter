@@ -47,6 +47,10 @@ file_put_contents($root . '/independent.json', wp_json_encode($meta, JSON_PRETTY
 echo 'Independent test selections: ' . count($all) . '; threshold=' . $meta['threshold'] . PHP_EOL;
 $native = apply_filters('gform_entry_list_bulk_actions', ['gf_bulk_download' => 'Native bulk download'], $form_id);
 if (!isset($native['gf_bulk_download'], $native[GFBRC_Independent_Flat_Zip_Experiment::ACTION])) {
+    echo 'DIAGNOSTIC user=' . get_current_user_id() . ' wp_cap=' . (int) current_user_can('gravityforms_view_entries') .
+        ' gf_cap=' . (int) GFCommon::current_user_can_any('gravityforms_view_entries') .
+        ' registered=' . (int) has_filter('gform_entry_list_bulk_actions', [GFBRC_Independent_Flat_Zip_Experiment::class, 'add_action']) .
+        ' actual_keys=' . implode(',', array_keys($native)) . PHP_EOL;
     throw new RuntimeException('Custom entry-list action did not coexist with native action');
 }
 echo 'Both entry-list actions present: PASS' . PHP_EOL;
