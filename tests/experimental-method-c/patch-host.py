@@ -68,7 +68,7 @@ def main():
         source,
         "\t\t\tif ( ! $zip->close() ) {",
         """\t\t\tif (getenv('BRC_MC_FAIL_CLOSE') === '1') {
-\t\t\t\tthrow new \\Exception('METHOD_C_INJECTED_CLOSE_FAILURE');
+\t\t\t\t$zip->close(); // fault injection AFTER native close, to exercise fail-before-delivery cleanup\n\t\t\t\tthrow new \\Exception('METHOD_C_INJECTED_CLOSE_FAILURE');
 \t\t\t}
 \t\t\tif ( ! $zip->close() ) {"""
     )
