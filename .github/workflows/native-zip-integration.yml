@@ -297,111 +297,34 @@ jobs:
           sf_perf_50 sf_perf_50
           STAGED_CASES
 
-      - name: Demonstrate public-hook integrity limits and failure cleanup (not admissible)
+      - name: Falsify end-to-end target-only safety against real ZIPs
         shell: bash
         run: |
           set -euo pipefail
+          python3 -m py_compile tests/experimental-staged-flatten/assert-adversarial.py
           mkdir -p "$BRC_LAB_DIR/sf-tmp"
-          # Last filter can defeat unique staging BEFORE native addFile(); fail
-          # visibly rather than misreporting a two-source ZIP as complete.
-          for spec in \
-            'sf_hook_early_extra shared SF_PRE_FLATTEN_MEMBER_COUNT_MISMATCH' \
-            'sf_fail_rename shared SF_RENAME_INDEX_FAILED_OCCUPIED'; do
-            read -r scenario fixture error <<< "$spec"
+          for scenario in sf_hook_early_extra sf_fail_rename sf_post_stage_filename \
+                          sf_hook_early_overwrite sf_hook_late_extra \
+                          sf_hook_late_overwrite sf_hook_late_same_bytes sf_missing_source; do
+            fixture=shared
+            test "$scenario" = sf_missing_source && fixture=sf_missing_source
+            outfile="$BRC_LAB_DIR/sf-$scenario.zip"
+            test "$scenario" = sf_fail_rename && outfile="$BRC_LAB_DIR/sf-failure-$scenario.out"
+            test "$scenario" = sf_hook_early_extra && outfile="$BRC_LAB_DIR/sf-failure-$scenario.out"
+            test "$scenario" = sf_post_stage_filename && outfile="$BRC_LAB_DIR/sf-post-stage.out"
+            test "$scenario" = sf_missing_source && outfile="$BRC_LAB_DIR/sf-missing.out"
             rc=0
             TMPDIR="$BRC_LAB_DIR/sf-tmp" BRC_SCENARIO="$fixture" BRC_SF_SCENARIO="$scenario" \
               BRC_SF_INJECT_RENAME_FAILURE="$([ "$scenario" = sf_fail_rename ] && echo 1 || echo 0)" \
               php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
-              eval-file tests/experimental-staged-flatten/run-case.php \
-              > "$BRC_LAB_DIR/sf-failure-$scenario.out" 2> "$BRC_LAB_DIR/sf-failure-$scenario.err" || rc=$?
-            python3 - "$BRC_LAB_DIR" "$scenario" "$error" "$rc" <<'PY'
-          import json,sys,zipfile
-          from pathlib import Path
-          base,case,expected,rc = Path(sys.argv[1]),sys.argv[2],sys.argv[3],sys.argv[4]
-          out=(base/('sf-failure-'+case+'.out')).read_bytes()
-          err=(base/('sf-failure-'+case+'.err')).read_text(errors='replace')
-          probe=base/('sf-hook-start-'+case+'.json')
-          changed=base/('sf-hook-'+case+'.txt')
-          flatten=base/('sf-flatten-start-'+case+'.json')
-          success=base/('sf-flatten-success-'+case+'.txt')
-          znames=None
-          if zipfile.is_zipfile(base/('sf-failure-'+case+'.out')):
-              with zipfile.ZipFile(base/('sf-failure-'+case+'.out')) as zipped:
-                  znames=zipped.namelist()
-          print('FAILURE_DIAGNOSTIC',json.dumps({
-              'zip_members':znames,
-              'flatten_start':flatten.read_text() if flatten.exists() else None,
-              'flatten_success':success.exists(),
-              'scenario':case,'expected':expected,'rc':rc,'out_is_zip':zipfile.is_zipfile(base/('sf-failure-'+case+'.out')),
-              'stdout_head':out[:180].decode(errors='replace'),'stderr_head':err[:180],
-              'hook_start':probe.read_text() if probe.exists() else None,
-              'hook_end':changed.read_text() if changed.exists() else None}))
-          PY
-            if grep -aq "$error" "$BRC_LAB_DIR/sf-failure-$scenario.out" "$BRC_LAB_DIR/sf-failure-$scenario.err"; then
-              echo "VISIBLE_FAILURE_SIGNATURE $scenario"
-            else
-              echo "INVESTIGATE_UNEXPECTED_EARLY_HOOK_RESULT $scenario"
-            fi
-            echo "Failure fixture $scenario collected; final qualification pending"
-
+              eval-file tests/experimental-staged-flatten/run-case.php > "$outfile" \
+              2> "$BRC_LAB_DIR/sf-$scenario.err" || rc=$?
+            echo "Adversarial native host case=$scenario php_exit=$rc"
           done
-          # A higher-priority filename filter executes *after* the staging
-          # filter but before the native writer. Capture actual host members
-          # before the flatten callback. Never classify prehook overwrite as PASS.
-          rc=0
-          BRC_SCENARIO=shared BRC_SF_SCENARIO=sf_post_stage_filename \
-            php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
-            eval-file tests/experimental-staged-flatten/run-case.php \
-            > "$BRC_LAB_DIR/sf-post-stage.out" 2> "$BRC_LAB_DIR/sf-post-stage.err" || rc=$?
-          python3 - "$BRC_LAB_DIR/sf-post-stage-paths.txt" \
-            "$BRC_LAB_DIR/sf-post-stage-before.json" "$BRC_LAB_DIR/sf-post-stage.out" <<'PY'
-          import json, sys
-          from pathlib import Path
-          changes = Path(sys.argv[1]).read_text().splitlines()
-          before = json.loads(Path(sys.argv[2]).read_text())
-          output = Path(sys.argv[3]).read_bytes()
-          assert len(changes) == 2 and all(" -> collapsed.jpg" in x for x in changes), changes
-          assert before["count"] == 1 and before["names"] == ["collapsed.jpg"], before
-          assert not output.startswith(bytes.fromhex("504b0304")), "A ZIP was delivered after prehook overwrite!"
-          print("FALSIFIED_UNBOUNDED_STAGING: 2 source occurrences collapsed to 1 BEFORE final callback")
-          PY
-          echo "post-stage-hook rc=$rc"
-          # This failure is a real public-hook contract limitation, not a
-          # successful full-provenance outcome.
-          # Post-flatten additions/overwrites and early same-count mutations
-          # can escape the adapter; independent closed-ZIP checks MUST reject.
-          for scenario in sf_hook_early_overwrite sf_hook_late_extra sf_hook_late_overwrite; do
-            BRC_SCENARIO=shared BRC_SF_SCENARIO="$scenario" \
-              php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
-              eval-file tests/experimental-staged-flatten/run-case.php > "$BRC_LAB_DIR/sf-$scenario.zip"
-            if python3 tests/experimental-staged-flatten/assert-case.py \
-              "$BRC_LAB_DIR/manifest.json" shared "$BRC_LAB_DIR/sf-$scenario.json" \
-              "$BRC_LAB_DIR/sf-$scenario.zip" "$scenario"; then
-              echo "FAIL: corruption/extra member accepted: $scenario" >&2; exit 1
-            fi
-            test -s "$BRC_LAB_DIR/sf-hook-$scenario.txt"
-            echo "FALSIFIED_END_TO_END_POST_HOOK_SAFETY $scenario"
-          done
-          # Replacing with the same bytes is not causally detectable even
-          # with exact source hashes and member counts.
-          scenario=sf_hook_late_same_bytes
-          BRC_SCENARIO=shared BRC_SF_SCENARIO="$scenario" \
-            php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
-            eval-file tests/experimental-staged-flatten/run-case.php > "$BRC_LAB_DIR/sf-$scenario.zip"
-          python3 tests/experimental-staged-flatten/assert-case.py \
-            "$BRC_LAB_DIR/manifest.json" shared "$BRC_LAB_DIR/sf-$scenario.json" \
-            "$BRC_LAB_DIR/sf-$scenario.zip" "$scenario"
-          test -s "$BRC_LAB_DIR/sf-hook-$scenario.txt"
-          echo 'NOT_PROVEN_CAUSAL_PROVENANCE: same-byte post-hook overwrite passed content checks'
-          # No filename callback can detect what the host's original collector
-          # silently discarded before staging.
-          BRC_SCENARIO=sf_missing_source BRC_SF_SCENARIO=sf_missing_source \
-            php "$BRC_WP_CLI" --quiet --path="$BRC_WP_PATH" --user=bootstrap_admin \
-            eval-file tests/experimental-staged-flatten/run-case.php \
-            > "$BRC_LAB_DIR/sf-missing.out" 2> "$BRC_LAB_DIR/sf-missing.err" || true
-          grep -aq 'No files found' "$BRC_LAB_DIR/sf-missing.out" "$BRC_LAB_DIR/sf-missing.err"
-          test ! -f "$BRC_LAB_DIR/sf-sf_missing_source.json"
-          echo 'NOT_PROVEN_COLLECTOR_COMPLETENESS: eligible unresolved files never enter the filters'
+          python3 tests/experimental-staged-flatten/assert-adversarial.py "$BRC_LAB_DIR"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin \
+            eval-file tests/integration/verify-sources.php
+          echo 'No source upload / GF Entry mutation observed, despite unsafe ZIP delivery in negative cases'
 
       - name: Verify original WordPress uploads and Gravity Forms entries
         shell: bash
