@@ -39,6 +39,15 @@ class ReleaseContract(unittest.TestCase):
         self.out = Path(self.tmp.name) / "artifact"
         self.identity = core.source_identity(self.root)
         self.version = core.version(self.root)
+        # Independent numeric expectations: never ask the production resolver
+        # to calculate the values against which that resolver is asserted.
+        major, minor, patch = map(int, self.version.split("."))
+        self.current_tag = f"v{self.version}"
+        self.next_versions = {
+            "patch": f"{major}.{minor}.{patch + 1}",
+            "minor": f"{major}.{minor + 1}.0",
+            "major": f"{major + 1}.0.0",
+        }
 
     def package(self):
         manifest = core.build(self.root, self.out, self.identity["commit"])
@@ -98,11 +107,12 @@ class ReleaseContract(unittest.TestCase):
             core.release_version(self.root, "patch", [])
         with self.assertRaisesRegex(core.ReleaseError, "forbids first"):
             core.release_version(self.root, "first", [f"v{self.version}"])
-        self.assertEqual("2.0.7", core.release_version(self.root, "patch", ["v2.0.6"]))
-        self.assertEqual("2.1.0", core.release_version(self.root, "minor", ["v2.0.6"]))
-        self.assertEqual("3.0.0", core.release_version(self.root, "major", ["v2.0.6"]))
+        for intent in ("patch", "minor", "major"):
+            with self.subTest(intent=intent):
+                self.assertEqual(self.next_versions[intent],
+                                 core.release_version(self.root, intent, [self.current_tag]))
         with self.assertRaisesRegex(core.ReleaseError, "does not match"):
-            core.release_version(self.root, "patch", ["v2.0.7"])
+            core.release_version(self.root, "patch", [f"v{self.next_versions['patch']}"])
 
     def test_real_archive_allowlist_and_determinism(self):
         manifest, z, c, m = self.package()
@@ -143,11 +153,30 @@ class ReleaseContract(unittest.TestCase):
             core.validate(self.root, z, c, m)
 
     def test_version_mirror_mismatch(self):
-        readme = self.root / "readme.txt"
-        readme.write_text(readme.read_text().replace("Stable tag: 2.0.6",
-                                                      "Stable tag: 2.0.5"))
-        with self.assertRaisesRegex(core.ReleaseError, "mismatch"):
-            core.version(self.root)
+        # Mutate each of the three active mirrors individually. An exact
+        # replacement count prevents a false PASS when the source version moves.
+        wrong = self.next_versions["patch"]
+        targets = (
+            ("header", self.root / core.FILES[0],
+             r"(?m)^(\s*\*\s*Version:\s*)" + re.escape(self.version) + r"(\s*)$"),
+            ("constant", self.root / core.FILES[0],
+             r"('GFBULKRENAME_VERSION',\s*')" + re.escape(self.version) + r"(')"),
+            ("readme", self.root / "readme.txt",
+             r"(?m)^(Stable tag:\s*)" + re.escape(self.version) + r"(\s*)$"),
+        )
+        for field, path, pattern in targets:
+            with self.subTest(mirror=field):
+                original = path.read_text(encoding="utf-8")
+                edited, replacements = re.subn(
+                    pattern, lambda match: match[1] + wrong + match[2], original,
+                )
+                self.assertEqual(replacements, 1, f"{field} fixture mutation must be real")
+                try:
+                    path.write_text(edited, encoding="utf-8")
+                    with self.assertRaisesRegex(core.ReleaseError, "version mismatch"):
+                        core.version(self.root)
+                finally:
+                    path.write_text(original, encoding="utf-8")
 
     def test_dirty_source_and_expected_sha_rejected(self):
         (self.root / core.FILES[0]).write_bytes((self.root / core.FILES[0]).read_bytes() + b"\n")
@@ -170,31 +199,38 @@ class ReleaseContract(unittest.TestCase):
             core.binding(self.root, original, next_head)
 
     def test_publication_conflict_and_partial_history_fail_closed(self):
-        core.publication_history([], [], "2.0.6")
-        core.publication_history(["v2.0.6"], [{"tag_name": "v2.0.6", "draft": False}], "2.0.7")
+        tag = self.current_tag
+        next_patch = self.next_versions["patch"]
+        published = [{"tag_name": tag, "draft": False}]
+        core.publication_history([], [], self.version)
+        core.publication_history([tag], published, next_patch)
         with self.assertRaisesRegex(core.ReleaseError, "version conflict"):
-            core.publication_history(["v2.0.6"], [{"tag_name": "v2.0.6", "draft": False}], "2.0.6")
+            core.publication_history([tag], published, self.version)
         with self.assertRaisesRegex(core.ReleaseError, "orphan"):
-            core.publication_history(["v2.0.6"], [], "2.0.7")
+            core.publication_history([tag], [], next_patch)
         with self.assertRaisesRegex(core.ReleaseError, "orphan"):
-            core.publication_history([], [{"tag_name": "v2.0.6", "draft": False}], "2.0.7")
+            core.publication_history([], published, next_patch)
         with self.assertRaisesRegex(core.ReleaseError, "draft/partial"):
-            core.publication_history(["v2.0.6"], [{"tag_name": "v2.0.6", "draft": True}], "2.0.7")
+            core.publication_history([tag], [{"tag_name": tag, "draft": True}], next_patch)
         with self.assertRaisesRegex(core.ReleaseError, "duplicate"):
-            core.publication_history(["v2.0.6", "v2.0.6"], [], "2.0.7")
+            core.publication_history([tag, tag], [], next_patch)
 
     def test_prepare_updates_only_version_mirrors_and_metadata(self):
-        next_version = core.prepare(self.root, "patch", ["v2.0.6"], "release-candidate/v2.0.7")
-        self.assertEqual(next_version, core.version(self.root))
-        self.assertEqual("2.0.7", next_version)
+        expected = self.next_versions["patch"]
+        branch = f"release-candidate/v{expected}"
+        next_version = core.prepare(self.root, "patch", [self.current_tag], branch)
+        self.assertEqual(next_version, expected)
+        self.assertEqual(core.version(self.root), expected)
         candidate = json.loads((self.root / "release/candidate.json").read_text())
+        self.assertEqual(candidate["version"], expected)
+        self.assertEqual(candidate["branch"], branch)
         self.assertEqual(self.identity, candidate["base"])
         status = git(self.root, "status", "--porcelain")
         self.assertIn("gf-bulk-rename-counter.php", status)
         self.assertIn("readme.txt", status)
         self.assertIn("release/", status)
         with self.assertRaisesRegex(core.ReleaseError, "already been integrated"):
-            core.prepare(self.root, "patch", ["v2.0.6"], "release-candidate/v2.0.7")
+            core.prepare(self.root, "patch", [self.current_tag], branch)
 
 
 if __name__ == "__main__":
