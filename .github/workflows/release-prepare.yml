@@ -1,0 +1,77 @@
+name: Prepare reviewed WordPress release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      intent:
+        description: "Owner's release intent; first only with no published releases"
+        type: choice
+        required: true
+        options: [first, patch, minor, major]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: brc-owner-release-operation
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare candidate and PR (never publish)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Verify live main, history and requested intent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "rezahh107/GF-Bulk-Rename-Counter"
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch origin main --tags
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          test -z "$(git status --porcelain)"
+          mapfile -t tags < <(git tag -l 'v*' | LC_ALL=C sort)
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate > "$RUNNER_TEMP/release-pages.json"
+          jq -s 'add' "$RUNNER_TEMP/release-pages.json" > "$RUNNER_TEMP/releases.json"
+          v="$(python3 scripts/release/release.py plan --intent "${{ inputs.intent }}" --tags "${tags[@]}")"
+          python3 scripts/release/release.py history --tags "${tags[@]}" --releases-file "$RUNNER_TEMP/releases.json" --candidate-version "$v"
+          branch="release-candidate/v$v"
+          test -z "$(git ls-remote --heads origin "refs/heads/$branch")" || { echo 'Candidate branch already exists' >&2; exit 1; }
+          echo "BRC_VERSION=$v" >> "$GITHUB_ENV"
+          echo "BRC_BRANCH=$branch" >> "$GITHUB_ENV"
+      - name: Create versioned review candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRC_BRANCH"
+          mapfile -t tags < <(git tag -l 'v*')
+          actual="$(python3 scripts/release/release.py prepare --intent "${{ inputs.intent }}" --tags "${tags[@]}" --branch "$BRC_BRANCH")"
+          test "$actual" = "$BRC_VERSION"
+          git add gf-bulk-rename-counter.php readme.txt release/candidate.json
+          git commit -m "chore(release): prepare reviewed v$BRC_VERSION candidate"
+          python3 -m unittest discover -s tests/release -p 'test_*.py' -v
+          python3 scripts/release/release.py version | grep -Fx "$BRC_VERSION"
+          git push origin "$BRC_BRANCH"
+      - name: Open review PR and explicitly dispatch exact candidate CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(gh pr create --base main --head "$BRC_BRANCH" --title "release: review v$BRC_VERSION candidate" --body "Owner-prepared candidate. Review source, version mirrors and changelog. Required: successful release-dry-run and native-zip-integration workflow_dispatch runs bound to the exact PR head before merge. This is NOT publication.")"
+          echo "Candidate PR: $url" >> "$GITHUB_STEP_SUMMARY"
+          gh workflow run release-dry-run.yml --ref "$BRC_BRANCH"
+          gh workflow run native-zip-integration.yml --ref "$BRC_BRANCH"
+          echo "CI dispatched; success is NOT assumed. Review workflow conclusions before merging." >> "$GITHUB_STEP_SUMMARY"
