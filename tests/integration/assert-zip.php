@@ -33,48 +33,83 @@ try {
         $actual[ $name ] = hash( 'sha256', $bytes );
     }
 
-    $check = static function ( array $expected ) use ( $zip, $actual, $duplicates ): void {
+    // Compare independently recorded source payloads as well as ZIP paths.
+    // A map of expected ZIP paths alone cannot represent two legitimate
+    // uploads whose host-configured member paths collide.
+    $source_hashes = array_column( $case['uploads'], 'sha256' );
+    if ( ! $source_hashes || count( $source_hashes ) !== count( $case['uploads'] ) ) {
+        throw new RuntimeException( 'Missing independently recorded upload hashes' );
+    }
+    $expected_paths = $case['expected'];
+    $check = static function ( array $paths, array $required_hashes ) use ( $zip, $actual, $duplicates, $case ): void {
         if ( $duplicates ) {
             throw new RuntimeException( 'Duplicate ZIP internal paths: ' . implode( ', ', $duplicates ) );
         }
-        if ( $zip->numFiles !== count( $expected ) ) {
-            throw new RuntimeException( 'Missing / overwritten ZIP entries: expected ' . count( $expected ) . ', observed ' . $zip->numFiles );
+        if ( $zip->numFiles !== count( $required_hashes ) ) {
+            throw new RuntimeException( 'Missing / overwritten source uploads: expected ' . count( $required_hashes ) . ', observed ' . $zip->numFiles );
         }
-        ksort( $expected );
-        $sorted = $actual;
-        ksort( $sorted );
-        if ( $sorted !== $expected ) {
-            throw new RuntimeException( 'ZIP paths or file checksums differ: expected ' . json_encode( $expected ) . ', observed ' . json_encode( $sorted ) );
+        $observed_hashes = array_values( $actual );
+        sort( $observed_hashes );
+        sort( $required_hashes );
+        if ( $observed_hashes !== $required_hashes ) {
+            throw new RuntimeException( 'Source upload contents missing, duplicated or changed in ZIP' );
+        }
+        if ( $paths ) {
+            ksort( $paths );
+            $sorted = $actual;
+            ksort( $sorted );
+            if ( $sorted !== $paths ) {
+                throw new RuntimeException( 'ZIP paths or file checksums differ: expected ' . json_encode( $paths ) . ', observed ' . json_encode( $sorted ) );
+            }
+        }
+        if ( isset( $case['expected_path_prefix'] ) ) {
+            foreach ( array_keys( $actual ) as $path ) {
+                if ( ! str_starts_with( $path, $case['expected_path_prefix'] ) ) {
+                    throw new RuntimeException( 'Member outside native custom folder: ' . $path );
+                }
+            }
         }
     };
 
-    // The negative control must demonstrate detection of wrong bytes after a real ZIP passed.
-    $check( $case['expected'] );
-    $mutated = $case['expected'];
-    $first_key = array_key_first( $mutated );
-    if ( $first_key === null ) {
-        throw new RuntimeException( 'Empty expected archive is forbidden' );
-    }
-    $mutated[ $first_key ] = str_repeat( '0', 64 );
-    if ( $mutated[ $first_key ] === $case['expected'][ $first_key ] ) {
-        $mutated[ $first_key ] = str_repeat( '1', 64 );
-    }
-    $negative_detected = false;
+    $diagnostic = ! empty( $case['diagnostic_collision'] );
+    $integrity_error = null;
     try {
-        $check( $mutated );
+        $check( $expected_paths, $source_hashes );
     } catch ( RuntimeException $e ) {
-        $negative_detected = true;
+        $integrity_error = $e;
     }
-    if ( ! $negative_detected ) {
-        throw new RuntimeException( 'Negative control failed: wrong member digest was accepted' );
+    if ( $integrity_error !== null && ! $diagnostic ) {
+        throw $integrity_error;
+    }
+
+    $negative_detected = false;
+    if ( $integrity_error === null ) {
+        // Negative control exercises the SAME checker with a deliberately
+        // incorrect source digest; no production archive is altered.
+        $mutated_hashes = $source_hashes;
+        $mutated_hashes[0] = str_repeat( '0', 64 );
+        if ( $mutated_hashes[0] === $source_hashes[0] ) {
+            $mutated_hashes[0] = str_repeat( '1', 64 );
+        }
+        try {
+            $check( $expected_paths, $mutated_hashes );
+        } catch ( RuntimeException $e ) {
+            $negative_detected = true;
+        }
+        if ( ! $negative_detected ) {
+            throw new RuntimeException( 'Negative control failed: wrong source digest was accepted' );
+        }
     }
     echo json_encode( [
         'scenario' => $argv[2],
-        'state' => 'PASS_NATIVE_ZIP',
+        'state' => $integrity_error === null ? 'PASS_NATIVE_ZIP' : 'NATIVE_ZIP_INTEGRITY_VIOLATION_OBSERVED',
+        'violation' => $integrity_error === null ? null : $integrity_error->getMessage(),
         'members' => $actual,
         'count' => $zip->numFiles,
+        'required_source_count' => count( $source_hashes ),
         'archive_sha256' => hash_file( 'sha256', $argv[3] ),
-        'negative_wrong_checksum_rejected' => true,
+        'negative_wrong_checksum_rejected' => $negative_detected,
+        'diagnostic_only' => $diagnostic,
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . PHP_EOL;
 } finally {
     $zip->close();
