@@ -73,6 +73,40 @@ $cases = [
         [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/01' ] ] ],
         [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/02' ] ] ],
     ],
+    // Default per-entry folders protect equal basenames across entries only.
+    'default_equal_entries' => [
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/03' ] ] ],
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/04' ] ] ],
+    ],
+    // Two file-upload fields in one entry still converge to the same member path.
+    'default_equal_within_entry' => [
+        [ 'counter' => '0',
+          'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/05' ] ],
+          'multi' => [ [ 'name' => 'same.jpg', 'time' => '2025/06' ] ] ],
+    ],
+    // Native GF {entry_id} merge tag in the host custom folder configuration.
+    'entry_folder_equal_entries' => [
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/07' ] ] ],
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/08' ] ] ],
+    ],
+    'entry_folder_equal_within_entry' => [
+        [ 'counter' => '0',
+          'single' => [ [ 'name' => 'same.jpg', 'time' => '2025/09' ] ],
+          'multi' => [ [ 'name' => 'same.jpg', 'time' => '2025/10' ] ] ],
+    ],
+    // WP upload filename sanitization makes distinct supplied names converge.
+    // Genuine wp_upload_bits() in separate months prevents disk auto-renaming.
+    'shared_sanitized_upload_collision' => [
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'a+b.jpg', 'time' => '2025/11' ] ] ],
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'ab.jpg', 'time' => '2025/12' ] ] ],
+    ],
+    // One archive includes both renamed (flat) and original (entry-folder) paths,
+    // with two fields and multiple source attachments.
+    'entry_folder_mixed_multi' => [
+        [ 'counter' => '125', 'single' => [ 'renamed-one.jpg' ], 'multi' => [ 'renamed-two.jpg' ] ],
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2026/01' ] ], 'multi' => [ 'unchanged-two.jpg' ] ],
+        [ 'counter' => '0', 'single' => [ [ 'name' => 'same.jpg', 'time' => '2026/02' ] ] ],
+    ],
     'independent_form_a' => [ [ 'counter' => '125', 'single' => [ 'form-a.jpg' ] ] ],
     'independent_form_b' => [ [ 'counter' => '125', 'single' => [ 'form-b.jpg' ] ] ],
 ];
@@ -87,10 +121,16 @@ foreach ( $cases as $name => $definitions ) {
         ],
         'button' => [ 'type' => 'text', 'text' => 'Submit' ],
     ];
-    if ( in_array( $name, [ 'custom_folder_mixed', 'host_folder_collision' ], true ) ) {
+    if ( in_array( $name, [ 'custom_folder_mixed', 'host_folder_collision', 'shared_sanitized_upload_collision' ], true ) ) {
         $form['bulkDownloadSettings'] = [
             'customFoldername' => true,
             'downloadFoldername' => 'shared',
+        ];
+    }
+    if ( in_array( $name, [ 'entry_folder_equal_entries', 'entry_folder_equal_within_entry', 'entry_folder_mixed_multi' ], true ) ) {
+        $form['bulkDownloadSettings'] = [
+            'customFoldername' => true,
+            'downloadFoldername' => 'shared-{entry_id}',
         ];
     }
     $form_id = GFAPI::add_form( $form );
@@ -120,7 +160,8 @@ foreach ( $cases as $name => $definitions ) {
                 if ( ! empty( $uploaded['error'] ) || ! is_file( $uploaded['file'] ) ) {
                     throw new RuntimeException( 'wp_upload_bits failed: ' . ( $uploaded['error'] ?? 'missing file' ) );
                 }
-                if ( $upload_time !== null && wp_basename( $uploaded['file'] ) !== $filename ) {
+                $expected_disk_basename = sanitize_file_name( $filename );
+                if ( $upload_time !== null && wp_basename( $uploaded['file'] ) !== $expected_disk_basename ) {
                     throw new RuntimeException( 'WordPress changed collision fixture basename; cannot qualify native folder collision.' );
                 }
                 $urls[] = $uploaded['url'];
@@ -129,6 +170,7 @@ foreach ( $cases as $name => $definitions ) {
                     'url' => $uploaded['url'],
                     'sha256' => hash( 'sha256', $bytes ),
                     'size' => strlen( $bytes ),
+                    'submitted_name' => $filename,
                 ];
             }
             if ( $urls ) {
@@ -188,6 +230,31 @@ foreach ( $cases as $name => $definitions ) {
         $second = $ordered[1];
         $data['expected']['d125.jpg'] = $first['sources'][0]['sha256'];
         $data['expected']['shared/folder-original.jpg'] = $second['sources'][0]['sha256'];
+    } elseif ( $name === 'default_equal_entries' || $name === 'entry_folder_equal_entries' ) {
+        foreach ( $ordered as $item ) {
+            $prefix = $name === 'default_equal_entries'
+                ? $item['entry_id']
+                : 'shared-' . $item['entry_id'];
+            $data['expected'][ $prefix . '/same.jpg' ] = $item['sources'][0]['sha256'];
+        }
+    } elseif ( $name === 'entry_folder_mixed_multi' ) {
+        $renamed = $ordered[0];
+        $unchanged = $ordered[1];
+        $third = $ordered[2];
+        $data['expected']['d125.jpg'] = $renamed['sources'][0]['sha256'];
+        $data['expected']['d125-' . $renamed['entry_id'] . '.jpg'] = $renamed['sources'][1]['sha256'];
+        $data['expected'][ 'shared-' . $unchanged['entry_id'] . '/same.jpg' ] = $unchanged['sources'][0]['sha256'];
+        $data['expected'][ 'shared-' . $unchanged['entry_id'] . '/unchanged-two.jpg' ] = $unchanged['sources'][1]['sha256'];
+        $data['expected'][ 'shared-' . $third['entry_id'] . '/same.jpg' ] = $third['sources'][0]['sha256'];
+    } elseif ( in_array( $name, [ 'default_equal_within_entry', 'entry_folder_equal_within_entry', 'shared_sanitized_upload_collision' ], true ) ) {
+        // Integrity violation is diagnostic only, with exact-case gates in assert-zip.php.
+        // Never insert an expected "winner" hash for a lossy archive.
+        $data['diagnostic_collision'] = true;
+        $data['expected_path_prefix'] = $name === 'default_equal_within_entry'
+            ? $first['entry_id'] . '/'
+            : ( $name === 'entry_folder_equal_within_entry'
+                ? 'shared-' . $first['entry_id'] . '/'
+                : 'shared/' );
     } elseif ( $name === 'host_folder_collision' ) {
         // No approved collision naming policy. Require conservation of BOTH source
         // payloads; never bless a one-member overwritten ZIP as an expected output.
