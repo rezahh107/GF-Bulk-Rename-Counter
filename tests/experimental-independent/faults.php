@@ -7,6 +7,7 @@ $case = $data['cases']['one'];
 $plan = GFBRC_Independent_Flat_Zip_Experiment::plan($case['form_id'], $case['entry_ids']);
 $prefix = rtrim(get_temp_dir(), '/\\') . '/gfbrc-independent-flat*';
 $before = glob($prefix) ?: [];
+if ($before) { throw new RuntimeException('Prior successful downloads left temporary ZIP files'); }
 foreach ([
     ['BRC_IFZ_FAIL_ADD', '1', 'Injected add failure'],
     ['BRC_IFZ_FAIL_CLOSE', '1', 'finalization failed'],
