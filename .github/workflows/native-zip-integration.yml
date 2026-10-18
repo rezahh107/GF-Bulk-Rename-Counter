@@ -320,7 +320,7 @@ jobs:
               cat "$BRC_LAB_DIR/sf-failure-$scenario.err" >&2
               exit 1
             fi
-            python3 -c 'from pathlib import Path;import sys;assert not Path(sys.argv[1]).read_bytes().startswith(b"PK\\x03\\x04")' \
+            python3 -c 'from pathlib import Path;import sys;assert not Path(sys.argv[1]).read_bytes().startswith(bytes.fromhex("504b0304"))' \
               "$BRC_LAB_DIR/sf-failure-$scenario.out"
             if find "$BRC_LAB_DIR/sf-tmp" -type f | grep -q .; then
               echo "Host leaked temporary ZIP: $scenario" >&2; exit 1
