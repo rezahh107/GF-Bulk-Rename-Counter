@@ -23,7 +23,7 @@ $report = [
     'expected' => 'd125.jpg',
 ];
 // Inspect the loaded native host class, not a test double or a source checkout.
-$host_class = new ReflectionClass(\\BDFGF\\Actions\\BulkDownload::class);
+$host_class = new ReflectionClass(\BDFGF\Actions\BulkDownload::class);
 $host_file = $host_class->getFileName();
 $expected_host_root = realpath(WP_PLUGIN_DIR . '/bulk-download-for-gravity-forms');
 if (!$host_file || !$expected_host_root || !str_starts_with(realpath($host_file), $expected_host_root . DIRECTORY_SEPARATOR)) {
