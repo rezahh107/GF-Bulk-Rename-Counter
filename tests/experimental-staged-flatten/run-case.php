@@ -25,17 +25,31 @@ if (str_starts_with($scenario, 'sf_hook_')) {
     add_action('bdfgf_after_uploaded_files', static function($zip) use ($scenario) {
         $lab = getenv('BRC_LAB_DIR');
         $file = $lab . '/sf-' . $scenario . '.json';
-        if (!$zip instanceof ZipArchive || !is_file($file)) {
-            throw new RuntimeException('SF_HOOK_PLAN_NOT_AVAILABLE');
+        if (!$zip instanceof ZipArchive) {
+            throw new RuntimeException('SF_HOOK_NOT_NATIVE_ZIP');
         }
-        $data = json_decode(file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
-        $first = $data['occurrences'][0];
-        if (str_contains($scenario, 'extra')) {
-            $result = $zip->addFromString('third-party-extra.txt', 'unexpected bytes');
-        } elseif (str_contains($scenario, 'same_bytes')) {
-            $result = $zip->addFile($first['source'], $first['member']);
+        // Early callbacks execute before any experimental journal exists.
+        if (str_starts_with($scenario, 'sf_hook_early')) {
+            $stage = $zip->getNameIndex(0);
+            if (!is_string($stage)) {
+                throw new RuntimeException('SF_NO_EARLY_STAGE');
+            }
+            $result = str_contains($scenario, 'extra')
+                ? $zip->addFromString('third-party-extra.txt', 'unexpected bytes')
+                : $zip->addFromString($stage, 'third-party changed bytes');
         } else {
-            $result = $zip->addFromString($first['member'], 'third-party changed bytes');
+            if (!is_file($file)) {
+                throw new RuntimeException('SF_HOOK_PLAN_NOT_AVAILABLE');
+            }
+            $data = json_decode(file_get_contents($file), true, 512, JSON_THROW_ON_ERROR);
+            $first = $data['occurrences'][0];
+            if (str_contains($scenario, 'extra')) {
+                $result = $zip->addFromString('third-party-extra.txt', 'unexpected bytes');
+            } elseif (str_contains($scenario, 'same_bytes')) {
+                $result = $zip->addFile($first['source'], $first['member']);
+            } else {
+                $result = $zip->addFromString($first['member'], 'third-party changed bytes');
+            }
         }
         if (!$result) {
             throw new RuntimeException('SF_THIRD_PARTY_INJECTION_FAILED');
