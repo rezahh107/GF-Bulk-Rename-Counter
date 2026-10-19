@@ -10,94 +10,7 @@ namespace GFBulkRename;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
-    /** A second native Settings API form edits only the selected Gravity Form. */
-    private static function render_per_form_rules(): void {
-        echo '<hr><h2>' . esc_html__('Per-form naming (independent flat ZIP only)', 'gf-bulk-rename-counter') . '</h2>';
-        echo '<p>' . esc_html__('Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients.', 'gf-bulk-rename-counter') . '</p>';
-        $forms = class_exists('GFAPI') ? \GFAPI::get_forms() : [];
-        if (!is_array($forms)) { $forms = []; }
-        $selected = isset($_GET['gfbrc_form']) ? absint($_GET['gfbrc_form']) : 0;
-        echo '<form method="get" action="' . esc_url(admin_url('options-general.php')) . '">';
-        echo '<input type="hidden" name="page" value="gf-bulk-rename-settings">';
-        echo '<label for="gfbrc-form-select">' . esc_html__('Choose a form to edit', 'gf-bulk-rename-counter') . '</label> ';
-        echo '<select id="gfbrc-form-select" name="gfbrc_form"><option value="0">' .
-            esc_html__('— Select a form —', 'gf-bulk-rename-counter') . '</option>';
-        foreach ($forms as $f) {
-            echo '<option value="' . esc_attr((string)$f['id']) . '" ' . selected($selected, $f['id'], false) . '>' .
-                esc_html($f['title'] . ' (ID: ' . $f['id'] . ')') . '</option>';
-        }
-        echo '</select> ';
-        submit_button(__('Open form rule', 'gf-bulk-rename-counter'), 'secondary', '', false);
-        echo '</form>';
-        if (!$selected || !class_exists('GFAPI')) { return; }
-        $form = \GFAPI::get_form($selected);
-        if (!is_array($form)) {
-            echo '<p>' . esc_html__('Form unavailable.', 'gf-bulk-rename-counter') . '</p>';
-            return;
-        }
-        $fields = Form_Naming_Rules::eligible_fields($form);
-        $rules = get_option(Form_Naming_Rules::OPTION_NAME, []);
-        $stored = is_array($rules) ? ($rules[(string)$selected] ?? []) : [];
-        $method = is_array($stored) ? ($stored['method'] ?? 'inherit') : 'inherit';
-        $single = is_array($stored) ? ($stored['field_id'] ?? 0) : 0;
-        $ordered = is_array($stored) && isset($stored['field_ids']) && is_array($stored['field_ids'])
-            ? $stored['field_ids'] : [];
-        $ranks = array_flip($ordered);
-        $sep = is_array($stored) ? ($stored['separator'] ?? '-') : '-';
-        $prefix = Form_Naming_Rules::OPTION_NAME;
-        echo '<form method="post" action="' . esc_url(admin_url('options.php')) . '">';
-        settings_fields(Form_Naming_Rules::OPTION_GROUP);
-        echo '<input type="hidden" name="' . esc_attr($prefix) . '[_form_id]" value="' . esc_attr((string)$selected) . '">';
-        echo '<table class="form-table" role="presentation"><tbody><tr><th scope="row"><label for="gfbrc-method">' .
-            esc_html__('Naming method', 'gf-bulk-rename-counter') . '</label></th><td>';
-        echo '<select id="gfbrc-method" name="' . esc_attr($prefix) . '[_method]">';
-        foreach ([
-            'inherit' => __('Use existing Legacy defaults (remove override)', 'gf-bulk-rename-counter'),
-            'legacy' => __('Legacy (existing counter configuration)', 'gf-bulk-rename-counter'),
-            'single' => __('Single Field', 'gf-bulk-rename-counter'),
-            'composite' => __('Composite', 'gf-bulk-rename-counter'),
-        ] as $key => $label) {
-            echo '<option value="' . esc_attr($key) . '" ' . selected($method, $key, false) . '>' .
-                esc_html($label) . '</option>';
-        }
-        echo '</select><p class="description">' .
-            esc_html__('Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules.', 'gf-bulk-rename-counter') .
-            '</p></td></tr>';
-        echo '<tr><th scope="row"><label for="gfbrc-single">' .
-            esc_html__('Single Field source', 'gf-bulk-rename-counter') . '</label></th><td>';
-        echo '<select id="gfbrc-single" name="' . esc_attr($prefix) . '[_single_field_id]">';
-        echo '<option value="0">' . esc_html__('— Choose a text or number field —', 'gf-bulk-rename-counter') . '</option>';
-        foreach ($fields as $id => $label) {
-            echo '<option value="' . esc_attr((string)$id) . '" ' . selected($single, $id, false) . '>' .
-                esc_html($label . ' (ID: ' . $id . ')') . '</option>';
-        }
-        echo '</select></td></tr>';
-        echo '<tr><th scope="row">' . esc_html__('Composite fields and order', 'gf-bulk-rename-counter') .
-            '</th><td><fieldset><legend class="screen-reader-text">' .
-            esc_html__('Composite fields and order', 'gf-bulk-rename-counter') . '</legend>';
-        echo '<p class="description">' .
-            esc_html__('Check at least two fields and assign consecutive positions 1, 2, 3 … to control filename order.', 'gf-bulk-rename-counter') . '</p>';
-        foreach ($fields as $id => $label) {
-            $rank = isset($ranks[$id]) ? $ranks[$id] + 1 : '';
-            echo '<p><label><input type="checkbox" name="' . esc_attr($prefix) . '[_include][' . esc_attr((string)$id) .
-                ']" value="1" ' . checked(isset($ranks[$id]), true, false) . '> ' .
-                esc_html($label . ' (ID: ' . $id . ')') . '</label> ';
-            echo '<label for="gfbrc-order-' . esc_attr((string)$id) . '">' .
-                esc_html__('Position', 'gf-bulk-rename-counter') . '</label> ';
-            echo '<input id="gfbrc-order-' . esc_attr((string)$id) . '" type="number" min="1" step="1" class="small-text" name="' .
-                esc_attr($prefix) . '[_field_order][' . esc_attr((string)$id) . ']" value="' .
-                esc_attr((string)$rank) . '"></p>';
-        }
-        echo '</fieldset></td></tr><tr><th scope="row"><label for="gfbrc-separator">' .
-            esc_html__('Composite separator', 'gf-bulk-rename-counter') . '</label></th><td>';
-        echo '<input id="gfbrc-separator" type="text" maxlength="32" name="' . esc_attr($prefix) .
-            '[_separator]" value="' . esc_attr((string)$sep) . '">';
-        echo '<p class="description">' .
-            esc_html__('Avoid personal data in selected fields; missing or unsafe values cause a visible ZIP preparation error.', 'gf-bulk-rename-counter') .
-            '</p></td></tr></tbody></table>';
-        submit_button(__('Save this form rule', 'gf-bulk-rename-counter'));
-        echo '</form>';
-    }
+
 }
 
 class Settings_Page {
@@ -213,5 +126,93 @@ class Settings_Page {
             <?php self::render_per_form_rules(); ?>
         </div>
         <?php
+    }
+    /** A second native Settings API form edits only the selected Gravity Form. */
+    private static function render_per_form_rules(): void {
+        echo '<hr><h2>' . esc_html__('Per-form naming (independent flat ZIP only)', 'gf-bulk-rename-counter') . '</h2>';
+        echo '<p>' . esc_html__('Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients.', 'gf-bulk-rename-counter') . '</p>';
+        $forms = class_exists('GFAPI') ? \GFAPI::get_forms() : [];
+        if (!is_array($forms)) { $forms = []; }
+        $selected = isset($_GET['gfbrc_form']) ? absint($_GET['gfbrc_form']) : 0;
+        echo '<form method="get" action="' . esc_url(admin_url('options-general.php')) . '">';
+        echo '<input type="hidden" name="page" value="gf-bulk-rename-settings">';
+        echo '<label for="gfbrc-form-select">' . esc_html__('Choose a form to edit', 'gf-bulk-rename-counter') . '</label> ';
+        echo '<select id="gfbrc-form-select" name="gfbrc_form"><option value="0">' .
+            esc_html__('— Select a form —', 'gf-bulk-rename-counter') . '</option>';
+        foreach ($forms as $f) {
+            echo '<option value="' . esc_attr((string)$f['id']) . '" ' . selected($selected, $f['id'], false) . '>' .
+                esc_html($f['title'] . ' (ID: ' . $f['id'] . ')') . '</option>';
+        }
+        echo '</select> ';
+        submit_button(__('Open form rule', 'gf-bulk-rename-counter'), 'secondary', '', false);
+        echo '</form>';
+        if (!$selected || !class_exists('GFAPI')) { return; }
+        $form = \GFAPI::get_form($selected);
+        if (!is_array($form)) {
+            echo '<p>' . esc_html__('Form unavailable.', 'gf-bulk-rename-counter') . '</p>';
+            return;
+        }
+        $fields = Form_Naming_Rules::eligible_fields($form);
+        $rules = get_option(Form_Naming_Rules::OPTION_NAME, []);
+        $stored = is_array($rules) ? ($rules[(string)$selected] ?? []) : [];
+        $method = is_array($stored) ? ($stored['method'] ?? 'inherit') : 'inherit';
+        $single = is_array($stored) ? ($stored['field_id'] ?? 0) : 0;
+        $ordered = is_array($stored) && isset($stored['field_ids']) && is_array($stored['field_ids'])
+            ? $stored['field_ids'] : [];
+        $ranks = array_flip($ordered);
+        $sep = is_array($stored) ? ($stored['separator'] ?? '-') : '-';
+        $prefix = Form_Naming_Rules::OPTION_NAME;
+        echo '<form method="post" action="' . esc_url(admin_url('options.php')) . '">';
+        settings_fields(Form_Naming_Rules::OPTION_GROUP);
+        echo '<input type="hidden" name="' . esc_attr($prefix) . '[_form_id]" value="' . esc_attr((string)$selected) . '">';
+        echo '<table class="form-table" role="presentation"><tbody><tr><th scope="row"><label for="gfbrc-method">' .
+            esc_html__('Naming method', 'gf-bulk-rename-counter') . '</label></th><td>';
+        echo '<select id="gfbrc-method" name="' . esc_attr($prefix) . '[_method]">';
+        foreach ([
+            'inherit' => __('Use existing Legacy defaults (remove override)', 'gf-bulk-rename-counter'),
+            'legacy' => __('Legacy (existing counter configuration)', 'gf-bulk-rename-counter'),
+            'single' => __('Single Field', 'gf-bulk-rename-counter'),
+            'composite' => __('Composite', 'gf-bulk-rename-counter'),
+        ] as $key => $label) {
+            echo '<option value="' . esc_attr($key) . '" ' . selected($method, $key, false) . '>' .
+                esc_html($label) . '</option>';
+        }
+        echo '</select><p class="description">' .
+            esc_html__('Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules.', 'gf-bulk-rename-counter') .
+            '</p></td></tr>';
+        echo '<tr><th scope="row"><label for="gfbrc-single">' .
+            esc_html__('Single Field source', 'gf-bulk-rename-counter') . '</label></th><td>';
+        echo '<select id="gfbrc-single" name="' . esc_attr($prefix) . '[_single_field_id]">';
+        echo '<option value="0">' . esc_html__('— Choose a text or number field —', 'gf-bulk-rename-counter') . '</option>';
+        foreach ($fields as $id => $label) {
+            echo '<option value="' . esc_attr((string)$id) . '" ' . selected($single, $id, false) . '>' .
+                esc_html($label . ' (ID: ' . $id . ')') . '</option>';
+        }
+        echo '</select></td></tr>';
+        echo '<tr><th scope="row">' . esc_html__('Composite fields and order', 'gf-bulk-rename-counter') .
+            '</th><td><fieldset><legend class="screen-reader-text">' .
+            esc_html__('Composite fields and order', 'gf-bulk-rename-counter') . '</legend>';
+        echo '<p class="description">' .
+            esc_html__('Check at least two fields and assign consecutive positions 1, 2, 3 … to control filename order.', 'gf-bulk-rename-counter') . '</p>';
+        foreach ($fields as $id => $label) {
+            $rank = isset($ranks[$id]) ? $ranks[$id] + 1 : '';
+            echo '<p><label><input type="checkbox" name="' . esc_attr($prefix) . '[_include][' . esc_attr((string)$id) .
+                ']" value="1" ' . checked(isset($ranks[$id]), true, false) . '> ' .
+                esc_html($label . ' (ID: ' . $id . ')') . '</label> ';
+            echo '<label for="gfbrc-order-' . esc_attr((string)$id) . '">' .
+                esc_html__('Position', 'gf-bulk-rename-counter') . '</label> ';
+            echo '<input id="gfbrc-order-' . esc_attr((string)$id) . '" type="number" min="1" step="1" class="small-text" name="' .
+                esc_attr($prefix) . '[_field_order][' . esc_attr((string)$id) . ']" value="' .
+                esc_attr((string)$rank) . '"></p>';
+        }
+        echo '</fieldset></td></tr><tr><th scope="row"><label for="gfbrc-separator">' .
+            esc_html__('Composite separator', 'gf-bulk-rename-counter') . '</label></th><td>';
+        echo '<input id="gfbrc-separator" type="text" maxlength="32" name="' . esc_attr($prefix) .
+            '[_separator]" value="' . esc_attr((string)$sep) . '">';
+        echo '<p class="description">' .
+            esc_html__('Avoid personal data in selected fields; missing or unsafe values cause a visible ZIP preparation error.', 'gf-bulk-rename-counter') .
+            '</p></td></tr></tbody></table>';
+        submit_button(__('Save this form rule', 'gf-bulk-rename-counter'));
+        echo '</form>';
     }
 }
