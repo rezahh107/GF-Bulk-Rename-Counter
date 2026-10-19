@@ -29,6 +29,8 @@ if (($rules[(string)$bform] ?? null) !== $state['previous_rules'][(string)$bform
         ['method'=>'composite','field_ids'=>[8,6],'separator'=>'.']) {
     throw new RuntimeException('Windows qualification changed unrelated per-form settings');
 }
+// WP-CLI runs outside admin_init. Explicitly register the same native sanitizer.
+\GFBulkRename\Settings_Page::register_settings();
 // Explicitly restore the previous C rule using the same registered sanitizer.
 update_option(Rules::OPTION_NAME, ['_form_id' => (string)$cform, '_method'=>'composite',
     '_include'=>['7'=>'1','6'=>'1'], '_field_order'=>['7'=>'1','6'=>'2'],

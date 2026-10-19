@@ -50,6 +50,8 @@ $updated = GFAPI::update_form($c_existing);
 if (is_wp_error($updated)) { throw new RuntimeException($updated->get_error_message()); }
 $rules = $previous_rules;
 $rules[(string)$cform] = ['method' => 'composite', 'field_ids' => [8, 6], 'separator' => '.'];
+// WP-CLI does not fire the admin_init registration used by options.php.
+\GFBulkRename\Settings_Page::register_settings();
 // Write via existing sanitizer using one-form Composite submission (not a new schema).
 update_option($option, ['_form_id' => (string)$cform, '_method' => 'composite',
     '_include' => ['8' => '1', '6' => '1'],
