@@ -19,12 +19,20 @@ const {chromium} = require('playwright-core');
     const context = await browser.newContext({acceptDownloads:true});
     await context.addCookies(cookies);
     const page = await context.newPage(), formId = meta.cases.one.form_id;
-    const diagnostic = [];
-    page.on('dialog', async d => {diagnostic.push('dialog='+d.message()); await d.dismiss();});
+    const diagnostic = [], endpointSelections = [], confirmations = [];
+    page.on('dialog', async d => {
+      diagnostic.push('dialog='+d.message());
+      if (d.type() === 'confirm') {
+        if (!d.message().includes('on this page') || !d.message().includes('NOT included'))
+          throw Error('Unclear page-scoped download confirmation: '+d.message());
+        confirmations.push(d.message()); await d.accept();
+      } else await d.dismiss();
+    });
     page.on('pageerror', e => diagnostic.push('pageerror='+String(e.message).slice(0,200)));
     page.on('request', req => {
       if (req.url().includes('admin-post.php')) {
         const body = new URLSearchParams(req.postData() || '');
+        endpointSelections.push({method:req.method(), ids:body.getAll('entry_ids[]'), form_id:body.get('form_id')});
         diagnostic.push('endpoint-request='+req.method()+' entry_count='+body.getAll('entry_ids[]').length+
           ' body_keys='+Array.from(new Set(body.keys())).join(','));
       }
@@ -170,6 +178,66 @@ const {chromium} = require('playwright-core');
       console.log('PASS_REAL_GF_ENTRY_LIST_SELECTED_'+number+
         ' visible='+visibleNow+' browser_zip_bytes='+multiBytes.length);
     }
+
+    // Native GF page-size qualification: remove the disposable 160-row test
+    // override without altering the real GF pagination or background threshold.
+    const marker = path.join(lab, 'ifz-native-page-size');
+    fs.writeFileSync(marker, 'normal GF pagination\\n');
+    try {
+      await page.goto(base + '/wp-admin/admin.php?page=gf_entries&id=' + formId,
+        {waitUntil:'domcontentloaded', timeout:25000});
+      const nativeRows = page.locator('input[type="checkbox"][name="entry[]"]');
+      const pageOneCount = await nativeRows.count();
+      const next = page.locator('a.next-page').first();
+      if (pageOneCount < 1 || pageOneCount >= 101 || await next.count() !== 1)
+        throw Error('Normal GF page size / next-page link not observed: visible='+pageOneCount+
+          ' next='+await next.count()+' url='+page.url());
+      const firstPageId = await nativeRows.first().inputValue();
+      await nativeRows.first().check();
+      const pageOneChecked = await nativeRows.locator(':checked').evaluateAll(nodes => nodes.map(x=>x.value));
+      if (!pageOneChecked.includes(firstPageId)) throw Error('Page one checkbox not selected');
+      await next.click();
+      await page.waitForLoadState('domcontentloaded');
+      const secondRows = page.locator('input[type="checkbox"][name="entry[]"]');
+      const pageTwoCount = await secondRows.count();
+      const secondPageId = await secondRows.first().inputValue();
+      if (!pageTwoCount || firstPageId === secondPageId)
+        throw Error('Real GF pagination did not change rows');
+      const pageTwoInitiallyChecked = await secondRows.evaluateAll(nodes => nodes.filter(x=>x.checked).map(x=>x.value));
+      const visibleAction = await page.locator('select[name="action"] option[value="gfbrc_independent_flat_zip"]').textContent();
+      if (!visibleAction.includes('selected on this page only'))
+        throw Error('No user-visible page-only qualification label');
+      await secondRows.first().check();
+      const secondChecked = await secondRows.evaluateAll(nodes => nodes.filter(x=>x.checked).map(x=>x.value));
+      const submittedBefore = endpointSelections.length, promptsBefore = confirmations.length;
+      await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
+      const [pagedDownload] = await Promise.all([
+        page.waitForEvent('download', {timeout:25000}),
+        page.locator('#doaction').click(),
+      ]);
+      const pagedPath = path.join(lab, 'browser-pagination.zip');
+      await pagedDownload.saveAs(pagedPath);
+      const received = fs.readFileSync(pagedPath);
+      if (received[0] !== 0x50 || received[1] !== 0x4b || !pagedDownload.suggestedFilename().endsWith('.zip'))
+        throw Error('Normal-paged case did not deliver ZIP');
+      const posted = endpointSelections.slice(submittedBefore);
+      if (posted.length !== 1 || posted[0].method !== 'POST' ||
+          JSON.stringify(posted[0].ids) !== JSON.stringify(secondChecked) ||
+          posted[0].ids.includes(firstPageId) || confirmations.length !== promptsBefore+1 ||
+          !confirmations.at(-1).includes(String(secondChecked.length)+' selected entries'))
+        throw Error('Actual paged UI/post/confirmation entry mismatch: '+JSON.stringify({posted,secondChecked,firstPageId}));
+      fs.writeFileSync(path.join(lab,'browser-pagination-selected.json'), JSON.stringify({
+        form_id:formId, selected_ids:posted[0].ids, page_one_selected_ids:pageOneChecked,
+        page_two_initially_checked:pageTwoInitiallyChecked, page_one_first_id:firstPageId,
+        page_two_first_id:secondPageId, page_one_rows:pageOneCount,
+        page_two_rows:pageTwoCount, page_scoped_confirmation:confirmations.at(-1),
+        zip_bytes:received.length,
+      }));
+      console.log('PASS_NATIVE_GF_PAGINATION_PAGE_SCOPED_DOWNLOAD page1_rows='+pageOneCount+
+        ' page2_rows='+pageTwoCount+' page1_selected='+pageOneChecked.join(',')+
+        ' page2_initial_checked='+pageTwoInitiallyChecked.join(',')+
+        ' submitted='+posted[0].ids.join(',')+' zip_bytes='+received.length);
+    } finally { fs.rmSync(marker,{force:true}); }
 
     // Control: native Bulk Download must STILL work from the authentic GF
     // dropdown in the same browser, with the test-only plugin active.
