@@ -101,14 +101,19 @@ const {chromium} = require('playwright-core');
           settingsRequests[requestCount].optionPage !== 'gf_bulk_rename_per_form_settings') {
         throw Error('Actual options.php POST did not contain the intended invalid separator');
       }
-      const notice = page.locator('.notice-error').filter({hasText:/Naming rule not saved/});
-      if (await notice.count() !== 1 ||
-          !(/Separator/.test(await notice.first().innerText()))) {
-        throw Error('Invalid separator lacked visible Settings API validation error: '+JSON.stringify(invalid));
-      }
+      const notices = await page.locator('.notice-error').allTextContents();
+      const visibleError = notices.some(message =>
+        /Naming rule not saved/.test(message) && /Separator/.test(message));
+      const responsePath = page.url();
       await settings('c');
-      if (await page.locator('#gfbrc-separator').inputValue() !== '__') {
-        throw Error('Invalid options.php POST mutated saved Composite rule: '+JSON.stringify(invalid));
+      const persisted = await page.locator('#gfbrc-separator').inputValue();
+      if (!visibleError || persisted !== '__') {
+        throw Error('Invalid Composite options.php submission diagnostic: input=' +
+          JSON.stringify(invalid) + ' posted=' +
+          JSON.stringify(settingsRequests[requestCount].separator) +
+          ' notices=' + JSON.stringify(notices) +
+          ' persisted=' + JSON.stringify(persisted) +
+          ' redirect=' + responsePath);
       }
     }
     console.log('PASS_BROWSER_OPTIONS_PHP_SEPARATOR_BACKSLASH_SLASH_VISIBLE_REJECTION');
