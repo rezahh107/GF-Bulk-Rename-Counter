@@ -240,8 +240,8 @@ final class Flat_Zip_Download {
                 for ($n = 0; $n <= 10000; $n++) {
                     $candidate = sanitize_file_name($stem . '-' . $item['entry_id'] .
                         ($n ? '-' . $n : '') . $ext);
-                    if ($candidate !== '' && !str_contains($candidate, '\\') &&
-                        !str_contains($candidate, '\\\\') &&
+                    if ($candidate !== '' && !str_contains($candidate, '/') &&
+                        !str_contains($candidate, '\\') &&
                         !isset($reserved[strtolower($candidate)]) &&
                         !isset($used[strtolower($candidate)])) {
                         $name = $candidate;
@@ -256,7 +256,7 @@ final class Flat_Zip_Download {
         }
         unset($item);
         if (count($used) !== count($plan)) { throw new RuntimeException('Duplicate planned names'); }
-        return $plan;        return $plan;
+        return $plan;
     }
 
     public static function write_verified_zip(array $plan): string {
