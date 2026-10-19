@@ -126,6 +126,49 @@ const {chromium} = require('playwright-core');
     console.log('PASS_REAL_CHROMIUM_TWO_ENTRY_DOWNLOAD ids='+twoIds.join(',')+
       ' zip_bytes='+bTwo.length);
 
+    // Deliberate LAB-ONLY GF page-size=160, NOT a bulk action threshold
+    // change. This qualifies the real checkbox -> browser POST path at
+    // 99, 100 and 101 in a single visible Entry-list page.
+    for (const [label, number] of [['n99',99],['n100',100],['n101',101]]) {
+      await page.goto(base + '/wp-admin/admin.php?page=gf_entries&id=' + formId,
+        {waitUntil:'domcontentloaded', timeout:40000});
+      const requested = meta.cases[label].entry_ids.map(String);
+      if (requested.length !== number || new Set(requested).size !== number)
+        throw Error('Malformed '+label+' selected fixture');
+      const available = page.locator('input[type="checkbox"][name="entry[]"]');
+      const visibleNow = await available.count();
+      if (visibleNow < 101)
+        throw Error('GF entry list did not honor test-only 160-row page size: '+visibleNow);
+      const picked = await available.evaluateAll((nodes, ids) => {
+        const wanted = new Set(ids);
+        for (const item of nodes) {
+          item.checked = wanted.has(item.value);
+          item.dispatchEvent(new Event('change',{bubbles:true}));
+        }
+        return nodes.filter(x=>x.checked).map(x=>x.value);
+      }, requested);
+      if (picked.length !== number || new Set(picked).size !== number ||
+          !requested.every(x=>picked.includes(x)))
+        throw Error('Browser selected checkbox IDs differ from exactly requested '+label);
+      await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
+      const [multiDownload] = await Promise.all([
+        page.waitForEvent('download',{timeout:40000}),
+        page.locator('#doaction').click(),
+      ]);
+      const multiPath = path.join(lab,'browser-'+label+'.zip');
+      await multiDownload.saveAs(multiPath);
+      const multiBytes = fs.readFileSync(multiPath);
+      if (!multiDownload.suggestedFilename().endsWith('.zip') ||
+          multiBytes.length < 30 || multiBytes[0]!==0x50 || multiBytes[1]!==0x4b)
+        throw Error(label+' did not deliver a browser ZIP');
+      fs.writeFileSync(path.join(lab,'browser-'+label+'-selected.json'), JSON.stringify({
+        selected_ids:requested, form_id:formId, browser_zip_bytes:multiBytes.length,
+        visible_rows:visibleNow
+      }));
+      console.log('PASS_REAL_GF_ENTRY_LIST_SELECTED_'+number+
+        ' visible='+visibleNow+' browser_zip_bytes='+multiBytes.length);
+    }
+
     // Control: native Bulk Download must STILL work from the authentic GF
     // dropdown in the same browser, with the test-only plugin active.
     await page.goto(base + '/wp-admin/admin.php?page=gf_entries&id=' + formId,
