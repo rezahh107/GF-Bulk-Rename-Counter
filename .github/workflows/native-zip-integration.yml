@@ -264,6 +264,14 @@ jobs:
           php -l tests/experimental-independent/auth.php
           php -l tests/experimental-independent/plans.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/prepare.php
+          # Source identity and schema semantics checked against the unchanged
+          # pinned Bulk Download 4.2.0 distribution, not a synthetic host stub.
+          test "$(grep -Fc "gform_get_meta( (int) \$entry_id, 'bdfgf_deleted_file_urls' )" "$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDownload.php")" -ge 1
+          test "$(grep -Fc "gform_update_meta( \$entry_id, 'bdfgf_deleted_file_urls', \$deleted_urls )" "$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDelete.php")" -ge 1
+          test "$(grep -Fc "gform_update_meta( \$entry_id, 'bdfgf_files_deleted', true )" "$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDelete.php")" -ge 1
+          echo "PASS_PINNED_HOST_DELETE_SCHEMA_SOURCE_CONTRACT"
+          php -l tests/experimental-independent/legacy-parity.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/legacy-parity.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/plans.php
           # Reuse the exact 8080 server + cookie pair that already delivered
           # the authenticated native single-entry HTTP ZIP above.
@@ -293,6 +301,7 @@ jobs:
           BRC_CHROME="$chrome" node tests/experimental-independent/browser.cjs
           php -l tests/experimental-independent/verify-browser.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-independent/verify-browser.php
+          test ! -e "$BRC_LAB_DIR/ifz-native-page-size"
           # The HTTP process logs bounded resource measurements for the
           # 24-file workload; no extra temporary ZIP copy is made.
           grep 'IFZ_RESOURCE_LAB ' "$BRC_LAB_DIR/http-server.log" | tail -n 3
