@@ -27,11 +27,15 @@ if (!is_array($previous_rules) ||
 $original_entries = [];
 $original_hashes = [];
 $original_sources = [];
-foreach ([$b, $c] as $fixture) {
+$qualified = json_decode(file_get_contents($lab . '/per-form.json'), true, 512, JSON_THROW_ON_ERROR);
+foreach (['b' => $b, 'c' => $c] as $role => $fixture) {
     $source_entry_id = (int)$fixture['entry_ids'][0];
-    $entry = GFAPI::get_entry($source_entry_id);
-    $original_entries[(string)$source_entry_id] = $entry;
-    $plan = Download::plan((int)$fixture['form_id'], [$source_entry_id]);
+    $original_entries[(string)$source_entry_id] = GFAPI::get_entry($source_entry_id);
+    // Native pre-EXT-001 fixtures lack the new text fields; read sources through
+    // the *already-qualified* real GF Entries that carry the selected new rule.
+    $qualified_id = (int)$qualified[$role]['entry_ids'][0];
+    $original_entries[(string)$qualified_id] = GFAPI::get_entry($qualified_id);
+    $plan = Download::plan((int)$fixture['form_id'], [$qualified_id]);
     $paths = array_column($plan, 'source');
     $original_sources[(string)$fixture['form_id']] = $paths;
     foreach ($paths as $path) { $original_hashes[$path] = hash_file('sha256', $path); }
