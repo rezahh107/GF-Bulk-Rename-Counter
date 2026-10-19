@@ -19,7 +19,8 @@ foreach ($snapshots as $case => $entries) {
             }
         }
         if ((int)$now['form_id'] !== (int)$original['form_id'] ||
-            gform_get_meta((int)$id, 'bdfgf_deleted_file_urls') !== $original['deleted']) {
+            gform_get_meta((int)$id, 'bdfgf_deleted_file_urls') !== $original['deleted'] ||
+            gform_get_meta((int)$id, 'bdfgf_files_deleted') !== $original['deleted_flag']) {
             throw new RuntimeException('Synthetic Entry metadata changed: ' . $id);
         }
         $count++;
