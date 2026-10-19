@@ -68,6 +68,7 @@ jobs:
           test "$(php -r 'echo PHP_VERSION;')" = "8.2.34"
           php -r 'if (!extension_loaded("zip") || !extension_loaded("mysqli")) exit(1);'
           php tests/verify.php
+          python3 tests/production-candidate/test-buffer-guard.py
 
       - name: Install WordPress 6.8.3 and checksum-verified WP-CLI
         shell: bash
@@ -250,6 +251,71 @@ jobs:
           set -euo pipefail
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Original uploads and GF values verified unchanged on authentic runtime.'
+
+      - name: Qualify independent flat-ZIP action in genuine WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Install only LAB-specific pagination helper; the actual implementation
+          # comes exclusively from the already installed release-allowlisted GFBRC ZIP.
+          mkdir -p "$BRC_WP_PATH/wp-content/mu-plugins"
+          cp tests/production-candidate/LabPaging.php "$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-lab-paging.php"
+          php -l tests/production-candidate/LabPaging.php
+          php tests/production-candidate/version-contract.php
+          php -l tests/production-candidate/prepare.php
+          php -l tests/production-candidate/auth.php
+          php -l tests/production-candidate/plans.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/prepare.php
+          # Source identity and schema semantics checked against the unchanged
+          # pinned Bulk Download 4.2.0 distribution, not a synthetic host stub.
+          test "$(grep -Fc "gform_get_meta( (int) \$entry_id, 'bdfgf_deleted_file_urls' )" "$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDownload.php")" -ge 1
+          test "$(grep -Fc "gform_update_meta( \$entry_id, 'bdfgf_deleted_file_urls', \$deleted_urls )" "$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDelete.php")" -ge 1
+          test "$(grep -Fc "gform_update_meta( \$entry_id, 'bdfgf_files_deleted', true )" "$BRC_WP_PATH/wp-content/plugins/bulk-download-for-gravity-forms/lib/Actions/BulkDelete.php")" -ge 1
+          echo "PASS_PINNED_HOST_DELETE_SCHEMA_SOURCE_CONTRACT"
+          php -l tests/production-candidate/legacy-parity.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/legacy-parity.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/plans.php
+          # Reuse the exact 8080 server + cookie pair that already delivered
+          # the authenticated native single-entry HTTP ZIP above.
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/auth.php
+          curl -fsS "$BRC_BASE_URL/wp-login.php" -o /dev/null
+          if ! python3 tests/production-candidate/verify-http.py "$BRC_LAB_DIR"; then
+            echo "Independent HTTP request failed; redacted server diagnostics:" >&2
+            grep -E "IFZ_HTTP_DIAGNOSTIC|PHP Fatal|Uncaught" "$BRC_LAB_DIR/http-server.log" | tail -n 30 >&2 || true
+            python3 -c 'from pathlib import Path; p=Path("/tmp/brc-lab/one.body"); b=p.read_text(errors="replace"); a=b.lower().find("<body"); print("Body error:",b[a:a+900] if a>=0 else b[-1200:])' >&2 || true
+            exit 1
+          fi
+          # Exercise the same installed candidate through genuine authenticated
+          # WordPress HTTP requests with real removable and non-removable stacks.
+          python3 tests/production-candidate/verify-buffer-http.py "$BRC_LAB_DIR"
+          # Cross-check an independent source-manifest-derived occurrence
+          # multiset, not solely the prototype's own filename plan.
+          for scenario in one n99 n100 n101 multiple shared sanitized_equal multi_entry_files host_folder_collision zero_counter empty_counter repeated_physical previously_deleted; do
+            python3 tests/production-candidate/assert-zip.py \
+              "$BRC_LAB_DIR/manifest.json" \
+              "$BRC_LAB_DIR/independent.json" \
+              "$scenario" "$BRC_LAB_DIR/$scenario.body"
+          done
+
+          # A real browser selects an actual Gravity Forms Entry row, clicks
+          # the custom item in the native bulk dropdown, and saves its ZIP.
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          BRC_CHROME="$chrome" npm --version
+          npm install --no-save --ignore-scripts --no-audit --package-lock=false playwright-core@1.55.0
+          BRC_CHROME="$chrome" node tests/production-candidate/browser.cjs
+          php -l tests/production-candidate/verify-browser.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-browser.php
+          test ! -e "$BRC_LAB_DIR/ifz-native-page-size"
+          # The HTTP process logs bounded resource measurements for the
+          # 24-file workload; no extra temporary ZIP copy is made.
+          grep 'GFBRC_CANDIDATE_RESOURCE_LAB ' "$BRC_LAB_DIR/http-server.log" | tail -n 3
+          php -l tests/production-candidate/faults.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/faults.php
+          php -l tests/production-candidate/verify-sources.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-sources.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
+          echo 'Native Bulk Download unchanged; independent production implementation loaded from installable GFBRC ZIP.'
 
       - name: Summarize qualification evidence
         if: always()

@@ -99,6 +99,7 @@ final class Plugin {
 
         $handler = new Rename_Handler();
         add_filter( 'bdfgf_entry_filename', [ $handler, 'rename_by_counter' ], 10, 3 );
+        Flat_Zip_Download::register();
     }
 
     public function missing_gf_notice(): void {
