@@ -194,7 +194,7 @@ const {chromium} = require('playwright-core');
           ' next='+await next.count()+' url='+page.url());
       const firstPageId = await nativeRows.first().inputValue();
       await nativeRows.first().check();
-      const pageOneChecked = await nativeRows.locator(':checked').evaluateAll(nodes => nodes.map(x=>x.value));
+      const pageOneChecked = await nativeRows.evaluateAll(nodes => nodes.filter(x=>x.checked).map(x=>x.value));
       if (!pageOneChecked.includes(firstPageId)) throw Error('Page one checkbox not selected');
       await next.click();
       await page.waitForLoadState('domcontentloaded');
