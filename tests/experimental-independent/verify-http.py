@@ -24,7 +24,7 @@ successes = {
     "malformed_counter": 1, "larger_workload": 24,
     "repeated_physical": 3, "previously_deleted": 1,
 }
-failures = {"all_deleted", "missing_mixed", "traversal", "remote_url",
+failures = {"all_deleted", "actual_host_deleted", "deleted_flag_without_urls", "missing_mixed", "traversal", "remote_url",
             "unreadable", "cross_form", "duplicate_selected_id"}
 assert meta["threshold"] == 100, f"GF background threshold changed: {meta['threshold']}"
 assert set(successes) | failures == set(meta["cases"]), "Unexpected scenario inventory"
