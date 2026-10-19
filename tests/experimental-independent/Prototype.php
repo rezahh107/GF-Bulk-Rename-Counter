@@ -13,6 +13,13 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
         add_filter('gform_entry_list_bulk_actions', [__CLASS__, 'add_action'], 20, 2);
         add_action('admin_footer', [__CLASS__, 'footer']);
         add_action('admin_post_' . self::ENDPOINT, [__CLASS__, 'download']);
+        // CI-ONLY paging accommodation to select 101 genuine checkbox rows
+        // on one actual Gravity Forms Entry-list page. Not a bulk threshold change.
+        if (getenv('BRC_LAB_DIR')) {
+            add_filter('gform_entry_page_size', static function($page_size, $form_id) {
+                return 160;
+            }, 10, 2);
+        }
     }
 
     public static function add_action($actions, $form_id) {
