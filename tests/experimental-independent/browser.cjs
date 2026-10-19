@@ -226,9 +226,20 @@ const {chromium} = require('playwright-core');
           posted[0].ids.includes(firstPageId) || confirmations.length !== promptsBefore+1 ||
           !confirmations.at(-1).includes(String(secondChecked.length)+' selected entries'))
         throw Error('Actual paged UI/post/confirmation entry mismatch: '+JSON.stringify({posted,secondChecked,firstPageId}));
+      // Return through the REAL previous-page control to determine whether a
+      // checkbox checked on page one remains checked after visiting page two.
+      const prev = page.locator('a.prev-page').first();
+      if (await prev.count() !== 1) throw Error('GF previous-page control absent');
+      await prev.click();
+      await page.waitForLoadState('domcontentloaded');
+      const originalCheckbox = page.locator('input[type="checkbox"][name="entry[]"][value="' + firstPageId + '"]');
+      if (await originalCheckbox.count() !== 1)
+        throw Error('Original checked Entry not found after navigating back');
+      const pageOneRetainedOnReturn = await originalCheckbox.isChecked();
       fs.writeFileSync(path.join(lab,'browser-pagination-selected.json'), JSON.stringify({
         form_id:formId, selected_ids:posted[0].ids, page_one_selected_ids:pageOneChecked,
-        page_two_initially_checked:pageTwoInitiallyChecked, page_one_first_id:firstPageId,
+        page_two_initially_checked:pageTwoInitiallyChecked,
+        page_one_retained_on_return:pageOneRetainedOnReturn, page_one_first_id:firstPageId,
         page_two_first_id:secondPageId, page_one_rows:pageOneCount,
         page_two_rows:pageTwoCount, page_scoped_confirmation:confirmations.at(-1),
         zip_bytes:received.length,
@@ -236,6 +247,7 @@ const {chromium} = require('playwright-core');
       console.log('PASS_NATIVE_GF_PAGINATION_PAGE_SCOPED_DOWNLOAD page1_rows='+pageOneCount+
         ' page2_rows='+pageTwoCount+' page1_selected='+pageOneChecked.join(',')+
         ' page2_initial_checked='+pageTwoInitiallyChecked.join(',')+
+        ' page1_retained_on_return='+pageOneRetainedOnReturn+
         ' submitted='+posted[0].ids.join(',')+' zip_bytes='+received.length);
     } finally { fs.rmSync(marker,{force:true}); }
 
