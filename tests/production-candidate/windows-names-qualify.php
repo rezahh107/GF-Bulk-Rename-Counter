@@ -61,6 +61,12 @@ if (Rules::for_form(GFAPI::get_form($cform)) !== $rules[(string)$cform] ||
     get_option('gf_bulk_rename_options') !== $legacy_before) {
     throw new RuntimeException('Composite test configuration changed unrelated rules or Legacy');
 }
+// An additional CI-only GF field legitimately changes the shape of GFAPI
+// readbacks for pre-existing Entries. Snapshot AFTER this fixture setup;
+// the HTTP requests must not change these normalized readbacks.
+foreach (array_keys($original_entries) as $entry_id) {
+    $original_entries[(string)$entry_id] = GFAPI::get_entry((int)$entry_id);
+}
 
 $cases = [];
 $entry_snapshots = [];
