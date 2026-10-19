@@ -61,7 +61,7 @@ final class Form_Naming_Rules {
 
     private static function validate_separator(string $separator): void {
         if (strlen($separator) > 32 || !preg_match('//u', $separator) ||
-            preg_match('/[\\x00-\\x1f\\x7f\\/\\\\]/u', $separator)) {
+            strpbrk($separator, '/\\\\') !== false || preg_match('/[\\x00-\\x1f\\x7f]/', $separator)) {
             throw new \RuntimeException('Separator must be valid text without slashes or control characters (max 32 bytes)');
         }
     }
@@ -76,6 +76,12 @@ final class Form_Naming_Rules {
     }
 
     public static function sanitize($input): array {
+        // WordPress may sanitize twice while first creating an option. Only a
+        // normalized value produced by THIS request can pass the second call.
+        static $previous_normalized = null;
+        if (is_array($previous_normalized) && $input === $previous_normalized) {
+            return $previous_normalized;
+        }
         $old = get_option(self::OPTION_NAME, []);
         if (!is_array($old)) { $old = []; }
         try {
@@ -92,6 +98,7 @@ final class Form_Naming_Rules {
             $method = $input['_method'];
             if ($method === 'inherit') {
                 unset($old[(string)$id]);
+                $previous_normalized = $old;
                 return $old;
             }
             if ($method === 'legacy') {
@@ -134,6 +141,7 @@ final class Form_Naming_Rules {
                 throw new \RuntimeException('Unknown naming method');
             }
             $old[(string)$id] = self::validate_saved($form, $rule);
+            $previous_normalized = $old;
             return $old;
         } catch (\Throwable $error) {
             add_settings_error(self::OPTION_NAME, 'invalid_form_rule',
