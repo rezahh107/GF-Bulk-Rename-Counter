@@ -2,7 +2,10 @@
 /** Read a ZIP saved by real Chromium and compare to selected GF source bytes. */
 if (!defined('ABSPATH') || !class_exists('GFAPI')) { throw new RuntimeException('Real WP/GF unavailable'); }
 $root = getenv('BRC_LAB_DIR');
-foreach ([['browser-selected.json','browser-one.zip'], ['browser-two-selected.json','browser-two.zip']] as [$meta_file, $zip_file]) {
+foreach ([['browser-selected.json','browser-one.zip'], ['browser-two-selected.json','browser-two.zip'],
+    ['browser-n99-selected.json','browser-n99.zip'],
+    ['browser-n100-selected.json','browser-n100.zip'],
+    ['browser-n101-selected.json','browser-n101.zip']] as [$meta_file, $zip_file]) {
 $meta = json_decode(file_get_contents($root . '/' . $meta_file), true, 512, JSON_THROW_ON_ERROR);
 $ids = isset($meta['selected_ids']) ? array_map('intval', $meta['selected_ids']) : [(int)$meta['selected_id']];
 $form_id = (int)$meta['form_id'];
