@@ -39,6 +39,27 @@ $add_case('empty_counter', ['1' => $url, '5' => '']);
 $add_case('missing_counter', ['1' => $url]);
 $add_case('malformed_counter', ['1' => $url, '5' => 'A?B']);
 $add_case('repeated_physical', ['1' => $url, '2' => wp_json_encode([$url, $url]), '5' => '125']);
+// Reserve a naturally occurring d125-<second Entry ID>.jpg before
+// assigning a suffix to the second d125.jpg occurrence.
+$reserved_first = GFAPI::add_entry(['form_id' => $form_id, '1' => $url, '5' => '125']);
+$reserved_second = GFAPI::add_entry(['form_id' => $form_id, '1' => $url, '5' => '125']);
+if (is_wp_error($reserved_first) || is_wp_error($reserved_second)) {
+    throw new RuntimeException('Cannot prepare reserved-name collision Entries');
+}
+$reserved_third = GFAPI::add_entry([
+    'form_id' => $form_id, '1' => $url, '5' => '125-' . $reserved_second
+]);
+if (is_wp_error($reserved_third)) { throw new RuntimeException('Cannot prepare natural name Entry'); }
+$cases['natural_reserved'] = ['form_id' => $form_id,
+    'entry_ids' => [(int)$reserved_first, (int)$reserved_second, (int)$reserved_third]];
+$case_first = GFAPI::add_entry(['form_id' => $form_id, '1' => $url, '5' => 'AB']);
+$case_second = GFAPI::add_entry(['form_id' => $form_id, '1' => $url, '5' => 'ab']);
+if (is_wp_error($case_first) || is_wp_error($case_second)) {
+    throw new RuntimeException('Cannot prepare case-insensitive filename collision Entries');
+}
+$cases['casefold_collision'] = ['form_id' => $form_id,
+    'entry_ids' => [(int)$case_first, (int)$case_second]];
+
 $other = $manifest['scenarios']['shared']['uploads'][0]['url'];
 $add_case('previously_deleted', ['1' => $url, '2' => wp_json_encode([$other]), '5' => '125'], [$url]);
 $add_case('all_deleted', ['1' => $url, '5' => '125'], [$url]);
