@@ -240,7 +240,7 @@ final class Flat_Zip_Download {
                 for ($n = 0; $n <= 10000; $n++) {
                     $candidate = sanitize_file_name($stem . '-' . $item['entry_id'] .
                         ($n ? '-' . $n : '') . $ext);
-                    if ($candidate !== '' && !str_contains($candidate, '/') &&
+                    if ($candidate !== '' && !str_contains($candidate, '\\') &&
                         !str_contains($candidate, '\\\\') &&
                         !isset($reserved[strtolower($candidate)]) &&
                         !isset($used[strtolower($candidate)])) {
@@ -286,6 +286,16 @@ final class Flat_Zip_Download {
             if (!$closed) {
                 throw new RuntimeException('ZIP finalization failed');
             }
+            self::verify_closed_zip($temp, $plan);
+            return $temp;
+        } catch (Throwable $e) {
+            @unlink($temp);
+            throw $e;
+        }
+    }
+
+    /** Verify an already closed ZIP before a response begins (also used in CI mutation controls). */
+    public static function verify_closed_zip(string $temp, array $plan): void {
             $read = new ZipArchive();
             if ($read->open($temp) !== true) { throw new RuntimeException('Closed ZIP unreadable'); }
             try {
@@ -310,12 +320,8 @@ final class Flat_Zip_Download {
                     }
                 }
             } finally { $read->close(); }
-            return $temp;
-        } catch (Throwable $e) {
-            @unlink($temp);
-            throw $e;
-        }
     }
+
 
     public static function download(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') { self::fail('POST required', 405); }
