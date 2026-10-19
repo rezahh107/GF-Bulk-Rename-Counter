@@ -25,7 +25,7 @@ foreach (['b' => 2, 'c' => 6] as $key => $expected) {
     // from fixture creation order. Names/suffixes belong to the actual POST order.
     $plan = \GFBulkRename\Flat_Zip_Download::plan($case['form_id'], $actual);
     if (count($plan) !== $expected) { throw new RuntimeException('Unexpected source occurrence count'); }
-    $expected_sources = $data['expected_sources'][$key];
+    $expected_sources = $data['expected_sources'][$key === 'b' ? 'single' : 'composite'];
     $actual_sources = array_map(static function(array $item): array {
         return ['source' => $item['source'], 'sha' => $item['sha256'], 'size' => $item['size']];
     }, $plan);
