@@ -8,6 +8,14 @@ This repository contains the existing **Gravity Forms Bulk Rename Counter v2.0.6
 
 **Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. The supported runtime dependency range is not exhaustively pinned or certified. A bounded CI integration lane uses **Gravity Forms 3.1.1.1** and **Bulk Download for Gravity Forms 4.2.0** in a synthetic WordPress environment; see [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md).
 
+## Independent flat ZIP (unreleased production candidate)
+
+A separately registered **Download Flat ZIP with Rename (selected on this page only)** action appears beside native Bulk Download. It confirms the exact selected Entry count; cross-page selections are not retained. The separate authenticated POST verifies Gravity Forms permission, nonce, source paths and SHA-256 of every expected member before responding. It leaves stored Entries, uploads, the original Legacy action and native Bulk Download unchanged.
+
+The compatibility check interprets both existing host deletion metadata keys through public Gravity Forms meta retrieval without comparing `BDFGF_VERSION` to any exact release number. Malformed, contradictory or unknown observable deletion states, missing source files and unsafe paths produce a visible error and **no ZIP**. A future release using new deletion semantics with no observable change in these keys cannot be detected or certified automatically. Remote/offloaded storage is outside the local upload-root contract.
+
+Noncolliding `d{counter}.{extension}` names remain unchanged. Collisions use the Legacy visual `d125-132.jpg`, `d125-132-1.jpg` suffix scheme, with natural names reserved first. Interrupted network delivery after streaming starts is outside pre-delivery atomicity.
+
 ## Install and configure
 
 1. Copy the plugin files from the repository root into a directory named `gf-bulk-rename-counter` under `wp-content/plugins/` (or package that directory as a WordPress plugin ZIP).
