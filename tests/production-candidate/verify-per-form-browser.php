@@ -14,7 +14,22 @@ foreach (['b' => 2, 'c' => 6] as $key => $expected) {
     $case = $data[$key];
     $plan = \GFBulkRename\Flat_Zip_Download::plan($case['form_id'], $case['entry_ids']);
     if (count($plan) !== $expected) { throw new RuntimeException('Unexpected source occurrence count'); }
-    \GFBulkRename\Flat_Zip_Download::verify_closed_zip($root . '/per-form-' . $key . '.zip', $plan);
+    try {
+        \GFBulkRename\Flat_Zip_Download::verify_closed_zip($root . '/per-form-' . $key . '.zip', $plan);
+    } catch (Throwable $e) {
+        $probe = new ZipArchive();
+        $observed = [];
+        if ($probe->open($root . '/per-form-' . $key . '.zip') === true) {
+            for ($index = 0; $index < $probe->numFiles; $index++) {
+                $observed[] = $probe->getNameIndex($index);
+            }
+            $probe->close();
+        }
+        throw new RuntimeException('Actual downloaded archive differs in ' . $key .
+            ': expected=' . wp_json_encode(array_column($plan, 'name'), JSON_UNESCAPED_UNICODE) .
+            ' actual=' . wp_json_encode($observed, JSON_UNESCAPED_UNICODE) .
+            '; prior=' . $e->getMessage(), 0, $e);
+    }
     $z = new ZipArchive();
     if ($z->open($root . '/per-form-' . $key . '.zip') !== true ||
         $z->numFiles !== $expected) { throw new RuntimeException('Browser archive unreadable'); }
