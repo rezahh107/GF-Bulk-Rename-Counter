@@ -23,6 +23,7 @@ successes = {
     "zero_counter": 1, "empty_counter": 1, "missing_counter": 1,
     "malformed_counter": 1, "larger_workload": 24,
     "repeated_physical": 3, "previously_deleted": 1,
+    "natural_reserved": 3, "casefold_collision": 2,
 }
 failures = {"all_deleted", "actual_host_deleted", "deleted_flag_without_urls", "missing_mixed", "traversal", "remote_url",
             "unreadable", "cross_form", "duplicate_selected_id",
@@ -87,6 +88,12 @@ def check_zip(label, case, body):
     if case == "malformed_counter": assert actual == ["dAB.jpg"]
     if case == "larger_workload": assert len(actual) == 24 and sum(m.file_size for m in members) == 24 * 262144
     if case == "repeated_physical": assert len(set(actual)) == 3
+    if case == "natural_reserved":
+        second_id = meta["cases"][case]["entry_ids"][1]
+        assert actual == ["d125.jpg", f"d125-{second_id}-1.jpg", f"d125-{second_id}.jpg"], actual
+    if case == "casefold_collision":
+        second_id = meta["cases"][case]["entry_ids"][1]
+        assert actual == ["dAB.jpg", f"dab-{second_id}.jpg"], actual
     assert all("-e" not in name or "-f" not in name for name in actual), "Experimental naming suffix leaked"
     if case == "sanitized_equal": assert "dAB.jpg" in actual and len(actual) == 2
     if case == "host_folder_collision": assert len(actual) == 2 and len(set(actual)) == 2
