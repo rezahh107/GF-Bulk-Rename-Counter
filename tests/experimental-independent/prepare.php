@@ -45,6 +45,44 @@ $add_case('missing_mixed', ['1' => $url, '2' => wp_json_encode([$missing]), '5' 
 $add_case('traversal', ['1' => dirname($url) . '/%2e%2e/secret.jpg', '5' => '125']);
 $add_case('remote_url', ['1' => 'https://example.invalid/private.jpg', '5' => '125']);
 
+// An inconsistent pair of host-owned metadata keys must fail closed instead
+// of reintroducing previously deleted uploads into a downloadable ZIP.
+$flag_only_id = $add_case('deleted_flag_without_urls', ['1' => $url, '5' => '125']);
+gform_update_meta($flag_only_id, 'bdfgf_files_deleted', true);
+
+// Exercise the *installed unmodified host's actual delete path* with a brand
+// new CI-owned upload and Entry. This does not touch original fixture files.
+$host_delete_upload = wp_upload_bits('ifz-host-deleted-' . wp_generate_password(12, false) . '.jpg',
+    null, 'synthetic-file-to-be-deleted-only-in-CI');
+if (!empty($host_delete_upload['error']) || !is_file($host_delete_upload['file'])) {
+    throw new RuntimeException('Cannot prepare host deletion-only synthetic upload');
+}
+$host_deleted_id = GFAPI::add_entry(['form_id' => $form_id, '1' => $host_delete_upload['url'], '5' => '125']);
+if (is_wp_error($host_deleted_id)) { throw new RuntimeException('Cannot add host deletion-only Entry'); }
+$original_form = GFAPI::get_form($form_id);
+$delete_form = $original_form;
+$delete_form['bulkDownloadSettings']['customDeleteEntryFiles'] = true;
+try {
+    $updated = GFAPI::update_form($delete_form);
+    if (is_wp_error($updated)) { throw new RuntimeException('Host deletion setting not writable'); }
+    if (!class_exists('\\BDFGF\\Actions\\BulkDelete')) {
+        throw new RuntimeException('Pinned authentic host delete class missing');
+    }
+    (new \\BDFGF\\Actions\\BulkDelete())->bulk_delete($form_id, [(int)$host_deleted_id]);
+} finally {
+    $restored = GFAPI::update_form($original_form);
+    if (is_wp_error($restored)) { throw new RuntimeException('Cannot restore form settings after CI deletion'); }
+}
+clearstatcache(true, $host_delete_upload['file']);
+$host_urls = maybe_unserialize(gform_get_meta((int)$host_deleted_id, 'bdfgf_deleted_file_urls'));
+if (file_exists($host_delete_upload['file']) ||
+    !gform_get_meta((int)$host_deleted_id, 'bdfgf_files_deleted') ||
+    !is_array($host_urls) || !in_array($host_delete_upload['url'], $host_urls, true)) {
+    throw new RuntimeException('Actual host delete did not remove file and mark exact URL');
+}
+$cases['actual_host_deleted'] = ['form_id' => $form_id, 'entry_ids' => [(int)$host_deleted_id]];
+echo 'PASS_AUTHENTIC_BULK_DOWNLOAD_DELETION_META_AND_REMOVED_SOURCE entry=' . $host_deleted_id . PHP_EOL;
+
 // Real filesystem unreadability: the synthetic test upload is CI-only.
 $unreadable = wp_upload_bits('independent-unreadable.jpg', null, 'only-in-ci-unreadable');
 if (!empty($unreadable['error']) || !is_file($unreadable['file'])) {
@@ -85,6 +123,7 @@ foreach ($cases as $name => $scenario) {
             '2' => $entry['2'] ?? null,
             '5' => $entry['5'] ?? null,
             'deleted' => gform_get_meta((int)$id, 'bdfgf_deleted_file_urls'),
+            'deleted_flag' => gform_get_meta((int)$id, 'bdfgf_files_deleted'),
         ];
     }
 }
