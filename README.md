@@ -51,6 +51,10 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 
 Runtime plugin files are imported from the owner-supplied `gf-bulk-rename-counter.zip` version `2.0.6`; foundational work does not intentionally change their behavior. The source contains placeholder author/website metadata. Treat these as inherited placeholders, not verified project identity.
 
+## EXT-001 qualification evidence
+
+The native WP/GF/Bulk Download CI additionally provisions three separate forms after running the existing Legacy and independent-ZIP baseline. It exercises Settings API persistence, changes and rejected saves, authentic Chromium per-form configuration, the actual selected-Entry ZIP download, member count/path/name and SHA-256 source readbacks. Existing native controls are exercised before per-form rules are provisioned. Green results are scoped to pinned CI; live site and future hosts remain unproven.
+
 ## Canonical verification
 
 Prerequisite: PHP CLI 8.0 or newer. No Composer dependencies are required for the current checks.
