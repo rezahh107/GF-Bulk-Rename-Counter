@@ -12,7 +12,7 @@ Gravity Forms documents gform_entry_list_bulk_actions for adding dropdown choice
 
 The independent choice appears beside native Bulk Download. Its isolated admin-list JavaScript intercepts the custom Apply click only, then submits a form-scoped, nonce-protected POST containing the selected Entry IDs to the authenticated WordPress admin-post route. Selected IDs are never placed in a shareable download URL. Native Bulk Download remains untouched. The endpoint uses the real GFCommon Entry-view capability check rather than raw WordPress current_user_can. Authentic runtime observed that a valid GF administrator can have GF Entry-view permission even when the raw WordPress capability predicate returns false.
 
-Native GF action callbacks for 99, 100 and 101 entries were not independently exercised as browser ZIP streams: at and above 100, the documented background boundary makes original-response streaming inappropriate. The separate POST endpoint ran successfully with exact 1, 99, 100 and 101 selected IDs, each delivering a binary ZIP attachment with 1, 99, 100 and 101 distinct flat members. Direct POST tests establish transport and authorization, not necessarily cross-page checkbox selection in the native list.
+Native GF action callbacks for 99, 100 and 101 entries were not independently exercised as browser ZIP streams: at and above 100, the documented background boundary makes original-response streaming inappropriate. The separate POST endpoint ran successfully with exact 1, 99, 100 and 101 selected IDs, each delivering a binary ZIP attachment with 1, 99, 100 and 101 distinct flat members. Both the endpoint's own filename/occurrence plan and a separately authored source-manifest checksum/conservation checker verified these downloads. Direct POST tests establish transport and authorization, not necessarily cross-page checkbox selection in the native list.
 
 ## Source ownership and ZIP invariants
 
@@ -39,7 +39,7 @@ Real HTTP error responses did not deliver incomplete ZIPs for all-deleted, valid
 
 Real closed-ZIP mutation tests rejected missing, extra, and changed-byte overwritten ZIP members. Test-induced add failure, finalization failure and corrupt archive were rejected with temporary-archive cleanup. These injections are not a genuine libzip close I/O failure. Existing GF Entries and uploads and experimental Entry snapshots/source files were verified unchanged after running positive and negative cases.
 
-**Resource limits:** only loopback HTTP time/ZIP byte size are currently measured. Peak process memory, temporary disk demand and external hosting performance are not quantified; the CI workload is not a production capacity guarantee.
+**Resource measurement (actual CI):** 24 × 256 KiB = 6 MiB uncompressed; validated temporary ZIP **6,295,272 bytes**; direct loopback HTTP request about **0.21–0.25 seconds**. The PHP process recorded **4 MiB peak allocated PHP heap**, plus **122,748 KiB Linux ru_maxrss** at the 24-file POST and **132,612 KiB cumulative process max RSS** after the browser's 25-member request. These RSS values include the broader WP/PHP runtime; they are **not incremental writer memory**, and additional filesystem scratch/ZIP compression overhead was not measured independently. External hosting performance and capacity remain unqualified.
 
 ## Comparison with PR #6 and PR #7
 
@@ -58,6 +58,6 @@ No fair comparative performance benchmark has been run. Native host has not been
 
 ## Outstanding proof and decisions
 
-Authentic browser click through the Gravity Forms Entry-list UI and cross-page selection behavior require their own observed results; direct HTTP POST is not evidence that an arbitrary 101-row UI selection works across paginated list pages. Offloaded/remote uploads, all customized GF upload roots, arbitrary site integrations and real libzip I/O failures remain unverified.
+**Real Chromium acceptance passed:** opened the authenticated Gravity Forms Entry list, selected one genuine Entry by checkbox, selected the independent action and clicked Apply. Chromium downloaded a 6,295,272-byte ZIP; independent PHP re-read the actual 24-member ZIP against the selected GF Entry. Repeated with two genuine checked Entry rows (25 members, 6,295,437 bytes), and independently verified their distinct Entry selection and hashes. The browser seam is therefore proven for one and two visible rows. **Cross-page selection behavior and clicking 99/100/101 checked rows in the native list remain NOT_PROVEN**; direct POST at those counts is not a substitute.  Offloaded/remote uploads, all customized GF upload roots, arbitrary site integrations and real libzip I/O failures remain unverified.
 
 Smallest Owner decision after qualification: whether to promote this **owned independent action architecture** into a separately approved production design, explicitly accepting or replacing the Bulk Download deletion-metadata compatibility dependency and specifying collision naming and bulk UI selection policy. Do not merge, release or deploy this qualification PR.
