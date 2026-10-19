@@ -16,6 +16,14 @@ The compatibility check interprets both existing host deletion metadata keys thr
 
 Noncolliding `d{counter}.{extension}` names remain unchanged. Collisions use the Legacy visual `d125-132.jpg`, `d125-132-1.jpg` suffix scheme, with natural names reserved first. Interrupted network delivery after streaming starts is outside pre-delivery atomicity.
 
+## Per-form naming (EXT-001 first batch; unreleased)
+
+Settings → GF Bulk Rename now contains a separate **Per-form naming (independent flat ZIP only)** section. Choose a form, open its rule, then save **Legacy**, **Single Field**, or **Composite**. Composite fields use explicit consecutive order numbers and a configurable separator. Only ordinary single-value text, textarea and number fields are offered. **Use existing Legacy defaults** removes the per-form override. Saving one form does not replace another form's rule.
+
+The original `gf_bulk_rename_options`, Bulk Download hook and native download are unchanged. New rules live separately in `gf_bulk_rename_per_form_rules`. No rule (including all upgraded installations without this new option) keeps the exact existing effective Legacy behavior. Explicit Legacy also uses the original target-form/counter settings; it does not invent a new per-form counter configuration. Rollback to v2.0.6 ignores the new option without overwriting the old option.
+
+New strategies run **only for the independent flat ZIP action**. The original extension remains; the existing ZIP collision reservation and verified writer still apply. The numeric value `0` is a valid field value for new methods (unlike the original Legacy counter-zero fallback). Missing, empty, non-scalar, obsolete or unsafe naming fields abort ZIP preparation visibly **before any archive is sent**; the plugin does not silently guess a name. Selected values become visible in downloaded filenames, so **avoid personal/sensitive information**.
+
 ## Install and configure
 
 1. Copy the plugin files from the repository root into a directory named `gf-bulk-rename-counter` under `wp-content/plugins/` (or package that directory as a WordPress plugin ZIP).

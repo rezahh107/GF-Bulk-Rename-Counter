@@ -172,6 +172,7 @@ final class Flat_Zip_Download {
         $opts = get_option('gf_bulk_rename_options', []);
         $counter_field = (int)($opts['counter_field_id'] ?? 0);
         $target_form = (int)($opts['form_id'] ?? 0);
+        $rule = Form_Naming_Rules::for_form($form);
         $plan = [];
         foreach ($ids as $entry_id) {
             $entry = \GFAPI::get_entry($entry_id);
@@ -196,8 +197,12 @@ final class Flat_Zip_Download {
                     if (isset($deleted_set[$url])) { continue; }
                     $path = self::upload_source($url, $form_id);
                     $base = sanitize_file_name(wp_basename($path));
+                    if ($rule !== null && in_array($rule['method'], ['single', 'composite'], true)) {
+                        $base = Naming_Strategy::candidate($rule, $entry, $path);
+                    }
                     $counter = $counter_field ? ($entry[(string)$counter_field] ?? null) : null;
-                    if ($counter_field > 0 && (!$target_form || $target_form === $form_id) &&
+                    if (($rule === null || $rule['method'] === 'legacy') &&
+                        $counter_field > 0 && (!$target_form || $target_form === $form_id) &&
                         is_scalar($counter) && !empty($counter)) {
                         $value = trim((string)$counter);
                         if ($value !== '') {
