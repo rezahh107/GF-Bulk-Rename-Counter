@@ -12,8 +12,31 @@ if (count($rules) !== 2 ||
 }
 foreach (['b' => 2, 'c' => 6] as $key => $expected) {
     $case = $data[$key];
-    $plan = \GFBulkRename\Flat_Zip_Download::plan($case['form_id'], $case['entry_ids']);
+    $posted = json_decode(file_get_contents($root . '/per-form-' . $key . '-selected.json'),
+        true, 512, JSON_THROW_ON_ERROR);
+    $intended = array_map('intval', $case['entry_ids']);
+    $actual = array_map('intval', $posted['ids']);
+    sort($intended); $actual_set = $actual; sort($actual_set);
+    if ((int)$posted['form_id'] !== (int)$case['form_id'] ||
+        $actual_set !== $intended || count($actual) !== count($intended)) {
+        throw new RuntimeException('Actual browser request did not submit exactly the intended Entry IDs');
+    }
+    // The native GF list sends checked rows in screen order, which can differ
+    // from fixture creation order. Names/suffixes belong to the actual POST order.
+    $plan = \GFBulkRename\Flat_Zip_Download::plan($case['form_id'], $actual);
     if (count($plan) !== $expected) { throw new RuntimeException('Unexpected source occurrence count'); }
+    $expected_sources = $data['expected_sources'][$key];
+    $actual_sources = array_map(static function(array $item): array {
+        return ['source' => $item['source'], 'sha' => $item['sha256'], 'size' => $item['size']];
+    }, $plan);
+    $sort = static function(array &$items): void {
+        usort($items, static fn(array $a, array $b): int =>
+            strcmp(wp_json_encode($a), wp_json_encode($b)));
+    };
+    $sort($actual_sources); $sort($expected_sources);
+    if ($actual_sources !== $expected_sources) {
+        throw new RuntimeException('Downloaded Entry selection lost or added a source occurrence');
+    }
     try {
         \GFBulkRename\Flat_Zip_Download::verify_closed_zip($root . '/per-form-' . $key . '.zip', $plan);
     } catch (Throwable $e) {
