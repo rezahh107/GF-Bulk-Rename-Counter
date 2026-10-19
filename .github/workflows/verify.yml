@@ -29,3 +29,5 @@ jobs:
         run: php --version
       - name: Run canonical verification
         run: php tests/verify.php
+      - name: Falsify unbounded output-buffer cleanup in isolated PHP processes
+        run: python3 tests/production-candidate/test-buffer-guard.py

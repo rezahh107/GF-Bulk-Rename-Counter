@@ -323,6 +323,24 @@ final class Flat_Zip_Download {
     }
 
 
+    /**
+     * Discard buffers only when PHP permits it, proving a decrease on each
+     * iteration. Failing here leaves the verified ZIP temporary file under
+     * download()'s existing pre-header exception cleanup.
+     */
+    private static function clear_output_buffers(): void {
+        while (($level = ob_get_level()) > 0) {
+            $status = ob_get_status();
+            if (!is_array($status) || !isset($status['flags']) ||
+                ($status['flags'] & PHP_OUTPUT_HANDLER_REMOVABLE) === 0) {
+                throw new RuntimeException('Cannot remove output buffer before ZIP response');
+            }
+            if (!ob_end_clean() || ob_get_level() >= $level) {
+                throw new RuntimeException('Output buffer cleanup failed to make progress');
+            }
+        }
+    }
+
     public static function download(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') { self::fail(__('POST required', 'gf-bulk-rename-counter'), 405); }
         if (!\GFCommon::current_user_can_any('gravityforms_view_entries')) { self::fail(__('Not authorized', 'gf-bulk-rename-counter'), 403); }
@@ -352,11 +370,16 @@ final class Flat_Zip_Download {
             if ($size === false || $size <= 0 || headers_sent()) {
                 throw new RuntimeException('Validated ZIP response unavailable');
             }
+            // Never open the response stream or send ZIP headers until all
+            // active output buffers have been safely discarded.
+            self::clear_output_buffers();
+            if (headers_sent()) {
+                throw new RuntimeException('Headers sent during output buffer cleanup');
+            }
             // Open before emitting headers; preparation failures must yield an
             // ordinary error page, not a promised but missing attachment.
             $f = fopen($temp, 'rb');
             if (!$f) { throw new RuntimeException('Cannot open ZIP for delivery'); }
-            while (ob_get_level()) { ob_end_clean(); }
             nocache_headers();
             header('Cache-Control: private, no-store, max-age=0');
             header('Content-Type: application/zip');

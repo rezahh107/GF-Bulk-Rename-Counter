@@ -68,6 +68,7 @@ jobs:
           test "$(php -r 'echo PHP_VERSION;')" = "8.2.34"
           php -r 'if (!extension_loaded("zip") || !extension_loaded("mysqli")) exit(1);'
           php tests/verify.php
+          python3 tests/production-candidate/test-buffer-guard.py
 
       - name: Install WordPress 6.8.3 and checksum-verified WP-CLI
         shell: bash
@@ -284,6 +285,9 @@ jobs:
             python3 -c 'from pathlib import Path; p=Path("/tmp/brc-lab/one.body"); b=p.read_text(errors="replace"); a=b.lower().find("<body"); print("Body error:",b[a:a+900] if a>=0 else b[-1200:])' >&2 || true
             exit 1
           fi
+          # Exercise the same installed candidate through genuine authenticated
+          # WordPress HTTP requests with real removable and non-removable stacks.
+          python3 tests/production-candidate/verify-buffer-http.py "$BRC_LAB_DIR"
           # Cross-check an independent source-manifest-derived occurrence
           # multiset, not solely the prototype's own filename plan.
           for scenario in one n99 n100 n101 multiple shared sanitized_equal multi_entry_files host_folder_collision zero_counter empty_counter repeated_physical previously_deleted; do
