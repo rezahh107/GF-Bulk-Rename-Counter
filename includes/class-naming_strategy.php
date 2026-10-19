@@ -24,6 +24,11 @@ final class Naming_Strategy {
         }
         $ext = pathinfo($source, PATHINFO_EXTENSION);
         $candidate = sanitize_file_name($stem . ($ext === '' ? '' : '.' . $ext));
+        // Windows device names remain reserved even with one or more extensions.
+        // Enforce only for newly generated Single/Composite names; Legacy is untouched.
+        if (preg_match('/^(?:CON|PRN|AUX|NUL|COM[1-9¹²³]|LPT[1-9¹²³])(?:\\.|$)/iu', $candidate)) {
+            throw new \RuntimeException('Naming fields produce a Windows reserved device filename');
+        }
         if ($candidate === '' || $candidate === '.' || $candidate === '..' ||
             str_starts_with($candidate, '.') ||
             str_contains($candidate, '/') || str_contains($candidate, '\\') ||
