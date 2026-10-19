@@ -135,7 +135,7 @@ class Settings_Page {
         $forms = class_exists('GFAPI') ? \GFAPI::get_forms() : [];
         if (!is_array($forms)) { $forms = []; }
         $selected = isset($_GET['gfbrc_form']) ? absint($_GET['gfbrc_form']) : 0;
-        echo '<form method="get" action="' . esc_url(admin_url('options-general.php')) . '">';
+        echo '<form method="get" action="options-general.php">';
         echo '<input type="hidden" name="page" value="gf-bulk-rename-settings">';
         echo '<label for="gfbrc-form-select">' . esc_html__('Choose a form to edit', 'gf-bulk-rename-counter') . '</label> ';
         echo '<select id="gfbrc-form-select" name="gfbrc_form"><option value="0">' .
@@ -163,7 +163,7 @@ class Settings_Page {
         $ranks = array_flip($ordered);
         $sep = is_array($stored) ? ($stored['separator'] ?? '-') : '-';
         $prefix = Form_Naming_Rules::OPTION_NAME;
-        echo '<form method="post" action="' . esc_url(admin_url('options.php')) . '">';
+        echo '<form method="post" action="options.php">';
         settings_fields(Form_Naming_Rules::OPTION_GROUP);
         echo '<input type="hidden" name="' . esc_attr($prefix) . '[_form_id]" value="' . esc_attr((string)$selected) . '">';
         echo '<table class="form-table" role="presentation"><tbody><tr><th scope="row"><label for="gfbrc-method">' .
