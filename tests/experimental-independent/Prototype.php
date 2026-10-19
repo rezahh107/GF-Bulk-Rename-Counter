@@ -138,6 +138,34 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
         throw new RuntimeException('File URL outside configured upload directories');
     }
 
+    /**
+     * Experimental compatibility boundary: public GF metadata transport, but
+     * host-owned keys/schema. A future Bulk Download version must be reviewed.
+     * Neither metadata key is a version-independent Gravity Forms API contract.
+     */
+    private static function deleted_urls_for_entry(int $entry_id): array {
+        if (!defined('BDFGF_VERSION') || BDFGF_VERSION !== '4.2.0' ||
+            !function_exists('gform_get_meta')) {
+            throw new RuntimeException('Unqualified Bulk Download deletion metadata version');
+        }
+        $raw = maybe_unserialize(gform_get_meta($entry_id, 'bdfgf_deleted_file_urls'));
+        $flag = gform_get_meta($entry_id, 'bdfgf_files_deleted');
+        if (($raw === '' || $raw === false || $raw === null) && empty($flag)) {
+            return [];
+        }
+        if (!is_array($raw) || (!empty($flag) && !$raw)) {
+            throw new RuntimeException('Inconsistent deleted-file metadata: refuse ZIP');
+        }
+        $set = [];
+        foreach ($raw as $url) {
+            if (!is_string($url) || $url === '') {
+                throw new RuntimeException('Invalid deleted-file metadata');
+            }
+            $set[$url] = true;
+        }
+        return $set;
+    }
+
     public static function plan(int $form_id, array $ids): array {
         $form = \GFAPI::get_form($form_id);
         if (!is_array($form)) { throw new RuntimeException('Form unavailable'); }
@@ -154,9 +182,7 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
             if (!is_array($entry) || (int)($entry['form_id'] ?? 0) !== $form_id) {
                 throw new RuntimeException('Selected entry missing or belongs to a different form');
             }
-            $deleted = function_exists('gform_get_meta') ?
-                maybe_unserialize(gform_get_meta($entry_id, 'bdfgf_deleted_file_urls')) : [];
-            $deleted_set = array_fill_keys(array_filter(is_array($deleted) ? $deleted : [], 'is_string'), true);
+            $deleted_set = self::deleted_urls_for_entry((int)$entry_id);
             foreach ($fields as $field_id) {
                 $raw = $entry[$field_id] ?? '';
                 if (!is_string($raw) || $raw === '') { continue; }
