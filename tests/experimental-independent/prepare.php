@@ -123,7 +123,7 @@ foreach ($cases as $name => $scenario) {
             '2' => $entry['2'] ?? null,
             '5' => $entry['5'] ?? null,
             'deleted' => gform_get_meta((int)$id, 'bdfgf_deleted_file_urls'),
-            'deleted_flag' => gform_get_meta((int)$id, 'bdfgf_files_deleted'),
+            'deleted_flag' => (bool) gform_get_meta((int)$id, 'bdfgf_files_deleted'),
         ];
     }
 }
