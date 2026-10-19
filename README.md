@@ -32,6 +32,7 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | --- | --- |
 | `gf-bulk-rename-counter.php` | Plugin metadata, dependency checks, WordPress hooks and loader |
 | `includes/class-rename_handler.php` | Filename transformation and within-handler duplicate handling |
+| `includes/class-flat_zip_download.php` | Separate current-page-only authenticated ZIP download, source planner, deleted-state validator, archive writer/verifier |
 | `includes/class-settings_page.php` | WordPress Settings API page and option sanitization |
 | `uninstall.php` | Deletes plugin settings on uninstall |
 | `languages/` | Supplied translation template (not regenerated) |

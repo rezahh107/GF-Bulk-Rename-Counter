@@ -4,7 +4,7 @@
 - Release Unit: single installable WordPress plugin (`gf-bulk-rename-counter`).
 - Canonical version source: `Version:` header in `gf-bulk-rename-counter.php`; the runtime `GFBULKRENAME_VERSION` constant and `readme.txt` `Stable tag:` are exact mirrors.
 - Current baseline: 2.0.6. No source plugin behavior changes and no release-related bump during infrastructure installation.
-- Production payload allowlist: main PHP, two `includes/` PHP classes, translations POT, `readme.txt`, `uninstall.php` — precisely six files rooted under `gf-bulk-rename-counter/`. Developer material/CI/tests/secrets excluded. No bundled third-party vendor libraries; SBOM not material for this six-file first-party ZIP. GF/Bulk Download remain external WordPress dependencies, validated by existing pinned native CI.
+- Production payload allowlist: main PHP, three `includes/` PHP classes, translations POT, `readme.txt`, `uninstall.php` — precisely seven files rooted under `gf-bulk-rename-counter/`. Developer material/CI/tests/secrets excluded. No bundled third-party vendor libraries; SBOM not material for this first-party ZIP. GF/Bulk Download remain external WordPress dependencies, validated by existing pinned native CI.
 - GPP referenced for architecture only. No Gravity Flow/Elementor/profile runtime paths or development-version sentinel.
 - Existing `verify.yml` and native runtime scenarios remain; native runtime now installs canonical ZIP instead of symlinking checkout.
 
@@ -24,3 +24,6 @@
 - Native integration workflow tests actual GF/Bulk Download hook, downloads, and source preservation using the installable ZIP in synthetic WordPress.
 - Successful dry-run does **not** prove publication, immutable-release status, GitHub consumer download, production-site equivalence or a future release. Those need a separately authorized production run.
 - The Owner controls first publish and any recovery. No tagging/merging/publication is part of infrastructure PR approval.
+## Production-candidate successor (PR #9; NOT a release)
+
+The independent current-page flat ZIP download adds only `includes/class-flat_zip_download.php` to the canonical release allowlist. The new seven-file allowlist remains strict; source hash/manifest/ZIP validation, clean-head binding, release Owner gates and all existing negative controls are unchanged. Earlier six-file V1 claims describe the pre-candidate source only. No tag, merged release, deployment, or publication was authorized by this implementation.
