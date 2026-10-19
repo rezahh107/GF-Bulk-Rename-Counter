@@ -146,7 +146,7 @@ final class Flat_Zip_Download {
             throw new RuntimeException('Unrecognized deleted-file flag');
         }
         if (in_array($raw, [false, null, ''], true)) { $raw = []; }
-        if (!is_array($raw) || !array_is_list($raw)) {
+        if (!is_array($raw) || array_values($raw) !== $raw) {
             throw new RuntimeException('Malformed deleted-file URL list');
         }
         $urls = [];
@@ -185,7 +185,7 @@ final class Flat_Zip_Download {
                 if (!is_string($raw) || $raw === '') { continue; }
                 $decoded = json_decode($raw, true);
                 if (json_last_error() !== JSON_ERROR_NONE) { $decoded = [$raw]; }
-                if (!is_array($decoded) || !array_is_list($decoded)) {
+                if (!is_array($decoded) || array_values($decoded) !== $decoded) {
                     throw new RuntimeException('Invalid stored multi-file data');
                 }
                 foreach ($decoded as $url) {
@@ -324,23 +324,23 @@ final class Flat_Zip_Download {
 
 
     public static function download(): void {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') { self::fail('POST required', 405); }
-        if (!\GFCommon::current_user_can_any('gravityforms_view_entries')) { self::fail('Not authorized', 403); }
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') { self::fail(__('POST required', 'gf-bulk-rename-counter'), 405); }
+        if (!\GFCommon::current_user_can_any('gravityforms_view_entries')) { self::fail(__('Not authorized', 'gf-bulk-rename-counter'), 403); }
         $form_id = isset($_POST['form_id']) && is_scalar($_POST['form_id']) ? absint($_POST['form_id']) : 0;
         if (!$form_id || !isset($_POST['_wpnonce']) ||
             !is_string($_POST['_wpnonce']) ||
             !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'gfbrc_independent_flat_zip_' . $form_id)) {
-            self::fail('Invalid download request', 403);
+            self::fail(__('Invalid download request', 'gf-bulk-rename-counter'), 403);
         }
         $raw = $_POST['entry_ids'] ?? null;
         if (!is_array($raw) || count($raw) < 1 || count($raw) > 500) {
-            self::fail('Select between 1 and 500 entries');
+            self::fail(__('Select between 1 and 500 entries', 'gf-bulk-rename-counter'));
         }
         $ids = [];
         foreach (wp_unslash($raw) as $value) {
             if (!is_string($value) || !ctype_digit($value) || (int)$value <= 0 ||
                 (string)(int)$value !== $value || isset($ids[(int)$value])) {
-                self::fail('Invalid or duplicate entry selection');
+                self::fail(__('Invalid or duplicate entry selection', 'gf-bulk-rename-counter'));
             }
             $ids[(int)$value] = (int)$value;
         }
