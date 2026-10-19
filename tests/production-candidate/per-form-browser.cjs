@@ -24,10 +24,16 @@ const {chromium} = require('playwright-core');
     }
     async function save() {
       const f=page.locator('form[action*="options.php"]').last();
-      await Promise.all([
-        page.waitForURL(/settings-updated=true/, {timeout:18000}),
-        f.locator('input[type="submit"]').click()
-      ]);
+      try {
+        await Promise.all([
+          page.waitForURL(/settings-updated=true/, {timeout:18000}),
+          f.locator('input[type="submit"]').click()
+        ]);
+      } catch (e) {
+        const details=await page.locator('body').innerText().catch(()=>'(body unavailable)');
+        throw Error('Settings save did not complete at '+page.url()+': '+
+          details.slice(0,850)+'; '+e.message);
+      }
     }
     await settings('b');
     await page.locator('#gfbrc-method').selectOption('single');
