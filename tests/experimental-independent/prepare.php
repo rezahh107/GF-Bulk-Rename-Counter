@@ -68,7 +68,7 @@ try {
     if (!class_exists('\\BDFGF\\Actions\\BulkDelete')) {
         throw new RuntimeException('Pinned authentic host delete class missing');
     }
-    (new \\BDFGF\\Actions\\BulkDelete())->bulk_delete($form_id, [(int)$host_deleted_id]);
+    (new \BDFGF\Actions\BulkDelete())->bulk_delete($form_id, [(int)$host_deleted_id]);
 } finally {
     $restored = GFAPI::update_form($original_form);
     if (is_wp_error($restored)) { throw new RuntimeException('Cannot restore form settings after CI deletion'); }
