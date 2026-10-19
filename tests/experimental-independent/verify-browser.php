@@ -38,3 +38,50 @@ try {
         ' members=' . count($plan) . PHP_EOL;
 } finally { $zip->close(); }
 }
+
+
+// Native Bulk Download regression with our test-only integration installed:
+// verify real browser ZIP conserves the exact selected GF Entry's file bytes.
+$native_meta = json_decode(file_get_contents($root . '/browser-native-selected.json'), true, 512, JSON_THROW_ON_ERROR);
+$native_plan = GFBRC_Independent_Flat_Zip_Experiment::plan(
+    (int)$native_meta['form_id'], array_map('intval', $native_meta['selected_ids'])
+);
+$native_zip = new ZipArchive();
+if ($native_zip->open($root . '/browser-native-control.zip') !== true) {
+    throw new RuntimeException('Native Bulk Download browser ZIP invalid');
+}
+try {
+    if ($native_zip->numFiles !== count($native_plan)) {
+        throw new RuntimeException('Native Bulk Download browser ZIP lost source occurrences');
+    }
+    $expected_hashes = array_count_values(array_column($native_plan, 'sha256'));
+    $actual_hashes = [];
+    $native_paths = [];
+    for ($n = 0; $n < $native_zip->numFiles; $n++) {
+        $name = $native_zip->getNameIndex($n);
+        if (!is_string($name) || isset($native_paths[$name])) {
+            throw new RuntimeException('Native Bulk Download duplicate/invalid path');
+        }
+        $native_paths[$name] = true;
+        $stream = $native_zip->getStream($name);
+        if (!$stream) { throw new RuntimeException('Native member unreadable'); }
+        $ctx = hash_init('sha256');
+        while (!feof($stream)) {
+            $bytes = fread($stream, 65536);
+            if ($bytes === false) {
+                fclose($stream);
+                throw new RuntimeException('Native member read failed');
+            }
+            hash_update($ctx, $bytes);
+        }
+        fclose($stream);
+        $sha = hash_final($ctx);
+        $actual_hashes[$sha] = ($actual_hashes[$sha] ?? 0) + 1;
+    }
+    ksort($actual_hashes);
+    ksort($expected_hashes);
+    if ($actual_hashes !== $expected_hashes) {
+        throw new RuntimeException('Native Bulk Download source bytes differ with experiment active');
+    }
+    echo 'PASS_NATIVE_BULK_BROWSER_SOURCE_CONSERVATION members=' . count($native_paths) . PHP_EOL;
+} finally { $native_zip->close(); }
