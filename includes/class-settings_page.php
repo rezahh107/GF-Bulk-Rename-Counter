@@ -116,6 +116,7 @@ class Settings_Page {
         ?>
         <div class="wrap">
             <h1><?php echo esc_html__( 'Gravity Forms Bulk Rename Settings', 'gf-bulk-rename-counter' ); ?></h1>
+            <?php settings_errors( Form_Naming_Rules::OPTION_NAME ); ?>
             <form action="options.php" method="post">
                 <?php
                 settings_fields( self::OPTION_GROUP );
