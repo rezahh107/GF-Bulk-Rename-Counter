@@ -125,6 +125,38 @@ const {chromium} = require('playwright-core');
     }));
     console.log('PASS_REAL_CHROMIUM_TWO_ENTRY_DOWNLOAD ids='+twoIds.join(',')+
       ' zip_bytes='+bTwo.length);
+
+    // Control: native Bulk Download must STILL work from the authentic GF
+    // dropdown in the same browser, with the test-only plugin active.
+    await page.goto(base + '/wp-admin/admin.php?page=gf_entries&id=' + formId,
+      {waitUntil:'domcontentloaded', timeout:25000});
+    const nativeEntry = String(meta.cases.larger_workload.entry_ids[0]);
+    const nativeCheckbox = page.locator('input[type="checkbox"][name="entry[]"][value="' + nativeEntry + '"]');
+    if (await nativeCheckbox.count() !== 1) throw Error('Native control fixture not visible');
+    await nativeCheckbox.check();
+    await page.locator('select[name="action"]').selectOption('gf_bulk_download');
+    let nativeDownload;
+    try {
+      [nativeDownload] = await Promise.all([
+        page.waitForEvent('download',{timeout:18000}),
+        page.locator('#doaction').click(),
+      ]);
+    } catch (err) {
+      console.error('NATIVE_CONTROL_EVENT_DIAGNOSTIC',diagnostic.slice(-15));
+      console.error('NATIVE_CONTROL_PAGE',page.url());
+      throw err;
+    }
+    const nativeSaved = path.join(lab,'browser-native-control.zip');
+    await nativeDownload.saveAs(nativeSaved);
+    const nBytes = fs.readFileSync(nativeSaved);
+    if (!nativeDownload.suggestedFilename().endsWith('.zip') ||
+        nBytes.length < 30 || nBytes[0] !== 0x50 || nBytes[1] !== 0x4b)
+      throw Error('Native Bulk Download browser action no longer downloads ZIP');
+    fs.writeFileSync(path.join(lab,'browser-native-selected.json'), JSON.stringify({
+      selected_ids:[nativeEntry],form_id:formId,bytes:nBytes.length
+    }));
+    console.log('PASS_REAL_CHROMIUM_NATIVE_BULK_DOWNLOAD_UNCHANGED entry='+nativeEntry+
+      ' zip_bytes='+nBytes.length);
     await context.close();
   } finally {await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1);});
