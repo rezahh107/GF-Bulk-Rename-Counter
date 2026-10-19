@@ -162,7 +162,9 @@ const {chromium} = require('playwright-core');
           multiBytes.length < 30 || multiBytes[0]!==0x50 || multiBytes[1]!==0x4b)
         throw Error(label+' did not deliver a browser ZIP');
       fs.writeFileSync(path.join(lab,'browser-'+label+'-selected.json'), JSON.stringify({
-        selected_ids:requested, form_id:formId, browser_zip_bytes:multiBytes.length,
+        // Submitted checkbox order follows visible DOM order (not fixture
+        // creation order). Preserve that real order when verifying suffix names.
+        selected_ids:picked, form_id:formId, browser_zip_bytes:multiBytes.length,
         visible_rows:visibleNow
       }));
       console.log('PASS_REAL_GF_ENTRY_LIST_SELECTED_'+number+
