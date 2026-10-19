@@ -17,6 +17,11 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
         // on one actual Gravity Forms Entry-list page. Not a bulk threshold change.
         if (getenv('BRC_LAB_DIR')) {
             add_filter('gform_entry_page_size', static function($page_size, $form_id) {
+                // Toggle only for the separate native-pagination Chromium case.
+                // All original 99/100/101 one-page qualifications still run at 160.
+                if (is_file(getenv('BRC_LAB_DIR') . '/ifz-native-page-size')) {
+                    return $page_size;
+                }
                 return 160;
             }, 10, 2);
         }
@@ -24,7 +29,7 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
 
     public static function add_action($actions, $form_id) {
         if (!is_array($actions) || !\GFCommon::current_user_can_any('gravityforms_view_entries')) { return $actions; }
-        $actions[self::ACTION] = 'Download Flat ZIP with Rename';
+        $actions[self::ACTION] = 'Download Flat ZIP with Rename (selected on this page only)';
         return $actions;
     }
 
@@ -67,7 +72,9 @@ final class GFBRC_Independent_Flat_Zip_Experiment {
     );
     var ids = Array.prototype.map.call(checked, function (x) { return x.value; })
       .filter(function (x) { return /^[1-9][0-9]*$/.test(x); });
-    if (!ids.length) { window.alert('Select at least one entry.'); return; }
+    if (!ids.length) { window.alert('Select at least one entry on this page.'); return; }
+    if (!window.confirm('Download files from only the ' + ids.length +
+      ' selected entries on this page? Selections made on other pages are NOT included.')) return;
     var form = document.createElement('form');
     form.method = 'POST';
     form.action = new URL('admin-post.php', window.location.href).href;
