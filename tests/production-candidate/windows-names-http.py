@@ -29,7 +29,7 @@ for label, scenario in fixture["cases"].items():
     head = headers.read_text(errors="replace").lower()
     payload = dest.read_bytes()
     if not scenario["valid"]:
-        assert status == "400", (label, status, payload[:500])
+        assert status == "422", (label, status, payload[:500])
         assert not payload.startswith(b"PK"), label
         assert "content-disposition: attachment" not in head, label
         assert "application/zip" not in head, label
