@@ -323,6 +323,7 @@ jobs:
           set -euo pipefail
           php -l tests/production-candidate/per-form-qualify.php
           php -l tests/production-candidate/verify-per-form-browser.php
+          node --check tests/production-candidate/per-form-browser.cjs
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/per-form-qualify.php
           chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$chrome"

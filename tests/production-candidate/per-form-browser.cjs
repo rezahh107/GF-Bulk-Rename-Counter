@@ -81,6 +81,59 @@ const {chromium} = require('playwright-core');
       throw Error('Form C rule was overwritten while editing B');
     console.log('PASS_BROWSER_NATIVE_SETTINGS_SAVE_EDIT_INVALID_VISIBLE_AND_FORM_ISOLATION');
 
+    // Genuine options.php HTTP submissions: inspect browser POST bytes,
+    // require a visible native Settings API rejection and unchanged readback.
+    const settingsRequests = [];
+    page.on('request', request => {
+      if (request.method() !== 'POST' || !request.url().includes('/wp-admin/options.php')) return;
+      const body = new URLSearchParams(request.postData() || '');
+      settingsRequests.push({
+        optionPage: body.get('option_page'),
+        separator: body.get('gf_bulk_rename_per_form_rules[_separator]')
+      });
+    });
+    for (const invalid of ['A\\B', '\\', '/']) {
+      await page.locator('#gfbrc-separator').fill(invalid);
+      const requestCount = settingsRequests.length;
+      await save();
+      if (settingsRequests.length !== requestCount + 1 ||
+          settingsRequests[requestCount].separator !== invalid ||
+          settingsRequests[requestCount].optionPage !== 'gf_bulk_rename_per_form_settings') {
+        throw Error('Actual options.php POST did not contain the intended invalid separator');
+      }
+      const notice = page.locator('.notice-error').filter({hasText:/Naming rule not saved/});
+      if (await notice.count() !== 1 ||
+          !(/Separator/.test(await notice.first().innerText()))) {
+        throw Error('Invalid separator lacked visible Settings API validation error: '+JSON.stringify(invalid));
+      }
+      await settings('c');
+      if (await page.locator('#gfbrc-separator').inputValue() !== '__') {
+        throw Error('Invalid options.php POST mutated saved Composite rule: '+JSON.stringify(invalid));
+      }
+    }
+    console.log('PASS_BROWSER_OPTIONS_PHP_SEPARATOR_BACKSLASH_SLASH_VISIBLE_REJECTION');
+    for (const valid of ['AB', '__', 'نام']) {
+      await page.locator('#gfbrc-separator').fill(valid);
+      const requestCount = settingsRequests.length;
+      await save();
+      if (settingsRequests.length !== requestCount + 1 ||
+          settingsRequests[requestCount].separator !== valid) {
+        throw Error('Actual options.php POST did not contain valid separator: '+JSON.stringify(valid));
+      }
+      await settings('c');
+      if (await page.locator('#gfbrc-separator').inputValue() !== valid) {
+        throw Error('Valid options.php separator changed in storage: '+JSON.stringify(valid));
+      }
+    }
+    // Existing ZIP assertions below expect the canonical "__" separator.
+    await page.locator('#gfbrc-separator').fill('__');
+    await save();
+    await settings('c');
+    if (await page.locator('#gfbrc-separator').inputValue() !== '__') {
+      throw Error('Composite baseline separator did not restore exactly');
+    }
+    console.log('PASS_BROWSER_OPTIONS_PHP_SEPARATOR_VALID_EXACT_PERSISTENCE');
+
     for (const key of ['b','c']) {
       const config=info[key];
       await page.goto(base+'/wp-admin/admin.php?page=gf_entries&id='+config.form_id,

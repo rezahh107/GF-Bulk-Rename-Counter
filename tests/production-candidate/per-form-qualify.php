@@ -75,6 +75,11 @@ foreach (['legacy' => [$a['form_id'], $a['entry_ids']],
 $save = static function(array $payload) use ($option): void {
     update_option($option, $payload);
 };
+$composite_input = static function(int $form_id, string $separator): array {
+    return ['_form_id' => (string)$form_id, '_method' => 'composite',
+        '_include' => ['6' => '1', '7' => '1'],
+        '_field_order' => ['7' => '1', '6' => '2'], '_separator' => $separator];
+};
 $save(['_form_id' => (string)$a['form_id'], '_method' => 'legacy']);
 $save(['_form_id' => (string)$b['form_id'], '_method' => 'single', '_single_field_id' => '6']);
 $save(['_form_id' => (string)$c['form_id'], '_method' => 'composite',
@@ -86,6 +91,31 @@ if (count($rules) !== 3 || $rules[(string)$c['form_id']]['field_ids'] !== [7, 6]
     get_option('gf_bulk_rename_options') !== $legacy_before) {
     throw new RuntimeException('First-save/double-sanitize or independent form rule failure');
 }
+// Direct update_option supplies an already-normalized value. Sanitizer must
+// reject invalid separators without a second unslash or validator bypass.
+foreach (['A\\B', '\\', '/'] as $invalid_separator) {
+    $unchanged = get_option($option);
+    $errors_before = count(get_settings_errors($option));
+    $save($composite_input((int)$c['form_id'], $invalid_separator));
+    if (get_option($option) !== $unchanged ||
+        count(get_settings_errors($option)) <= $errors_before) {
+        throw new RuntimeException('Direct invalid separator silently changed saved rules: ' .
+            wp_json_encode($invalid_separator));
+    }
+}
+foreach (['AB', '__', 'نام'] as $valid_separator) {
+    $save($composite_input((int)$c['form_id'], $valid_separator));
+    $actual = get_option($option);
+    if ($actual[(string)$c['form_id']]['separator'] !== $valid_separator ||
+        $actual[(string)$b['form_id']]['field_id'] !== 6 ||
+        get_option('gf_bulk_rename_options') !== $legacy_before) {
+        throw new RuntimeException('Direct valid separator was not preserved exactly');
+    }
+}
+// Restore the existing canonical Composite fixture for ZIP checks below.
+$save($composite_input((int)$c['form_id'], '__'));
+echo 'PASS_REAL_WP_GF_DIRECT_SEPARATOR_REJECT_BACKSLASH_SLASH_PRESERVE_VALID' . PHP_EOL;
+
 $before_invalid = get_option($option);
 $save(['_form_id' => (string)$b['form_id'], '_method' => 'single', '_single_field_id' => '999']);
 $save(['_form_id' => (string)$c['form_id'], '_method' => 'composite',
@@ -121,7 +151,28 @@ $save(['_form_id' => (string)$c['form_id'], '_method' => 'inherit']);
 if (isset(get_option($option)[(string)$c['form_id']])) {
     throw new RuntimeException('Form override cannot be removed');
 }
+// WordPress can invoke sanitize_option twice for an option's first save.
+// Both the rejection path and accepted Unicode must be stable across it.
 delete_option($option);
+$errors_before = count(get_settings_errors($option));
+$save($composite_input((int)$c['form_id'], 'A\\B'));
+if (get_option($option, []) !== [] || count(get_settings_errors($option)) <= $errors_before) {
+    throw new RuntimeException('First-save invalid Composite rule was silently accepted');
+}
+$first_save_calls = 0;
+$counter_callback = static function($value) use (&$first_save_calls) {
+    ++$first_save_calls;
+    return $value;
+};
+add_filter('sanitize_option_' . $option, $counter_callback, PHP_INT_MAX);
+$save($composite_input((int)$c['form_id'], 'نام'));
+remove_filter('sanitize_option_' . $option, $counter_callback, PHP_INT_MAX);
+if ($first_save_calls < 2 ||
+    (get_option($option)[(string)$c['form_id']]['separator'] ?? null) !== 'نام') {
+    throw new RuntimeException('First-save double-sanitizer did not preserve valid Unicode separator');
+}
+delete_option($option);
+echo 'PASS_REAL_WP_GF_FIRST_SAVE_DOUBLE_SANITIZER_SEPARATOR_GUARD' . PHP_EOL;
 if (get_option('gf_bulk_rename_options') !== $legacy_before ||
     Download::plan((int)$a['form_id'], $a['entry_ids'])[0]['name'] !== 'd125.jpg') {
     throw new RuntimeException('Rollback to no rules changed Legacy behavior');

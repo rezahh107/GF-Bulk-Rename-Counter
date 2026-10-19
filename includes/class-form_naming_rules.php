@@ -134,7 +134,6 @@ final class Form_Naming_Rules {
                 }
                 $separator = $input['_separator'] ?? null;
                 if (!is_string($separator)) { throw new \RuntimeException('Invalid separator'); }
-                $separator = wp_unslash($separator);
                 $rule = ['method' => 'composite', 'field_ids' => array_values($ranked),
                     'separator' => $separator];
             } else {
