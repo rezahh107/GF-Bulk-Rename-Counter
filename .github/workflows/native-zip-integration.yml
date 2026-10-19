@@ -305,7 +305,7 @@ jobs:
           test ! -e "$BRC_LAB_DIR/ifz-native-page-size"
           # The HTTP process logs bounded resource measurements for the
           # 24-file workload; no extra temporary ZIP copy is made.
-          grep 'IFZ_RESOURCE_LAB ' "$BRC_LAB_DIR/http-server.log" | tail -n 3
+          grep 'GFBRC_CANDIDATE_RESOURCE_LAB ' "$BRC_LAB_DIR/http-server.log" | tail -n 3
           php -l tests/production-candidate/faults.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/faults.php
           php -l tests/production-candidate/verify-sources.php
