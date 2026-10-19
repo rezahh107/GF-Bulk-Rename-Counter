@@ -17,6 +17,14 @@ const {chromium} = require('playwright-core');
     await context.addCookies(cookies);
     const page=await context.newPage();
     page.on('dialog', d=>d.accept());
+    const submitted = [];
+    page.on('request', request => {
+      if (request.method() !== 'POST' || !request.url().includes('/admin-post.php')) return;
+      const body = new URLSearchParams(request.postData() || '');
+      if (body.get('action') === 'gfbrc_flat_zip_download')
+        submitted.push({form_id:Number(body.get('form_id')),
+          ids:body.getAll('entry_ids[]').map(Number)});
+    });
     async function settings(key) {
       await page.goto(base+'/wp-admin/options-general.php?page=gf-bulk-rename-settings&gfbrc_form='+info[key].form_id,
         {waitUntil:'domcontentloaded'});
@@ -83,8 +91,16 @@ const {chromium} = require('playwright-core');
         await row.check();
       }
       await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
+      const previousRequests = submitted.length;
       const [download]=await Promise.all([page.waitForEvent('download',{timeout:20000}),
         page.locator('#doaction').click()]);
+      if (submitted.length !== previousRequests+1) throw Error('No single independent POST observed');
+      const posted=submitted[submitted.length-1];
+      if (posted.form_id !== config.form_id ||
+          posted.ids.slice().sort((a,b)=>a-b).join(',') !==
+          config.entry_ids.slice().sort((a,b)=>a-b).join(','))
+        throw Error('Selected browser Entry IDs differ from intended form selection');
+      fs.writeFileSync(path.join(lab,'per-form-'+key+'-selected.json'), JSON.stringify(posted));
       const dest=path.join(lab,'per-form-'+key+'.zip');
       await download.saveAs(dest);
       const bytes=fs.readFileSync(dest);
