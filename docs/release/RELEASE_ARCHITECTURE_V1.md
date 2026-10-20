@@ -3,8 +3,8 @@
 ## Discovery and product authority
 - Release Unit: single installable WordPress plugin (`gf-bulk-rename-counter`).
 - Canonical version source: `Version:` header in `gf-bulk-rename-counter.php`; the runtime `GFBULKRENAME_VERSION` constant and `readme.txt` `Stable tag:` are exact mirrors.
-- Current baseline: 2.0.6. No source plugin behavior changes and no release-related bump during infrastructure installation.
-- Production payload allowlist: main PHP, three `includes/` PHP classes, translations POT, `readme.txt`, `uninstall.php` — precisely seven files rooted under `gf-bulk-rename-counter/`. Developer material/CI/tests/secrets excluded. No bundled third-party vendor libraries; SBOM not material for this first-party ZIP. GF/Bulk Download remain external WordPress dependencies, validated by existing pinned native CI.
+- Current plugin metadata version: 2.0.6 (unreleased). Independent verified flat ZIP and per-form naming were added after the original release-infrastructure work. No release-related bump has been authorized.
+- Production payload allowlist: main PHP, **five** `includes/` PHP classes (`class-rename_handler.php`, `class-settings_page.php`, `class-flat_zip_download.php`, `class-form_naming_rules.php`, `class-naming_strategy.php`), translation POT, `readme.txt`, `uninstall.php` — precisely **nine files** rooted under `gf-bulk-rename-counter/`. Developer material/CI/tests/secrets excluded. No bundled third-party vendor libraries; SBOM not material for this first-party ZIP. GF/Bulk Download remain external WordPress dependencies, validated by existing pinned native CI.
 - GPP referenced for architecture only. No Gravity Flow/Elementor/profile runtime paths or development-version sentinel.
 - Existing `verify.yml` and native runtime scenarios remain; native runtime now installs canonical ZIP instead of symlinking checkout.
 
@@ -24,6 +24,6 @@
 - Native integration workflow tests actual GF/Bulk Download hook, downloads, and source preservation using the installable ZIP in synthetic WordPress.
 - Successful dry-run does **not** prove publication, immutable-release status, GitHub consumer download, production-site equivalence or a future release. Those need a separately authorized production run.
 - The Owner controls first publish and any recovery. No tagging/merging/publication is part of infrastructure PR approval.
-## Production-candidate successor (PR #9; NOT a release)
+## Post-infrastructure production candidates (merged PR #9 and #10; NOT releases)
 
-The independent current-page flat ZIP download adds only `includes/class-flat_zip_download.php` to the canonical release allowlist. The new seven-file allowlist remains strict; source hash/manifest/ZIP validation, clean-head binding, release Owner gates and all existing negative controls are unchanged. Earlier six-file V1 claims describe the pre-candidate source only. No tag, merged release, deployment, or publication was authorized by this implementation.
+PR #9 added the independent current-page flat ZIP class. PR #10 added per-form naming rules and candidate evaluation classes exclusively for that independent action. The **current canonical nine-file allowlist in `scripts/release/release.py`** is authoritative; old six-/seven-file counts describe prior history only. Source hashes, manifest/ZIP validation, Owner gates and negative controls remain. Neither merge constitutes a plugin release, tag, deployment or publication.
