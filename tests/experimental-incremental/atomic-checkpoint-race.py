@@ -58,12 +58,13 @@ def seed(form, frontier=100):
 
 def snap(form, name, old, end, selected=None, no_files=()):
     ids = list(range(old + 1, end + 1))
-    files = ["f-" + str(n) for n in ids if n not in no_files]
+    by_entry = {str(n): ([] if n in no_files else ["f-" + str(n)]) for n in ids}
+    files = [occ for occurrences in by_entry.values() for occ in occurrences]
     return {"id": name, "form": form, "base_frontier": old, "base_rev": 0,
             "target": end, "expected": ids,
             "included": list(ids) if selected is None else list(selected),
             "expected_files": files, "zip_members": list(files),
-            "file_free": list(no_files), "zip_verified": True}
+            "files_by_entry": by_entry, "file_free": list(no_files), "zip_verified": True}
 
 
 def commit(form, snapshot, ack, label):
@@ -129,6 +130,13 @@ def main():
     missing = snap(a, "missing-member-110", 100, 110)
     missing["zip_members"].pop()
     outcome(commit(a, missing, missing["id"], "missing-member"), "INCOMPLETE")
+    missing_map = snap(a, "missing-per-entry-declaration", 100, 110)
+    del missing_map["files_by_entry"]["105"]
+    outcome(commit(a, missing_map, missing_map["id"], "missing-per-entry"), "INCOMPLETE")
+    contradiction = snap(a, "contradictory-file-free", 100, 110, no_files=(105,))
+    contradiction["files_by_entry"]["105"] = ["f-105"]
+    outcome(commit(a, contradiction, contradiction["id"], "contradictory-file-free"),
+            "INCOMPLETE")
     require(state(a) == {"frontier":100, "rev":0, "last_op":""},
             "Invalid/incomplete operation advanced state")
     print_pass("PASS_REAL_DB_NO_ACK_INCOMPLETE_AND_MISSING_MEMBER_REJECTED")
@@ -183,6 +191,7 @@ def main():
     late["included"]=list(late["expected"])
     late["expected_files"]=["f-"+str(n) for n in late["expected"]]
     late["zip_members"]=list(late["expected_files"])
+    late["files_by_entry"]={str(n):["f-"+str(n)] for n in late["expected"]}
     outcome(commit(a,late,late["id"],"retry-fresh"),"COMMITTED")
     require(state(a)["frontier"]==120 and state(a)["rev"]==2,
             "Failed commit/retry corrupted state")
@@ -206,7 +215,7 @@ def main():
     frozen={"id":"gf-real-frozen","form":a,"base_frontier":gf["frontier"],
             "base_rev":0,"target":first,"expected":[first],"included":[first],
             "file_free":[first],"expected_files":[],"zip_members":[],
-            "zip_verified":True}
+            "files_by_entry":{str(first):[]}, "zip_verified":True}
     outcome(commit(a,frozen,frozen["id"],"genuine-gf-ack"),"COMMITTED")
     require(state(a)["frontier"]==first and
             all(x>state(a)["frontier"] for x in later["ids"]),
@@ -221,7 +230,8 @@ def main():
                persistent_cache=observed["external_cache"])
     # Explicit disposable cleanup; no production or GFBRC state touched.
     for form in (a,b):
-        seed(form,0)
+        clean = run({"action":"cleanup", "form":form}, "cleanup-"+str(form))
+        require(clean["deleted"] and clean["absent"], "Temporary checkpoint option remained")
     print_pass("CHECKPOINT_QUALIFICATION_COMPLETE_NO_PRODUCTION_STATE")
 
 
