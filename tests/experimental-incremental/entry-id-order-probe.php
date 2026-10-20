@@ -27,6 +27,9 @@ $table = GFFormsModel::get_lead_table_name();
 order_assert(is_string($table) && preg_match('/^[A-Za-z0-9_]+$/', $table) === 1,
     'Unexpected GF Entry table identifier');
 $column = $wpdb->get_row("SHOW COLUMNS FROM `{$table}` LIKE 'id'", ARRAY_A);
+echo 'GF_ENTRY_SCHEMA_OBS table=' . $table .
+    ' column=' . wp_json_encode($column) .
+    ' sql_error=' . wp_json_encode($wpdb->last_error) . PHP_EOL;
 order_assert(is_array($column) && ($column['Key'] ?? '') === 'PRI' &&
     str_contains(strtolower((string)($column['Extra'] ?? '')), 'auto_increment'),
     'Pinned GF Entry schema does not prove AUTO_INCREMENT primary key');
