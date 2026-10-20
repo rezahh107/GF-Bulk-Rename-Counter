@@ -61,7 +61,8 @@ jobs:
           intent="$(jq -er '.intent' release/candidate.json)"
           branch="$(jq -er '.branch' release/candidate.json)"
           base="$(jq -er '.base.commit' release/candidate.json)"
-          test "$branch" = "release-candidate/v$v"
+          test "$branch" = "$(python3 scripts/release/release.py candidate-branch --candidate-version "$v" --base-commit "$base")"
+          test "$(git rev-parse "$base^{tree}")" = "$(jq -er '.base.tree' release/candidate.json)"
           test "$v" = "$(python3 scripts/release/release.py version)"
           git merge-base --is-ancestor "$base" "$GITHUB_SHA"
           test -z "$(git ls-remote --tags origin "refs/tags/v$v")"
@@ -74,16 +75,16 @@ jobs:
           planned="$(python3 scripts/release/release.py plan --root "$RUNNER_TEMP/release-base" --intent "$intent" --tags "${tags[@]}")"
           test "$planned" = "$v"
           gh api "repos/$GITHUB_REPOSITORY/pulls?state=closed&per_page=100" --paginate --jq '.[] | select(.merged_at != null)' > "$RUNNER_TEMP/merged.jsonl"
-          jq -s --arg branch "$branch" '[.[] | select(.head.ref == $branch and .base.ref == "main")]' "$RUNNER_TEMP/merged.jsonl" > "$RUNNER_TEMP/matched.json"
-          test "$(jq 'length' "$RUNNER_TEMP/matched.json")" -eq 1
-          reviewed="$(jq -er '.[0].head.sha' "$RUNNER_TEMP/matched.json")"
-          pr="$(jq -er '.[0].number' "$RUNNER_TEMP/matched.json")"
+          jq -s '.' "$RUNNER_TEMP/merged.jsonl" > "$RUNNER_TEMP/merged.json"
+          selected="$(python3 scripts/release/release.py select-candidate --merged-prs-file "$RUNNER_TEMP/merged.json")"
+          reviewed="$(jq -er '.reviewed' <<< "$selected")"
+          pr="$(jq -er '.pr' <<< "$selected")"
           git fetch origin "refs/pull/$pr/head"
           test "$(git rev-parse FETCH_HEAD)" = "$reviewed"
           python3 scripts/release/release.py bind --reviewed "$reviewed" --integrated "$GITHUB_SHA"
           for workflow in release-dry-run.yml native-zip-integration.yml; do
-            successful="$(gh run list --workflow "$workflow" --branch "$branch" --limit 100 --json headSha,conclusion,event --jq "[.[] | select(.headSha == \"$reviewed\" and .event == \"workflow_dispatch\" and .conclusion == \"success\")] | length")"
-            test "$successful" -gt 0 || { echo "Candidate qualification absent: $workflow" >&2; exit 1; }
+            gh run list --workflow "$workflow" --branch "$branch" --limit 100 --json headSha,headBranch,conclusion,event > "$RUNNER_TEMP/candidate-ci.json"
+            python3 scripts/release/release.py candidate-ci --runs-file "$RUNNER_TEMP/candidate-ci.json" --reviewed "$reviewed" --branch "$branch"
           done
           echo "BRC_VERSION=$v" >> "$GITHUB_ENV"
           echo "BRC_TAG=v$v" >> "$GITHUB_ENV"
