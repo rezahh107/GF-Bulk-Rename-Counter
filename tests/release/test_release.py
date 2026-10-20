@@ -63,7 +63,8 @@ class ReleaseContract(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             fixture = Path(temporary)
             for relative in (*core.FILES, ".gitignore", "scripts/release/release.py",
-                             "tests/release/test_release.py"):
+                             "tests/release/test_release.py",
+                             "tests/release/test_candidate_lifecycle.py"):
                 target = fixture / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(HERE / relative, target)
@@ -217,7 +218,7 @@ class ReleaseContract(unittest.TestCase):
 
     def test_prepare_updates_only_version_mirrors_and_metadata(self):
         expected = self.next_versions["patch"]
-        branch = f"release-candidate/v{expected}"
+        branch = core.candidate_branch(expected, self.identity["commit"])
         next_version = core.prepare(self.root, "patch", [self.current_tag], branch)
         self.assertEqual(next_version, expected)
         self.assertEqual(core.version(self.root), expected)
