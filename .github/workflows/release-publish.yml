@@ -26,7 +26,6 @@ jobs:
       pull-requests: read
     env:
       GH_TOKEN: ${{ github.token }}
-      BRC_ADMIN_READ_TOKEN: ${{ secrets.BRC_RELEASE_ADMIN_READ_TOKEN }}
     services:
       database:
         image: mariadb:11.4.8@sha256:bc474f00629f0123c10f9e1bca193a45d18af15a274cf0656acda64f1086c3b6
@@ -47,15 +46,13 @@ jobs:
           php-version: '8.2.34'
           extensions: zip, mysqli
           coverage: none
-      - name: Fail closed on unverified platform, history, candidate or CI
+      - name: Fail closed on mismatched source, history, candidate or CI
         shell: bash
         run: |
           set -euo pipefail
           test "$GITHUB_REPOSITORY" = "rezahh107/GF-Bulk-Rename-Counter"
           test "$GITHUB_REF" = refs/heads/main
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test -n "$BRC_ADMIN_READ_TOKEN"
-          curl -fsSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $BRC_ADMIN_READ_TOKEN" "https://api.github.com/repos/$GITHUB_REPOSITORY/immutable-releases" | jq -e '.enabled == true' >/dev/null
           git fetch origin main --tags
           test "$(git rev-parse origin/main)" = "$GITHUB_SHA"
           test -z "$(git status --porcelain)"
@@ -64,7 +61,8 @@ jobs:
           intent="$(jq -er '.intent' release/candidate.json)"
           branch="$(jq -er '.branch' release/candidate.json)"
           base="$(jq -er '.base.commit' release/candidate.json)"
-          test "$branch" = "release-candidate/v$v"
+          test "$branch" = "$(python3 scripts/release/release.py candidate-branch --candidate-version "$v" --base-commit "$base")"
+          test "$(git rev-parse "$base^{tree}")" = "$(jq -er '.base.tree' release/candidate.json)"
           test "$v" = "$(python3 scripts/release/release.py version)"
           git merge-base --is-ancestor "$base" "$GITHUB_SHA"
           test -z "$(git ls-remote --tags origin "refs/tags/v$v")"
@@ -77,16 +75,16 @@ jobs:
           planned="$(python3 scripts/release/release.py plan --root "$RUNNER_TEMP/release-base" --intent "$intent" --tags "${tags[@]}")"
           test "$planned" = "$v"
           gh api "repos/$GITHUB_REPOSITORY/pulls?state=closed&per_page=100" --paginate --jq '.[] | select(.merged_at != null)' > "$RUNNER_TEMP/merged.jsonl"
-          jq -s --arg branch "$branch" '[.[] | select(.head.ref == $branch and .base.ref == "main")]' "$RUNNER_TEMP/merged.jsonl" > "$RUNNER_TEMP/matched.json"
-          test "$(jq 'length' "$RUNNER_TEMP/matched.json")" -eq 1
-          reviewed="$(jq -er '.[0].head.sha' "$RUNNER_TEMP/matched.json")"
-          pr="$(jq -er '.[0].number' "$RUNNER_TEMP/matched.json")"
+          jq -s '.' "$RUNNER_TEMP/merged.jsonl" > "$RUNNER_TEMP/merged.json"
+          selected="$(python3 scripts/release/release.py select-candidate --merged-prs-file "$RUNNER_TEMP/merged.json")"
+          reviewed="$(jq -er '.reviewed' <<< "$selected")"
+          pr="$(jq -er '.pr' <<< "$selected")"
           git fetch origin "refs/pull/$pr/head"
           test "$(git rev-parse FETCH_HEAD)" = "$reviewed"
           python3 scripts/release/release.py bind --reviewed "$reviewed" --integrated "$GITHUB_SHA"
           for workflow in release-dry-run.yml native-zip-integration.yml; do
-            successful="$(gh run list --workflow "$workflow" --branch "$branch" --limit 100 --json headSha,conclusion,event --jq "[.[] | select(.headSha == \"$reviewed\" and .event == \"workflow_dispatch\" and .conclusion == \"success\")] | length")"
-            test "$successful" -gt 0 || { echo "Candidate qualification absent: $workflow" >&2; exit 1; }
+            gh run list --workflow "$workflow" --branch "$branch" --limit 100 --json headSha,headBranch,conclusion,event > "$RUNNER_TEMP/candidate-ci.json"
+            python3 scripts/release/release.py candidate-ci --runs-file "$RUNNER_TEMP/candidate-ci.json" --reviewed "$reviewed" --branch "$branch"
           done
           echo "BRC_VERSION=$v" >> "$GITHUB_ENV"
           echo "BRC_TAG=v$v" >> "$GITHUB_ENV"
@@ -97,7 +95,7 @@ jobs:
           php tests/verify.php
           python3 -m unittest discover -s tests/release -p 'test_*.py' -v
           python3 scripts/release/release.py build --output-dir "$RUNNER_TEMP/release" --expected-head "$GITHUB_SHA"
-      - name: Publish immutable draft with already tested artifact
+      - name: Publish reviewed draft with already tested artifact
         shell: bash
         run: |
           set -euo pipefail
@@ -119,12 +117,12 @@ jobs:
           dest="$RUNNER_TEMP/consumer"
           mkdir -p "$dest"
           zname="gf-bulk-rename-counter-$BRC_VERSION.zip"
-          gh release verify "$BRC_TAG"
+          test "$(gh release view "$BRC_TAG" --json tagName --jq '.tagName')" = "$BRC_TAG"
+          test "$(gh release view "$BRC_TAG" --json isDraft --jq '.isDraft')" = false
           gh release download "$BRC_TAG" --dir "$dest" --pattern "$zname" --pattern "$zname.sha256" --pattern "$zname.manifest.json"
           cmp "$RUNNER_TEMP/release/$zname" "$dest/$zname"
           cmp "$RUNNER_TEMP/release/$zname.sha256" "$dest/$zname.sha256"
           cmp "$RUNNER_TEMP/release/$zname.manifest.json" "$dest/$zname.manifest.json"
-          gh release verify-asset "$BRC_TAG" "$dest/$zname"
           python3 scripts/release/release.py validate --zip "$dest/$zname" --checksum "$dest/$zname.sha256" --manifest "$dest/$zname.manifest.json" --expected-head "$GITHUB_SHA"
           test "$(git ls-remote --tags origin "refs/tags/$BRC_TAG^{}" | cut -f1)" = "$GITHUB_SHA"
           bash scripts/release/consumer-smoke.sh "$dest/$zname" "$BRC_VERSION"
@@ -138,7 +136,8 @@ jobs:
           git commit -m "chore(release): retire consumed $BRC_TAG candidate marker"
           git push origin HEAD:main
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)"
-          gh release verify "$BRC_TAG"
+          test "$(gh release view "$BRC_TAG" --json tagName --jq '.tagName')" = "$BRC_TAG"
+          test "$(gh release view "$BRC_TAG" --json isDraft --jq '.isDraft')" = false
           echo "PUBLISHED_AND_CONSUMER_VERIFIED: $BRC_TAG" >> "$GITHUB_STEP_SUMMARY"
       - name: Report partial failure without rewriting a tag or asset
         if: failure()

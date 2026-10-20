@@ -205,11 +205,94 @@ def release_version(root: Path, intent: str, tags: list[str]) -> str:
     return f"{major}.{minor}.{patch}"
 
 
+def candidate_branch(candidate_version: str, base_commit: str) -> str:
+    """Unique release-candidate namespace bound to the complete source commit SHA."""
+    require(VERSION.fullmatch(candidate_version) is not None, "invalid candidate version")
+    require(re.fullmatch(r"[0-9a-f]{40}", base_commit) is not None,
+            "invalid candidate base commit")
+    return f"release-candidate/v{candidate_version}-from-{base_commit}"
+
+
+def validated_candidate_marker(root: Path) -> dict:
+    marker = json.loads((root / "release/candidate.json").read_text(encoding="utf-8"))
+    require(isinstance(marker, dict) and
+            set(marker) == {"schema", "intent", "version", "branch", "base"},
+            "invalid candidate marker structure")
+    require(type(marker["schema"]) is int and marker["schema"] == 1,
+            "unsupported candidate marker schema")
+    require(marker["intent"] in ("first", "patch", "minor", "major"),
+            "invalid candidate intent")
+    base = marker["base"]
+    require(isinstance(base, dict) and set(base) == {"commit", "tree"},
+            "invalid candidate base identity")
+    require(isinstance(base["commit"], str) and
+            re.fullmatch(r"[0-9a-f]{40}", base["commit"]) is not None,
+            "invalid candidate base SHA")
+    require(isinstance(base["tree"], str) and
+            re.fullmatch(r"[0-9a-f]{40}", base["tree"]) is not None,
+            "invalid candidate base tree")
+    require(isinstance(marker["version"], str) and
+            marker["version"] == version(root), "candidate version/source mismatch")
+    require(marker["branch"] ==
+            candidate_branch(marker["version"], base["commit"]),
+            "candidate branch does not match source base identity")
+    require(git(root, "rev-parse", f'{base["commit"]}^{{tree}}') == base["tree"],
+            "candidate recorded base tree mismatch")
+    return marker
+
+
+def select_candidate_pr(marker: dict, merged_prs: list[dict]) -> dict:
+    """Do not let an old PR for the same version stand in for this source-bound PR."""
+    require(isinstance(merged_prs, list), "invalid merged PR collection")
+    require(isinstance(marker, dict) and isinstance(marker.get("base"), dict),
+            "invalid candidate marker")
+    base = marker["base"]
+    require(marker.get("branch") == candidate_branch(marker.get("version"), base.get("commit")),
+            "candidate branch/source mismatch")
+    matches = [pr for pr in merged_prs
+               if isinstance(pr, dict) and isinstance(pr.get("head"), dict)
+               and pr["head"].get("ref") == marker["branch"]]
+    require(len(matches) == 1,
+            "candidate PR identity missing or ambiguous")
+    pr = matches[0]
+    require(isinstance(pr.get("base"), dict) and pr["base"].get("ref") == "main",
+            "candidate PR targets wrong base branch")
+    require(pr["base"].get("sha") == base["commit"],
+            "candidate PR base commit mismatch")
+    require(isinstance(pr.get("merged_at"), str) and pr["merged_at"],
+            "candidate PR is not merged")
+    require(isinstance(pr.get("merge_commit_sha"), str) and
+            re.fullmatch(r"[0-9a-f]{40}", pr["merge_commit_sha"]) is not None,
+            "candidate PR missing merge commit identity")
+    reviewed = pr["head"].get("sha")
+    require(isinstance(reviewed, str) and
+            re.fullmatch(r"[0-9a-f]{40}", reviewed) is not None,
+            "candidate PR has invalid reviewed SHA")
+    number = pr.get("number")
+    require(type(number) is int and number > 0, "invalid candidate PR number")
+    return {"pr": number, "reviewed": reviewed}
+
+
+def candidate_ci_qualified(runs: list[dict], reviewed: str, branch: str) -> None:
+    require(isinstance(runs, list) and
+            re.fullmatch(r"[0-9a-f]{40}", reviewed) is not None,
+            "invalid candidate CI input")
+    require(any(
+        isinstance(run, dict)
+        and run.get("headSha") == reviewed
+        and run.get("headBranch") == branch
+        and run.get("event") == "workflow_dispatch"
+        and run.get("conclusion") == "success"
+        for run in runs), "exact reviewed candidate workflow_dispatch CI missing")
+
+
 def prepare(root: Path, intent: str, tags: list[str], branch: str) -> str:
     require(not (root / "release/candidate.json").exists(),
             "a candidate has already been integrated; do not stack preparation")
     identity = source_identity(root)
     new = release_version(root, intent, tags)
+    require(branch == candidate_branch(new, identity["commit"]),
+            "prepared candidate branch not bound to source identity")
     old = version(root)
     if new != old:
         php_path = root / FILES[0]
@@ -246,7 +329,8 @@ def binding(root: Path, reviewed_sha: str, integrated_sha: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("build", "validate", "version", "plan", "prepare", "bind", "history"))
+    parser.add_argument("command", choices=("build", "validate", "version", "plan", "prepare", "bind", "history",
+                                     "candidate-branch", "select-candidate", "candidate-ci"))
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--zip", type=Path)
@@ -260,6 +344,9 @@ def main() -> None:
     parser.add_argument("--candidate-version")
     parser.add_argument("--reviewed")
     parser.add_argument("--integrated")
+    parser.add_argument("--base-commit")
+    parser.add_argument("--merged-prs-file", type=Path)
+    parser.add_argument("--runs-file", type=Path)
     args = parser.parse_args()
     try:
         if args.command == "version":
@@ -267,6 +354,21 @@ def main() -> None:
         elif args.command == "plan":
             require(bool(args.intent), "--intent is required")
             print(release_version(args.root, args.intent, args.tags))
+        elif args.command == "candidate-branch":
+            require(bool(args.candidate_version and args.base_commit),
+                    "candidate version and base commit required")
+            print(candidate_branch(args.candidate_version, args.base_commit))
+        elif args.command == "select-candidate":
+            require(args.merged_prs_file is not None, "merged PR records required")
+            marker = validated_candidate_marker(args.root)
+            records = json.loads(args.merged_prs_file.read_text(encoding="utf-8"))
+            print(json.dumps(select_candidate_pr(marker, records), sort_keys=True))
+        elif args.command == "candidate-ci":
+            require(args.runs_file is not None and args.reviewed and args.branch,
+                    "candidate CI records, reviewed SHA and branch required")
+            runs = json.loads(args.runs_file.read_text(encoding="utf-8"))
+            candidate_ci_qualified(runs, args.reviewed, args.branch)
+            print("EXACT_CANDIDATE_CI_PASS")
         elif args.command == "prepare":
             require(bool(args.intent and args.branch), "--intent and --branch required")
             print(prepare(args.root, args.intent, args.tags, args.branch))
