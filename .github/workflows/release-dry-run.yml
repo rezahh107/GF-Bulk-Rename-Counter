@@ -39,7 +39,7 @@ jobs:
           catalog=languages/gf-bulk-rename-counter.pot
           msgfmt --check -o /dev/null "$catalog"
           tmp="$(mktemp -d)"
-          xgettext --language=PHP --from-code=UTF-8 --omit-header \
+          xgettext --language=PHP --from-code=UTF-8 \
             --keyword= --keyword=__ --keyword=esc_html__ --keyword=esc_html_e \
             --keyword=esc_attr__ --keyword=esc_attr_e \
             --output="$tmp/extracted.pot" \
