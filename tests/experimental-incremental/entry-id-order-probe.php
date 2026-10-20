@@ -23,7 +23,8 @@ function order_entry(int $id): array {
     return $value;
 }
 global $wpdb;
-$table = GFFormsModel::get_lead_table_name();
+$table = GFFormsModel::get_entry_table_name();
+order_assert($table === $wpdb->prefix . 'gf_entry', 'Unexpected current GF Entry table name');
 order_assert(is_string($table) && preg_match('/^[A-Za-z0-9_]+$/', $table) === 1,
     'Unexpected GF Entry table identifier');
 $column = $wpdb->get_row("SHOW COLUMNS FROM `{$table}` LIKE 'id'", ARRAY_A);
