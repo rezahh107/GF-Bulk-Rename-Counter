@@ -47,7 +47,7 @@ jobs:
           jq -s 'add' "$RUNNER_TEMP/release-pages.json" > "$RUNNER_TEMP/releases.json"
           v="$(python3 scripts/release/release.py plan --intent "${{ inputs.intent }}" --tags "${tags[@]}")"
           python3 scripts/release/release.py history --tags "${tags[@]}" --releases-file "$RUNNER_TEMP/releases.json" --candidate-version "$v"
-          branch="release-candidate/v$v"
+          branch="$(python3 scripts/release/release.py candidate-branch --candidate-version "$v" --base-commit "$GITHUB_SHA")"
           test -z "$(git ls-remote --heads origin "refs/heads/$branch")" || { echo 'Candidate branch already exists' >&2; exit 1; }
           echo "BRC_VERSION=$v" >> "$GITHUB_ENV"
           echo "BRC_BRANCH=$branch" >> "$GITHUB_ENV"
