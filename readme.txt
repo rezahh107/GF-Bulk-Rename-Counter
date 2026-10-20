@@ -17,16 +17,20 @@ Each file will be renamed to `d[COUNTER_VALUE].extension`, where `[COUNTER_VALUE
 **Features:**
 - Settings page to select target form (optional) and counter field ID.
 - Uses WordPress Settings API.
-- Fully translation-ready.
-- No external dependencies, pure direct array access.
-- Handles duplicate filenames inside the same ZIP.
-- Clean uninstall.
+- Uses WordPress gettext for available interface messages; translations are not bundled.
+- Requires Gravity Forms and Bulk Download for Gravity Forms; does not bundle them.
+- Preserves the original Legacy filename hook and its existing duplicate handling.
+- Provides a separate verified, flat ZIP download for selected entries on the current page only.
+- Offers per-form Legacy / Single Field / Composite naming only for that separate ZIP.
+- Removes only its own two settings options on explicit uninstall, not deactivation.
 
 == Installation ==
-1. Upload the plugin folder to `/wp-content/plugins/`
-2. Activate the plugin.
-3. Go to **Settings → GF Bulk Rename** and configure.
-4. Use bulk download in Gravity Forms entries.
+1. Upload the plugin folder to `/wp-content/plugins/`.
+2. Activate Gravity Forms and Bulk Download for Gravity Forms, then activate this plugin.
+3. Go to **Settings → GF Bulk Rename** to configure the Legacy counter and optional per-form rules.
+4. Use native Bulk Download for the unchanged Legacy workflow, or **Download Flat ZIP with Rename** for the independent current-page workflow.
+
+**Privacy:** Values selected for Single Field / Composite naming appear in ZIP filenames. Do not choose personal or sensitive fields unless sharing those values with recipients is intended. Invalid or missing naming values stop the independent ZIP with an error.
 
 == Changelog ==
 

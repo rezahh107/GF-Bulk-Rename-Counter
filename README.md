@@ -6,7 +6,7 @@ A WordPress add-on that renames Gravity Forms files **during bulk download**, us
 
 This repository contains the existing **Gravity Forms Bulk Rename Counter v2.0.6** plugin source. It hooks into the `bdfgf_entry_filename` filter provided by **Bulk Download for Gravity Forms**, looks up the Gravity Forms entry, and returns `d{counter}.{original-extension}`. When a generated name repeats within the same handler instance, it adds the entry ID and, if necessary, a further numeric suffix.
 
-**Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. The supported runtime dependency range is not exhaustively pinned or certified. A bounded CI integration lane uses **Gravity Forms 3.1.1.1** and **Bulk Download for Gravity Forms 4.2.0** in a synthetic WordPress environment; see [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md).
+**Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. The independent flat ZIP additionally requires the PHP `ZipArchive` extension and a writable WordPress temporary-file location (`wp_tempnam()`); it is not a remote-storage downloader. The supported runtime dependency range is not exhaustively pinned or certified. A bounded CI integration lane uses **Gravity Forms 3.1.1.1** and **Bulk Download for Gravity Forms 4.2.0** in a synthetic WordPress environment; see [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md).
 
 ## Independent flat ZIP (unreleased production candidate)
 
@@ -41,15 +41,17 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | `gf-bulk-rename-counter.php` | Plugin metadata, dependency checks, WordPress hooks and loader |
 | `includes/class-rename_handler.php` | Filename transformation and within-handler duplicate handling |
 | `includes/class-flat_zip_download.php` | Separate current-page-only authenticated ZIP download, source planner, deleted-state validator, archive writer/verifier |
+| `includes/class-form_naming_rules.php` | Independent per-form rule persistence and validation |
+| `includes/class-naming_strategy.php` | Strict Single Field / Composite filename candidates for independent ZIP only |
 | `includes/class-settings_page.php` | WordPress Settings API page and option sanitization |
-| `uninstall.php` | Deletes plugin settings on uninstall |
-| `languages/` | Supplied translation template (not regenerated) |
+| `uninstall.php` | Deletes only both GFBRC-owned options on explicit uninstall (not deactivation or update) |
+| `languages/` | Extracted gettext source-string catalog (no translations) |
 | `readme.txt` | Supplied WordPress plugin readme and changelog |
 | `tests/verify.php` and `tests/rename-handler-test.php` | Canonical dependency-free PHP lint and isolated regressions |
 | `tests/integration/` | Synthetic WordPress / Gravity Forms fixtures, genuine Bulk Download ZIP checks, and negative integrity control |
 | `.github/workflows/native-zip-integration.yml` | Repeatable native ZIP qualification CI, separate from source verification |
 
-Runtime plugin files are imported from the owner-supplied `gf-bulk-rename-counter.zip` version `2.0.6`; foundational work does not intentionally change their behavior. The source contains placeholder author/website metadata. Treat these as inherited placeholders, not verified project identity.
+The plugin began from an owner-supplied v2.0.6 ZIP. Later approved commits added the independent flat ZIP and per-form strategies; they have **not** been published or version-bumped. The source still contains inherited placeholder author/website metadata; project identity remains an Owner decision.
 
 ## EXT-001 qualification evidence
 
@@ -73,12 +75,12 @@ The tests **do not certify the production environment**, all custom Bulk Downloa
 
 ## Known behavior and limits of v2.0.6
 
-- The generated filename is flat (it does not preserve an incoming ZIP subdirectory path).
+- The Legacy hook emits flat filename candidates. The independent action creates a separate flat, verified ZIP; native Bulk Download still owns its own archive paths.
 - Non-empty counter values are stringified and sanitized as filenames; they are not validated as numeric IDs. The literal value `0` is treated as empty and keeps the original name.
-- Duplicate handling only sees filenames emitted by the rename handler and depends on processing order; original names returned without renaming are not registered for collision detection.
-- The handler calls `GFAPI::get_entry()` for each file and does not add an entry cache.
+- The original Legacy hook's duplicate handling sees only names emitted by its handler and depends on call order; the independent flat ZIP instead reserves natural names and verifies its final archive.
+- The Legacy handler calls `GFAPI::get_entry()` for each file and does not add an entry cache.
 - The integration relies on `BDFGF_VERSION` and a three-argument `bdfgf_entry_filename` filter; the installed bulk-download plugin must provide that contract.
-- The supplied POT file and WordPress.org readme have not been regenerated or compatibility-certified by this foundation change.
+- The POT tracks current gettext source strings, but does not contain translations. The WordPress.org readme still contains inherited publisher placeholders and its compatibility claims are not a production certification.
 
 ## Change and release boundary
 
