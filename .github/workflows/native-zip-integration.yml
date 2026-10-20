@@ -317,6 +317,26 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Native Bulk Download unchanged; independent production implementation loaded from installable GFBRC ZIP.'
 
+      - name: Qualify EXT-001 per-form settings and final browser ZIP downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/production-candidate/per-form-qualify.php
+          php -l tests/production-candidate/verify-per-form-browser.php
+          node --check tests/production-candidate/per-form-browser.cjs
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/per-form-qualify.php
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          BRC_CHROME="$chrome" node tests/production-candidate/per-form-browser.cjs
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-per-form-browser.php
+          php -l tests/production-candidate/windows-names-qualify.php
+          php -l tests/production-candidate/windows-names-verify.php
+          python3 -m py_compile tests/production-candidate/windows-names-http.py
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/windows-names-qualify.php
+          python3 tests/production-candidate/windows-names-http.py "$BRC_LAB_DIR"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/windows-names-verify.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
+
       - name: Summarize qualification evidence
         if: always()
         shell: bash
