@@ -1,5 +1,7 @@
 # Native ZIP integration qualification (first bounded lab)
 
+> **Historical-lab boundary:** this document records the original v2.0.6-era native qualification and subsequent expansions. The repository has since **published v2.1.0** with an independent verified flat ZIP and per-form naming; references below to an unchanged v2.0.6 production baseline describe the *original lab phase*, not the current release. A passing integration workflow can include expected **native host collision-loss diagnostics**, which are not archive-integrity PASS. For current release identities, executed run IDs and remaining limitations see [post-release integrity qualification](POST_RELEASE_V2.1.0_INTEGRITY_QUALIFICATION.md).
+
 This lab is a **supplemental integration lane**, not a new release authority. The existing
 canonical source entrypoint remains `php tests/verify.php` and also runs inside the
 integration workflow. Source PASS is not native ZIP PASS.

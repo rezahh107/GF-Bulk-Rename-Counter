@@ -1,5 +1,7 @@
 # Native Bulk Download 4.2.0: configuration-only collision qualification
 
+> **Historical qualification, current risk:** the statement below that v2.0.6 production PHP was unchanged refers to this earlier host-configuration test, **not** to today’s published v2.1.0 feature set. The native host ZIP collision remains an observed issue in bounded v2.1.0-era CI, reproduced without GFBRC; it is distinct from the separate verified flat ZIP included in v2.1.0. See [post-release evidence](POST_RELEASE_V2.1.0_INTEGRITY_QUALIFICATION.md).
+
 **Scope:** qualification only. GFBRC 2.0.6 production PHP is unchanged. No
 WordPress setting is migrated. Do not equate a diagnostic finding with ZIP
 integrity PASS.
