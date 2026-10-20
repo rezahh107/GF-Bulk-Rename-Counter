@@ -350,6 +350,19 @@ jobs:
           BRC_CHROME="$chrome" node tests/experimental-incremental/browser-selection.cjs
           test ! -e "$BRC_LAB_DIR/ifz-native-page-size"
 
+      - name: Qualify creation-order contract in authentic Gravity Forms
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/experimental-incremental/entry-id-order-probe.php
+          php -l tests/experimental-incremental/verify-public-entry.php
+          node --check tests/experimental-incremental/public-entry-browser.cjs
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-incremental/entry-id-order-probe.php
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          BRC_CHROME="$chrome" node tests/experimental-incremental/public-entry-browser.cjs
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-incremental/verify-public-entry.php
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
