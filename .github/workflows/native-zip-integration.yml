@@ -44,6 +44,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          fetch-depth: 0 # Needed only for the pinned pre-EXT-001 rollback lifecycle test.
 
       - name: Verify exact target and canonical source checks
         shell: bash
@@ -336,6 +337,48 @@ jobs:
           python3 tests/production-candidate/windows-names-http.py "$BRC_LAB_DIR"
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/windows-names-verify.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
+
+      - name: Verify both settings across deactivate, update, rollback and explicit uninstall
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/production-candidate/settings-lifecycle.php
+          lifecycle() {
+            GFBRC_LIFECYCLE_PHASE="$1" php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/settings-lifecycle.php
+          }
+          lifecycle seed
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin deactivate gf-bulk-rename-counter
+          lifecycle deactivated
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin activate gf-bulk-rename-counter
+          lifecycle reactivated
+          # Reinstall the same exact canonical PR-Head ZIP: ordinary file update
+          # must not invoke uninstall.php or clear either stored option.
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin install "$BRC_TARGET_ZIP" --force --activate
+          lifecycle updated
+
+          # Authentic old source from merged pre-EXT-001 main. This disposable
+          # rollback archive is only a lab input; it is NOT the release artifact.
+          rollback_sha=6f482ac4204136cd8e3a833e7b9c4ced7d0ddccc
+          git cat-file -e "$rollback_sha^{commit}"
+          temp="$(mktemp -d)"
+          git archive --format=tar --prefix=gf-bulk-rename-counter/ "$rollback_sha" -- \
+            gf-bulk-rename-counter.php \
+            includes/class-rename_handler.php includes/class-settings_page.php \
+            includes/class-flat_zip_download.php \
+            languages/gf-bulk-rename-counter.pot readme.txt uninstall.php | tar -xf - -C "$temp"
+          ( cd "$temp" && zip -qr "$BRC_LAB_DIR/rollback-before-ext001.zip" gf-bulk-rename-counter )
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin install "$BRC_LAB_DIR/rollback-before-ext001.zip" --force --activate
+          git show "$rollback_sha:gf-bulk-rename-counter.php" > "$temp/old-main.php"
+          cmp "$temp/old-main.php" "$BRC_WP_PATH/wp-content/plugins/gf-bulk-rename-counter/gf-bulk-rename-counter.php"
+          lifecycle rolled_back
+
+          # Restore reviewed installable ZIP before running real WP uninstall.
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin install "$BRC_TARGET_ZIP" --force --activate
+          lifecycle restored
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" plugin deactivate gf-bulk-rename-counter
+          lifecycle uninstall
+          rm -rf "$temp"
+          echo "PASS_WP_AUTHENTIC_UPDATE_ROLLBACK_AND_UNINSTALL_SCOPE"
 
       - name: Summarize qualification evidence
         if: always()
