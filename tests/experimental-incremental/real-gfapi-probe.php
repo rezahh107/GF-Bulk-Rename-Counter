@@ -3,7 +3,6 @@
  * Non-production qualification: real GFAPI pagination/chronology and empty-entry boundary.
  * Executed ONLY against disposable synthetic WordPress in native CI; never shipped.
  */
-declare(strict_types=1);
 if (!defined('ABSPATH') || !class_exists('GFAPI') ||
     !defined('GFBULKRENAME_VERSION') || GFBULKRENAME_VERSION !== '2.1.0') {
     throw new RuntimeException('Pinned genuine WP/GF/GFBRC required');
