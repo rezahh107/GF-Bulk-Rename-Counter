@@ -148,6 +148,7 @@ order_assert($unsafe_ack > $simulated_ack &&
     'Unsafe acknowledgment control failed to detect out-of-snapshot coverage');
 echo 'PASS_SYNTHETIC_NEGATIVE_CONTROLS_LOWER_ID_OLD_UPDATE_UNFROZEN_ACK' . PHP_EOL;
 
+if (!function_exists('get_plugins')) { require_once ABSPATH . 'wp-admin/includes/plugin.php'; }
 $plugins = get_plugins();
 $names = array_keys($plugins);
 $importers = array_values(array_filter($names, static fn($p) =>
