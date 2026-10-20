@@ -25,7 +25,7 @@
 - Release unit/mutation tests exercise parser, version, content, archive, source and review binding failures in isolated temporary repositories.
 - Native integration workflow tests actual GF/Bulk Download hook, downloads, and source preservation using the installable ZIP in synthetic WordPress.
 - A successful dry-run alone does **not** prove publication or consumer download. For `v2.1.0` those separate outcomes were tested in publication run `39419857317`, including downloaded-byte comparison and fresh WordPress activation; that still does **not** prove production-site equivalence, Windows extraction, or future releases. Immutable Releases are not an Owner requirement.
-- The Owner controls first publish and any recovery. No tagging/merging/publication is part of infrastructure PR approval.
+- The Owner controls subsequent publication and any recovery. No tagging/merging/publication is authorized by an infrastructure or documentation PR alone.
 ## Historical post-infrastructure production candidates (PR #9 and #10; subsequently shipped in v2.1.0)
 
 PR #9 added the independent current-page flat ZIP class. PR #10 added per-form naming rules and candidate evaluation classes exclusively for that independent action. The **current canonical nine-file allowlist in `scripts/release/release.py`** is authoritative; old six-/seven-file counts describe prior history only. Source hashes, manifest/ZIP validation, Owner gates and negative controls remain. Those merges alone were not releases; their approved production payload was subsequently included in the published v2.1.0 asset.
