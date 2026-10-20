@@ -338,6 +338,13 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/windows-names-verify.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
 
+      - name: Qualify incremental-selection GFAPI behavior on real disposable WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/experimental-incremental/real-gfapi-probe.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-incremental/real-gfapi-probe.php
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
