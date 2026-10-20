@@ -1,18 +1,16 @@
 === Gravity Forms Bulk Rename Counter ===
-Contributors: yourname
 Tags: gravity forms, bulk download, rename files, counter
 Requires at least: 5.8
-Tested up to: 6.5
-Stable tag: 2.0.6
+Tested up to: 6.8
+Stable tag: 2.1.0
 Requires PHP: 8.0
 License: GPL-2.0-or-later
 
-Automatically renames uploaded files in Gravity Forms bulk downloads by prefixing a unique counter number with 'd'.
+Rename Gravity Forms downloads with legacy counters or per-form rules using a separate verified flat ZIP.
 
 == Description ==
 
-This plugin integrates with **Gravity Forms** and **Bulk Download for Gravity Forms** to rename files during bulk download.  
-Each file will be renamed to `d[COUNTER_VALUE].extension`, where `[COUNTER_VALUE]` is taken from a specified field in your form.
+The original **Bulk Download for Gravity Forms** action keeps its existing `d[COUNTER_VALUE].extension` Legacy behavior. A separate **Download Flat ZIP with Rename** action creates a verified archive of files from Entries selected on the current page. This separate download supports per-form Legacy, Single Field and Composite naming rules. Original uploads and Entries are not modified.
 
 **Features:**
 - Settings page to select target form (optional) and counter field ID.
@@ -33,6 +31,12 @@ Each file will be renamed to `d[COUNTER_VALUE].extension`, where `[COUNTER_VALUE
 **Privacy:** Values selected for Single Field / Composite naming appear in ZIP filenames. Do not choose personal or sensitive fields unless sharing those values with recipients is intended. Invalid or missing naming values stop the independent ZIP with an error.
 
 == Changelog ==
+
+= 2.1.0 =
+* Add a separate, verified flat ZIP download with integrity checks and safe filename collision handling.
+* Add per-form Legacy, Single Field and ordered Composite filename rules for the independent ZIP.
+* Preserve the original Bulk Download Legacy workflow and original uploaded files/Entries.
+* Verify clean uninstall, deactivation, rollback and independent download behavior in authentic WordPress CI.
 
 = 2.0.6 =
 * Removed all dependencies on `rgar()` and any helper functions. Direct array access is used for maximum compatibility.

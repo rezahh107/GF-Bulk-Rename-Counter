@@ -4,7 +4,7 @@ A WordPress add-on that renames Gravity Forms files **during bulk download**, us
 
 ## What it does
 
-This repository contains the existing **Gravity Forms Bulk Rename Counter v2.0.6** plugin source. It hooks into the `bdfgf_entry_filename` filter provided by **Bulk Download for Gravity Forms**, looks up the Gravity Forms entry, and returns `d{counter}.{original-extension}`. When a generated name repeats within the same handler instance, it adds the entry ID and, if necessary, a further numeric suffix.
+This repository contains the **Gravity Forms Bulk Rename Counter v2.1.0 pre-release source**; it has not yet been tagged or published. Its retained Legacy workflow hooks into the `bdfgf_entry_filename` filter of **Bulk Download for Gravity Forms**, looks up the Gravity Forms entry, and returns `d{counter}.{original-extension}`. When a generated name repeats within the same handler instance, it adds the entry ID and, if necessary, a further numeric suffix.
 
 **Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. The independent flat ZIP additionally requires the PHP `ZipArchive` extension and a writable WordPress temporary-file location (`wp_tempnam()`); it is not a remote-storage downloader. The supported runtime dependency range is not exhaustively pinned or certified. A bounded CI integration lane uses **Gravity Forms 3.1.1.1** and **Bulk Download for Gravity Forms 4.2.0** in a synthetic WordPress environment; see [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md).
 
@@ -51,7 +51,7 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | `tests/integration/` | Synthetic WordPress / Gravity Forms fixtures, genuine Bulk Download ZIP checks, and negative integrity control |
 | `.github/workflows/native-zip-integration.yml` | Repeatable native ZIP qualification CI, separate from source verification |
 
-The plugin began from an owner-supplied v2.0.6 ZIP. Later approved commits added the independent flat ZIP and per-form strategies; they have **not** been published or version-bumped. The source still contains inherited placeholder author/website metadata; project identity remains an Owner decision.
+The plugin began from an owner-supplied v2.0.6 ZIP. The untagged v2.1.0 candidate includes the merged independent ZIP and per-form strategies. The Owner-approved Author is **Reza Hashemi Hosseini** and Plugin URI points to this repository. Author URI is intentionally omitted and no unverified WordPress.org contributor username is claimed. Neither tagging nor publication has occurred.
 
 ## EXT-001 qualification evidence
 
@@ -69,7 +69,7 @@ The command runs PHP syntax checks across the repository's PHP files and a small
 
 ### Authentic native ZIP qualification
 
-The supplemental [Native WordPress ZIP qualification workflow](.github/workflows/native-zip-integration.yml) installs real WordPress 6.8.3, Gravity Forms 3.1.1.1, Bulk Download for Gravity Forms 4.2.0, and this plugin v2.0.6. It retains `php tests/verify.php` as the canonical source check, then provisions synthetic forms, entries and uploads through WordPress/Gravity Forms APIs. It verifies one authenticated HTTP single-entry ZIP download and three native multi-file/multi-entry ZIP paths dispatched from WP-CLI, including ZIP member paths, counts, SHA-256 checksums, a deliberately wrong-checksum negative control, and persistence/upload readback.
+The supplemental [Native WordPress ZIP qualification workflow](.github/workflows/native-zip-integration.yml) installs real WordPress 6.8.3, Gravity Forms 3.1.1.1, Bulk Download for Gravity Forms 4.2.0, and the exact source-built candidate plugin ZIP. It retains `php tests/verify.php` as the canonical source check, then provisions synthetic forms, entries and uploads through WordPress/Gravity Forms APIs. It verifies one authenticated HTTP single-entry ZIP download and three native multi-file/multi-entry ZIP paths dispatched from WP-CLI, including ZIP member paths, counts, SHA-256 checksums, a deliberately wrong-checksum negative control, and persistence/upload readback.
 
 The tests **do not certify the production environment**, all custom Bulk Download folder configurations, or every possible filename collision. The multi-entry checks invoke the genuine host action in WordPress rather than browser UI selection. Exact source/dependency provenance, scenarios, observations, and evidence limits are documented in [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md). CI conclusions must be checked against the actual exercised commit; the source workflow explicitly checks out the PR Head for pull requests (and the pushed commit for `main`).
 

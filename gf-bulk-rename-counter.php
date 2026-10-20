@@ -1,11 +1,10 @@
 <?php
 /**
  * Plugin Name:     Gravity Forms Bulk Rename Counter
- * Plugin URI:      https://your-website.com/plugins/gf-bulk-rename-counter
- * Description:     Renames uploaded files in Gravity Forms bulk downloads by prefixing a unique counter with 'd'. Professional settings page with form & field selection.
- * Version:         2.0.6
+ * Plugin URI:      https://github.com/rezahh107/GF-Bulk-Rename-Counter
+ * Description:     Preserves legacy counter filenames and adds an independent verified flat ZIP download with per-form naming rules.
+ * Version:         2.1.0
  * Author:          Reza Hashemi Hosseini
- * Author URI:      https://your-website.com
  * Text Domain:     gf-bulk-rename-counter
  * Domain Path:     /languages
  * License:         GPL-2.0-or-later
@@ -23,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define constants
-define( 'GFBULKRENAME_VERSION', '2.0.6' );
+define( 'GFBULKRENAME_VERSION', '2.1.0' );
 define( 'GFBULKRENAME_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'GFBULKRENAME_INCLUDES_DIR', GFBULKRENAME_PLUGIN_DIR . 'includes/' );
 
