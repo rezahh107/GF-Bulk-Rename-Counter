@@ -30,6 +30,29 @@ jobs:
           coverage: none
       - name: Existing source verification
         run: php tests/verify.php
+      - name: Validate gettext POT syntax and exact translatable source coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gettext
+          catalog=languages/gf-bulk-rename-counter.pot
+          msgfmt --check -o /dev/null "$catalog"
+          tmp="$(mktemp -d)"
+          xgettext --language=PHP --from-code=UTF-8 --omit-header \
+            --keyword= --keyword=__ --keyword=esc_html__ --keyword=esc_html_e \
+            --keyword=esc_attr__ --keyword=esc_attr_e \
+            --output="$tmp/extracted.pot" \
+            gf-bulk-rename-counter.php includes/*.php
+          msgfmt --check -o /dev/null "$tmp/extracted.pot"
+          msgcomm --unique --omit-header --no-location \
+            --output="$tmp/unmatched.pot" "$catalog" "$tmp/extracted.pot"
+          if grep -q '^msgid "' "$tmp/unmatched.pot"; then
+            echo 'POT does not match current PHP gettext messages:' >&2
+            cat "$tmp/unmatched.pot" >&2
+            exit 1
+          fi
+          echo 'PASS_GETTEXT_POT_PARSE_AND_EXACT_SOURCE_MSGID_SET'
       - name: Release mutation/contract regression suite
         run: python3 -m unittest discover -s tests/release -p 'test_*.py' -v
       - name: Canonical package, metadata and checksum dry-run
