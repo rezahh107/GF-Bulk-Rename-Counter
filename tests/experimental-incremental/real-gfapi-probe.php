@@ -120,4 +120,10 @@ try {
         'Unexpected zero-file plan failure: ' . $e->getMessage());
     echo 'PASS_PROVED_CURRENT_PLANNER_REJECTS_ALL_ZERO_FILE_ENTRY_SET' . PHP_EOL;
 }
+$fixture_path = getenv('BRC_LAB_DIR') . '/incremental-entry-selection.json';
+if (!file_put_contents($fixture_path, wp_json_encode([
+    'form_id' => $form, 'expected_entry_ids' => $expected,
+], JSON_PRETTY_PRINT))) {
+    throw new RuntimeException('Cannot write disposable browser oracle');
+}
 echo 'QUALIFICATION_ONLY_NO_PERSISTENT_DOWNLOAD_HISTORY_WRITTEN' . PHP_EOL;
