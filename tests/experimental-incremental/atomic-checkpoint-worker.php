@@ -26,6 +26,9 @@ if ($action === 'forms') {
         ))];
 } elseif ($action === 'reset') {
     $result = cq_reset($form, (int)($job['frontier'] ?? 100));
+} elseif ($action === 'cleanup') {
+    $deleted = delete_option(cq_key($form));
+    $result = ['deleted'=>$deleted, 'absent'=>get_option(cq_key($form)) === false];
 } elseif ($action === 'read') {
     $raw = cq_db_raw($form);
     $result = ['db'=>cq_decode($raw),
