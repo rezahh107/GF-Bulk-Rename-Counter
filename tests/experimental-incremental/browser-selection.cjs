@@ -40,7 +40,6 @@ const {chromium} = require('playwright-core');
       let chosen=0;
       for (const id of values) {
         if (!expected.has(id)) continue;
-        await rows.locator('xpath=.', {}).count(); // Keep selectors scoped to real GF rows.
         await page.locator('input[type="checkbox"][name="entry[]"][value="'+id+'"]').check();
         selected.add(id); chosen++;
       }
