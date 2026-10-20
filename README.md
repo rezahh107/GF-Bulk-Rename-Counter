@@ -6,7 +6,7 @@ A WordPress add-on that renames Gravity Forms files **during bulk download**, us
 
 This repository contains the existing **Gravity Forms Bulk Rename Counter v2.0.6** plugin source. It hooks into the `bdfgf_entry_filename` filter provided by **Bulk Download for Gravity Forms**, looks up the Gravity Forms entry, and returns `d{counter}.{original-extension}`. When a generated name repeats within the same handler instance, it adds the entry ID and, if necessary, a further numeric suffix.
 
-**Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. The supported runtime dependency range is not exhaustively pinned or certified. A bounded CI integration lane uses **Gravity Forms 3.1.1.1** and **Bulk Download for Gravity Forms 4.2.0** in a synthetic WordPress environment; see [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md).
+**Dependencies at runtime:** WordPress (declared minimum 5.8), PHP (declared minimum 8.0), Gravity Forms, and Bulk Download for Gravity Forms. The independent flat ZIP additionally requires the PHP `ZipArchive` extension and a writable WordPress temporary-file location (`wp_tempnam()`); it is not a remote-storage downloader. The supported runtime dependency range is not exhaustively pinned or certified. A bounded CI integration lane uses **Gravity Forms 3.1.1.1** and **Bulk Download for Gravity Forms 4.2.0** in a synthetic WordPress environment; see [Native ZIP integration qualification](docs/NATIVE_ZIP_INTEGRATION_LAB.md).
 
 ## Independent flat ZIP (unreleased production candidate)
 
