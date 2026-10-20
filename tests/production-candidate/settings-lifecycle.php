@@ -6,6 +6,7 @@
 if (!defined('ABSPATH') || !class_exists('GFAPI')) {
     throw new RuntimeException('WordPress and Gravity Forms required');
 }
+require_once ABSPATH . 'wp-admin/includes/plugin.php';
 $phase = getenv('GFBRC_LIFECYCLE_PHASE');
 $plugin = 'gf-bulk-rename-counter/gf-bulk-rename-counter.php';
 $legacy = 'gf_bulk_rename_options';
