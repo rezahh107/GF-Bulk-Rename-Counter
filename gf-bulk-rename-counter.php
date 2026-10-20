@@ -4,7 +4,7 @@
  * Plugin URI:      https://your-website.com/plugins/gf-bulk-rename-counter
  * Description:     Renames uploaded files in Gravity Forms bulk downloads by prefixing a unique counter with 'd'. Professional settings page with form & field selection.
  * Version:         2.0.6
- * Author:          Your Name
+ * Author:          Reza Hashemi Hosseini
  * Author URI:      https://your-website.com
  * Text Domain:     gf-bulk-rename-counter
  * Domain Path:     /languages
