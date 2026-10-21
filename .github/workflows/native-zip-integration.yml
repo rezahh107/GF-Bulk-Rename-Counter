@@ -372,6 +372,14 @@ jobs:
           python3 -m py_compile tests/experimental-incremental/atomic-checkpoint-race.py
           python3 tests/experimental-incremental/atomic-checkpoint-race.py
 
+      - name: Qualify exact GF snapshot mutation and delayed commit (disposable InnoDB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/experimental-incremental/exact-snapshot-worker.php
+          python3 -m py_compile tests/experimental-incremental/exact-snapshot-mutation.py
+          python3 tests/experimental-incremental/exact-snapshot-mutation.py
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
