@@ -380,6 +380,14 @@ jobs:
           python3 -m py_compile tests/experimental-incremental/exact-snapshot-mutation.py
           python3 tests/experimental-incremental/exact-snapshot-mutation.py
 
+      - name: Qualify below-frontier identity reconciliation with genuine concurrent GF commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/experimental-incremental/below-frontier-worker.php
+          python3 -m py_compile tests/experimental-incremental/below-frontier-reconciliation.py
+          python3 tests/experimental-incremental/below-frontier-reconciliation.py
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
