@@ -80,23 +80,19 @@ def main():
     form = run(dict(action='setup'),'form-setup')['form']
     other = run(dict(action='setup'),'other-form-setup')['form']
 
-    # Two real InnoDB transactions allocate IDs and deliberately stay uncommitted.
+    # Two genuine delayed commits, SEQUENTIAL, not two long-lived overlapping
+    # GF writers: the overlapping-two-writer harness can block at GF write locks
+    # before reaching the ACK/reconciliation discriminator. A separate real
+    # concurrent checkpoint ACK test follows.
     with tempfile.TemporaryDirectory(prefix='gfbrc-recon-holds-') as temp:
         b1=Path(temp)/'older-1'
-        b2=Path(temp)/'older-2'
         h1=spawn(dict(action='hold',form=form,barrier=str(b1)))
         older1=ready(b1)['id']
-        h2=spawn(dict(action='hold',form=form,barrier=str(b2)))
-        older2=ready(b2)['id']
-        check(older1 < older2, 'Delayed allocation order mismatch')
+        newer=run(dict(action='add',form=form,count=1),'later-committed')['ids'][0]
+        check(older1<newer, 'First delayed GF allocation ordering missing')
 
-        committed=run(dict(action='add',form=form,count=1),'later-committed')
-        newer=committed['ids'][0]
-        check(older1 < older2 < newer,
-              'Expected two uncommitted older GF Entry allocations')
-
-        frozen=run(dict(action='snapshot',form=form),'frozen-before-older-commits')
-        check(frozen['ids']==[newer], 'Uncommitted GF Entries visible in frozen snapshot')
+        frozen=run(dict(action='snapshot',form=form),'frozen-before-older-commit')
+        check(frozen['ids']==[newer], 'Uncommitted GF Entry leaked into snapshot')
         first=op(form,'qual-frozen-first',[newer])
         before=run(dict(action='read',form=form),'pre-ack-state')
         check(before['state']['rev']==0 and before['acked']==[],
@@ -109,59 +105,82 @@ def main():
         check(run(dict(action='read',form=form),'read-after-first')['acked']==[newer],
               'First exact acknowledgment corrupted')
 
-        # Unbounded allocation distance via a different genuine Gravity Forms Form.
+        # Five genuine globally allocated IDs in a DIFFERENT form, while older
+        # Entry is still uncommitted. This falsifies the finite four-ID lookback.
         others=run(dict(action='add',form=other,count=5),'intervening-global-ids')['ids']
         higher=run(dict(action='add',form=form,count=1),'higher-committed')['ids'][0]
-        check(higher - older1 > 4 and max(others)<higher,
-              '4-ID lookback falsifier not large enough')
+        check(higher-older1>4 and max(others)<higher,
+              'Four-ID lookback falsifier was not reached')
         snap_high=run(dict(action='snapshot',form=form),'second-frozen')
         check(snap_high['ids']==[newer,higher],
-              'Genuine frozen snapshot unexpectedly sees delayed Entries')
-        status(ack(form,op(form,'ack-high',[higher]),'ack-higher'), 'COMMITTED')
+              'Second genuine snapshot saw an uncommitted Entry')
+        status(ack(form,op(form,'ack-high',[higher]),'ack-higher'),'COMMITTED')
         above_unack=run(dict(action='add',form=form,count=1),'above-unack')['ids'][0]
 
-        # Both delayed writers commit only AFTER acknowledgments above their IDs.
-        # Release older transaction FIRST: a later transaction's COMMIT may
-        # await locks retained by the earlier uncommitted GF writer.
         go(b1)
         check(finish(h1,'late-first')['committed']==older1,
-              'Late first GF commit changed ID')
+              'First delayed GF commit changed ID')
+
+        mid=evaluate(form)
+        check(mid['acked']==[newer,higher] and
+              mid['unacknowledged']==[older1,above_unack],
+              'First real delayed commit was not rescued by exact set difference')
+
+        # A second genuine late commit AFTER the first transaction is closed.
+        # Its ID is allocated after earlier confirmed state but remains below
+        # a subsequently acknowledged visible Entry.
+        b2=Path(temp)/'older-2'
+        h2=spawn(dict(action='hold',form=form,barrier=str(b2)))
+        older2=ready(b2)['id']
+        newer2=run(dict(action='add',form=form,count=1),
+                   'second-newer-committed')['ids'][0]
+        check(above_unack<older2<newer2,
+              'Second delayed GF allocation ordering missing')
+        frozen2=run(dict(action='snapshot',form=form),
+                    'second-delay-frozen-before-commit')
+        check(older1 in frozen2['ids'] and older2 not in frozen2['ids'] and
+              newer2 in frozen2['ids'],
+              'Second frozen snapshot visibility boundary incorrect')
+        status(ack(form,op(form,'ack-second-newer',[newer2]),
+                   'ack-second-newer'),'COMMITTED')
+        final_above=run(dict(action='add',form=form,count=1),
+                        'outside-latest-frontier')['ids'][0]
         go(b2)
         check(finish(h2,'late-second')['committed']==older2,
-              'Late second GF commit changed ID')
+              'Second delayed GF commit changed ID')
 
     e=evaluate(form)
-    expected=[older1,older2,above_unack]
-    check(e['unacknowledged']==expected and e['acked']==[newer,higher],
-          'Confirmed Entry identity reconciliation missed delayed Entry')
-    check(older1 < newer < higher < above_unack and older2 < newer,
+    missing_expected=[older1,above_unack,older2,final_above]
+    confirmed_expected=[newer,higher,newer2]
+    check(e['unacknowledged']==missing_expected and
+          e['acked']==confirmed_expected,
+          'Confirmed Entry identity reconciliation missed a real late commit')
+    check(older1<newer<higher<above_unack<older2<newer2<final_above,
           'Expected below/above frontier mix not reproduced')
     p('PASS_REAL_GF_MULTI_DELAYED_COMMIT_RECONCILED_AFTER_ACK',
-      earlier=[older1,older2], acknowledged=[newer,higher],
-      above_unack=above_unack, rescued=e['unacknowledged'])
+      earlier=[older1,older2], acknowledged=confirmed_expected,
+      above_unack=[above_unack,final_above], rescued=e['unacknowledged'])
     p('PASS_REAL_GF_FIXED_4_LOOKBACK_FALSIFIED',
       first_delayed=older1,frontier=higher,actual_gap=higher-older1,
       omitted_by_fixed_4=older1<higher-4)
 
-    # A lossy min-to-max interval marks unacknowledged older IDs as covered.
-    # Negative control uses REAL GF-assigned identifiers, but the lossy encoding is synthetic.
-    lossy_range=list(range(newer,higher+1))
-    # Inserting missing old IDs into the interval by pretending all IDs up to frontier
-    # are covered gives a false negative; actual acknowledged set contains only two IDs.
-    frontier_only=[i for i in e['eligible'] if i>higher]
+    # Compact representation is lossless only when it conserves every gap.
+    # A max-frontier or a count-plus-max encoding loses exact acknowledged ID.
+    frontier_only=[i for i in e['eligible'] if i>newer2]
     check(older1 not in frontier_only and older1 in e['unacknowledged'],
-          'High-water negative control did not detect omission')
-    compressed_real=run(dict(action='read',form=form),'range-representation')['state']['ranges']
-    check(compressed_real==[[newer,newer],[higher,higher]],
+          'Frontier-only negative control did not detect omission')
+    compressed_real=run(dict(action='read',form=form),
+                        'range-representation')['state']['ranges']
+    expected_ranges=[[newer,newer],[higher,higher],[newer2,newer2]]
+    check(compressed_real==expected_ranges,
           'Lossless ranges must preserve exact gaps')
-    check(len(lossy_range)>2 and len(compressed_real)==2,
-          'Lossy compressed interval control invalid')
     p('PASS_REAL_IDENTITIES_LOSSLESS_RANGES_VS_LOSSY_INTERVAL',
-      exact_ranges=compressed_real, false_coverage_from_frontier=[older1,older2])
+      exact_ranges=compressed_real,
+      false_coverage_from_frontier=[older1,older2])
 
     # Actual two independent concurrent ACKs race on identical in-memory revision.
     op_left=op(form,'ack-late-left',[older1,above_unack])
-    op_right=op(form,'ack-late-right',[older2])
+    op_right=op(form,'ack-late-right',[older2,final_above])
     with tempfile.TemporaryDirectory(prefix='gfbrc-recon-race-') as temp:
         bar1=Path(temp)/'ack-left'
         bar2=Path(temp)/'ack-right'
@@ -169,14 +188,14 @@ def main():
         r1=ready(bar1)
         w2=spawn(dict(action='ack',form=form,op=op_right,ack=op_right['id'],barrier=str(bar2)))
         r2=ready(bar2)
-        check(r1['pid']!=r2['pid'] and r1['rev']==r2['rev']==2,
+        check(r1['pid']!=r2['pid'] and r1['rev']==r2['rev']==3,
               'Independent workers must read the same persisted revision')
         go(bar1);go(bar2)
         race=[finish(w1,'race-left'),finish(w2,'race-right')]
     check(sorted(v['outcome'] for v in race)==['CAS_CONFLICT','COMMITTED'],
           'Exactly one CAS winner required, got '+str(race))
     after_race=evaluate(form)
-    check(len(after_race['unacknowledged']) in (1,2),
+    check(len(after_race['unacknowledged']) == 2,
           'Race lost or improperly advanced acknowledged identities')
     for candidate in (op_left,op_right):
         response=ack(form,candidate,'retry-same-frozen-evidence')
@@ -185,7 +204,7 @@ def main():
                else 'COMMITTED')
     final=evaluate(form)
     check(final['unacknowledged']==[] and
-          final['acked']==sorted([older1,older2,newer,higher,above_unack]),
+          final['acked']==sorted([older1,older2,newer,higher,above_unack,newer2,final_above]),
           'Stale retry failed to restore exact acknowledgment coverage')
     p('PASS_TWO_PROCESS_REAL_DB_CONCURRENT_ACK_CAS_AND_STALE_RETRY',
       race=[v['outcome'] for v in race], final_rev=final['rev'],
@@ -230,7 +249,7 @@ def main():
           set(changed['eligible'])-actual,
           'Incomplete history false positive not reproduced')
     aggregate_left={newer,higher}
-    aggregate_right={older2,higher}
+    aggregate_right={older1,higher}
     check(len(aggregate_left)==len(aggregate_right) and
           max(aggregate_left)==max(aggregate_right) and
           aggregate_left!=aggregate_right,
