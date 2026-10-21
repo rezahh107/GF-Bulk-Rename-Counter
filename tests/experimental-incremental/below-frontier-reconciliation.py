@@ -110,7 +110,7 @@ def main():
               'First exact acknowledgment corrupted')
 
         # Unbounded allocation distance via a different genuine Gravity Forms Form.
-        others=run(dict(action='add',form=other,count=70),'intervening-global-ids')['ids']
+        others=run(dict(action='add',form=other,count=40),'intervening-global-ids')['ids']
         higher=run(dict(action='add',form=form,count=1),'higher-committed')['ids'][0]
         check(higher - older1 > 32 and max(others)<higher,
               '32-ID lookback falsifier not large enough')
