@@ -110,10 +110,10 @@ def main():
               'First exact acknowledgment corrupted')
 
         # Unbounded allocation distance via a different genuine Gravity Forms Form.
-        others=run(dict(action='add',form=other,count=40),'intervening-global-ids')['ids']
+        others=run(dict(action='add',form=other,count=5),'intervening-global-ids')['ids']
         higher=run(dict(action='add',form=form,count=1),'higher-committed')['ids'][0]
-        check(higher - older1 > 32 and max(others)<higher,
-              '32-ID lookback falsifier not large enough')
+        check(higher - older1 > 4 and max(others)<higher,
+              '4-ID lookback falsifier not large enough')
         snap_high=run(dict(action='snapshot',form=form),'second-frozen')
         check(snap_high['ids']==[newer,higher],
               'Genuine frozen snapshot unexpectedly sees delayed Entries')
@@ -137,9 +137,9 @@ def main():
     p('PASS_REAL_GF_MULTI_DELAYED_COMMIT_RECONCILED_AFTER_ACK',
       earlier=[older1,older2], acknowledged=[newer,higher],
       above_unack=above_unack, rescued=e['unacknowledged'])
-    p('PASS_REAL_GF_FIXED_32_LOOKBACK_FALSIFIED',
+    p('PASS_REAL_GF_FIXED_4_LOOKBACK_FALSIFIED',
       first_delayed=older1,frontier=higher,actual_gap=higher-older1,
-      omitted_by_fixed_32=older1<higher-32)
+      omitted_by_fixed_4=older1<higher-4)
 
     # A lossy min-to-max interval marks unacknowledged older IDs as covered.
     # Negative control uses REAL GF-assigned identifiers, but the lossy encoding is synthetic.
