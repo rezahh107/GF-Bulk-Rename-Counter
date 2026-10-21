@@ -131,7 +131,9 @@ function rq_ack(int $form,array $op,string $ack,?string $frozen_raw=null): array
 }
 function rq_gate(string $prefix, array $meta): void {
     file_put_contents($prefix.'.ready', rq_encode($meta));
-    $end=microtime(true)+50;
+    // The CI deliberately allocates many real GF Entries while this transaction
+    // stays open; allow bounded orchestration without premature test timeout.
+    $end=microtime(true)+240;
     while(!is_file($prefix.'.go')) {
         if(microtime(true)>$end) { throw new RuntimeException('Racing worker barrier timeout'); }
         usleep(25000);
