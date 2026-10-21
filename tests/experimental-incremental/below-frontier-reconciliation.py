@@ -121,12 +121,14 @@ def main():
         above_unack=run(dict(action='add',form=form,count=1),'above-unack')['ids'][0]
 
         # Both delayed writers commit only AFTER acknowledgments above their IDs.
-        go(b2)
-        check(finish(h2,'late-second')['committed']==older2,
-              'Late second GF commit changed ID')
+        # Release older transaction FIRST: a later transaction's COMMIT may
+        # await locks retained by the earlier uncommitted GF writer.
         go(b1)
         check(finish(h1,'late-first')['committed']==older1,
               'Late first GF commit changed ID')
+        go(b2)
+        check(finish(h2,'late-second')['committed']==older2,
+              'Late second GF commit changed ID')
 
     e=evaluate(form)
     expected=[older1,older2,above_unack]
