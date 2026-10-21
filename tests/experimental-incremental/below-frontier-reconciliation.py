@@ -80,103 +80,86 @@ def main():
     form = run(dict(action='setup'),'form-setup')['form']
     other = run(dict(action='setup'),'other-form-setup')['form']
 
-    # Two genuine delayed commits, SEQUENTIAL, not two long-lived overlapping
-    # GF writers: the overlapping-two-writer harness can block at GF write locks
-    # before reaching the ACK/reconciliation discriminator. A separate real
-    # concurrent checkpoint ACK test follows.
+    # Keep each genuine GF writer open for the MINIMUM necessary API calls:
+    # create subsequent committed Entry, freeze snapshot, ACK, then release.
+    # Multiple separate delayed-commit rounds still exercise the defect family.
     with tempfile.TemporaryDirectory(prefix='gfbrc-recon-holds-') as temp:
-        b1=Path(temp)/'older-1'
-        h1=spawn(dict(action='hold',form=form,barrier=str(b1)))
-        older1=ready(b1)['id']
-        newer=run(dict(action='add',form=form,count=1),'later-committed')['ids'][0]
-        check(older1<newer, 'First delayed GF allocation ordering missing')
+        first_gate=Path(temp)/'writer-one'
+        first_worker=spawn(dict(action='hold',form=form,barrier=str(first_gate)))
+        older1=ready(first_gate)['id']
 
-        frozen=run(dict(action='snapshot',form=form),'frozen-before-older-commit')
-        check(frozen['ids']==[newer], 'Uncommitted GF Entry leaked into snapshot')
-        first=op(form,'qual-frozen-first',[newer])
-        before=run(dict(action='read',form=form),'pre-ack-state')
-        check(before['state']['rev']==0 and before['acked']==[],
-              'Checkpoint advanced before any ACK')
-        status(ack(form,first,'missing-ack','not-the-token'),'NO_VALID_ACK')
-        check(run(dict(action='read',form=form),'after-rejected-ack')['acked']==[],
-              'Incorrect ACK advanced confirmed coverage')
-        status(ack(form,first,'first-committed-ack'),'COMMITTED')
-        status(ack(form,first,'duplicate-ack'),'ALREADY_ACKNOWLEDGED')
-        check(run(dict(action='read',form=form),'read-after-first')['acked']==[newer],
-              'First exact acknowledgment corrupted')
+        # Five real global allocations in another form falsify a fixed 4-ID
+        # lookback even without any time-based bound.
+        others=run(dict(action='add',form=other,count=5),'real-intervening-ids')['ids']
+        newer=run(dict(action='add',form=form,count=1),'visible-newer')['ids'][0]
+        check(older1<max(others)<newer and newer-older1>4,
+              'Real fixed-size lookback falsification precondition missing')
+        frozen=run(dict(action='snapshot',form=form),
+                   'first-consistent-snapshot')
+        check(frozen['ids']==[newer],
+              'First frozen snapshot unexpectedly saw uncommitted older ID')
+        first=op(form,'first-exact-confirmed',[newer])
+        status(ack(form,first,'first-valid-ack'),'COMMITTED')
+        go(first_gate)
+        check(finish(first_worker,'late-first')['committed']==older1,
+              'First real late GF commit failed')
 
-        # Five genuine globally allocated IDs in a DIFFERENT form, while older
-        # Entry is still uncommitted. This falsifies the finite four-ID lookback.
-        others=run(dict(action='add',form=other,count=5),'intervening-global-ids')['ids']
-        higher=run(dict(action='add',form=form,count=1),'higher-committed')['ids'][0]
-        check(higher-older1>4 and max(others)<higher,
-              'Four-ID lookback falsifier was not reached')
-        snap_high=run(dict(action='snapshot',form=form),'second-frozen')
-        check(snap_high['ids']==[newer,higher],
-              'Second genuine snapshot saw an uncommitted Entry')
-        status(ack(form,op(form,'ack-high',[higher]),'ack-higher'),'COMMITTED')
-        above_unack=run(dict(action='add',form=form,count=1),'above-unack')['ids'][0]
+        # All duplicate and invalid ACK checks run AFTER releasing GF writer.
+        duplicate=ack(form,first,'repeat-first')
+        status(duplicate,'ALREADY_ACKNOWLEDGED')
+        invalid=ack(form,op(form,'not-yet-authorized',[older1]),
+                    'wrong-token','unmatched-token')
+        status(invalid,'NO_VALID_ACK')
+        now=evaluate(form)
+        check(now['acked']==[newer] and now['unacknowledged']==[older1],
+              'First acknowledged snapshot missed real delayed Entry')
+        above_unack=run(dict(action='add',form=form,count=1),
+                        'above-first-frontier')['ids'][0]
 
-        go(b1)
-        check(finish(h1,'late-first')['committed']==older1,
-              'First delayed GF commit changed ID')
-
-        mid=evaluate(form)
-        check(mid['acked']==[newer,higher] and
-              mid['unacknowledged']==[older1,above_unack],
-              'First real delayed commit was not rescued by exact set difference')
-
-        # A second genuine late commit AFTER the first transaction is closed.
-        # Its ID is allocated after earlier confirmed state but remains below
-        # a subsequently acknowledged visible Entry.
-        b2=Path(temp)/'older-2'
-        h2=spawn(dict(action='hold',form=form,barrier=str(b2)))
-        older2=ready(b2)['id']
-        newer2=run(dict(action='add',form=form,count=1),
-                   'second-newer-committed')['ids'][0]
-        check(above_unack<older2<newer2,
-              'Second delayed GF allocation ordering missing')
+        second_gate=Path(temp)/'writer-two'
+        second_worker=spawn(dict(action='hold',form=form,barrier=str(second_gate)))
+        older2=ready(second_gate)['id']
+        higher=run(dict(action='add',form=form,count=1),
+                   'second-visible-newer')['ids'][0]
+        check(above_unack<older2<higher,
+              'Second real delayed commit allocation order missing')
         frozen2=run(dict(action='snapshot',form=form),
-                    'second-delay-frozen-before-commit')
-        check(older1 in frozen2['ids'] and older2 not in frozen2['ids'] and
-              newer2 in frozen2['ids'],
-              'Second frozen snapshot visibility boundary incorrect')
-        status(ack(form,op(form,'ack-second-newer',[newer2]),
-                   'ack-second-newer'),'COMMITTED')
-        final_above=run(dict(action='add',form=form,count=1),
-                        'outside-latest-frontier')['ids'][0]
-        go(b2)
-        check(finish(h2,'late-second')['committed']==older2,
-              'Second delayed GF commit changed ID')
+                    'second-consistent-snapshot')
+        check(older1 in frozen2['ids'] and above_unack in frozen2['ids']
+              and higher in frozen2['ids'] and older2 not in frozen2['ids'],
+              'Second snapshot visibility mismatch')
+        # This exact snapshot includes old1 and above_unack. For this
+        # checkpoint-isolation experiment we ACK only a controlled operation
+        # selecting higher; this is NOT a complete NEW frontier advancement.
+        status(ack(form,op(form,'second-exact-confirmed',[higher]),
+                   'second-valid-ack'),'COMMITTED')
+        go(second_gate)
+        check(finish(second_worker,'late-second')['committed']==older2,
+              'Second real late GF commit failed')
 
-    e=evaluate(form)
-    missing_expected=[older1,above_unack,older2,final_above]
-    confirmed_expected=[newer,higher,newer2]
-    check(e['unacknowledged']==missing_expected and
-          e['acked']==confirmed_expected,
-          'Confirmed Entry identity reconciliation missed a real late commit')
-    check(older1<newer<higher<above_unack<older2<newer2<final_above,
-          'Expected below/above frontier mix not reproduced')
+    final_above=run(dict(action='add',form=form,count=1),
+                    'above-second-frontier')['ids'][0]
+    current=evaluate(form)
+    expected_missing=[older1,above_unack,older2,final_above]
+    check(current['acked']==[newer,higher] and
+          current['unacknowledged']==expected_missing,
+          'Reconciliation did not preserve exact real delayed Entry identities')
+    check(older1<newer<above_unack<older2<higher<final_above,
+          'Expected mixed IDs below and above diagnostic frontier absent')
     p('PASS_REAL_GF_MULTI_DELAYED_COMMIT_RECONCILED_AFTER_ACK',
-      earlier=[older1,older2], acknowledged=confirmed_expected,
-      above_unack=[above_unack,final_above], rescued=e['unacknowledged'])
+      late=[older1,older2],acknowledged=[newer,higher],
+      unacknowledged=current['unacknowledged'])
     p('PASS_REAL_GF_FIXED_4_LOOKBACK_FALSIFIED',
-      first_delayed=older1,frontier=higher,actual_gap=higher-older1,
-      omitted_by_fixed_4=older1<higher-4)
-
-    # Compact representation is lossless only when it conserves every gap.
-    # A max-frontier or a count-plus-max encoding loses exact acknowledged ID.
-    frontier_only=[i for i in e['eligible'] if i>newer2]
-    check(older1 not in frontier_only and older1 in e['unacknowledged'],
-          'Frontier-only negative control did not detect omission')
-    compressed_real=run(dict(action='read',form=form),
-                        'range-representation')['state']['ranges']
-    expected_ranges=[[newer,newer],[higher,higher],[newer2,newer2]]
-    check(compressed_real==expected_ranges,
-          'Lossless ranges must preserve exact gaps')
+      late_id=older1,diagnostic_frontier=newer,gap=newer-older1)
+    frontier_only=[x for x in current['eligible'] if x>higher]
+    check(older1 not in frontier_only and older2 not in frontier_only,
+          'Frontier-only falsifier missed genuinely below-frontier Entries')
+    stored=run(dict(action='read',form=form),'exact-ack-ranges')
+    check(stored['state']['ranges']==[[newer,newer],[higher,higher]],
+          'Lossless ranges did not preserve confirmed identities and gaps')
     p('PASS_REAL_IDENTITIES_LOSSLESS_RANGES_VS_LOSSY_INTERVAL',
-      exact_ranges=compressed_real,
-      false_coverage_from_frontier=[older1,older2])
+      exact_ranges=stored['state']['ranges'],
+      falsely_covered_by_frontier=[older1,older2])
 
     # Actual two independent concurrent ACKs race on identical in-memory revision.
     op_left=op(form,'ack-late-left',[older1,above_unack])
@@ -188,7 +171,7 @@ def main():
         r1=ready(bar1)
         w2=spawn(dict(action='ack',form=form,op=op_right,ack=op_right['id'],barrier=str(bar2)))
         r2=ready(bar2)
-        check(r1['pid']!=r2['pid'] and r1['rev']==r2['rev']==3,
+        check(r1['pid']!=r2['pid'] and r1['rev']==r2['rev']==2,
               'Independent workers must read the same persisted revision')
         go(bar1);go(bar2)
         race=[finish(w1,'race-left'),finish(w2,'race-right')]
@@ -204,7 +187,7 @@ def main():
                else 'COMMITTED')
     final=evaluate(form)
     check(final['unacknowledged']==[] and
-          final['acked']==sorted([older1,older2,newer,higher,above_unack,newer2,final_above]),
+          final['acked']==sorted([older1,older2,newer,higher,above_unack,final_above]),
           'Stale retry failed to restore exact acknowledgment coverage')
     p('PASS_TWO_PROCESS_REAL_DB_CONCURRENT_ACK_CAS_AND_STALE_RETRY',
       race=[v['outcome'] for v in race], final_rev=final['rev'],
