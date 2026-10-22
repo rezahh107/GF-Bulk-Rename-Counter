@@ -6,7 +6,9 @@ foreach ([['browser-selected.json','browser-one.zip'], ['browser-two-selected.js
     ['browser-n99-selected.json','browser-n99.zip'],
     ['browser-n100-selected.json','browser-n100.zip'],
     ['browser-n101-selected.json','browser-n101.zip'],
-    ['browser-pagination-selected.json','browser-pagination.zip']] as [$meta_file, $zip_file]) {
+    ['browser-pagination-selected.json','browser-pagination.zip'],
+    ['browser-global154-selected.json','browser-global154.zip'],
+    ['browser-global_filtered-selected.json','browser-global_filtered.zip']] as [$meta_file, $zip_file]) {
 $meta = json_decode(file_get_contents($root . '/' . $meta_file), true, 512, JSON_THROW_ON_ERROR);
 $ids = isset($meta['selected_ids']) ? array_map('intval', $meta['selected_ids']) : [(int)$meta['selected_id']];
 $form_id = (int)$meta['form_id'];
