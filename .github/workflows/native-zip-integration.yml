@@ -353,6 +353,15 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/windows-names-verify.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
 
+      - name: Reject 501 Entry scopes and 501-field POSTs before sending ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/selection-qualification/limits.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/selection-qualification/limits.php
+          python3 -m py_compile tests/selection-qualification/verify-limits-http.py
+          python3 tests/selection-qualification/verify-limits-http.py "$BRC_LAB_DIR"
+
       - name: Prove live server snapshot during actual GF membership changes
         shell: bash
         run: |
