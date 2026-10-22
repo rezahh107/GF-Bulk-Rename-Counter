@@ -34,7 +34,8 @@ const {chromium} = require('playwright-core');
     page.on('request', req => {
       if (req.url().includes('admin-post.php')) {
         const body = new URLSearchParams(req.postData() || '');
-        endpointSelections.push({method:req.method(), ids:body.getAll('entry_ids[]'), form_id:body.get('form_id')});
+        endpointSelections.push({method:req.method(), ids:body.getAll('entry_ids[]'), form_id:body.get('form_id'),
+          mode:body.get('selection_mode'), scope:body.get('selection_scope'), seal:body.get('selection_scope_seal')});
         diagnostic.push('endpoint-request='+req.method()+' entry_count='+body.getAll('entry_ids[]').length+
           ' body_keys='+Array.from(new Set(body.keys())).join(','));
       }
@@ -298,7 +299,9 @@ const {chromium} = require('playwright-core');
         throw Error('Global selection did not deliver a verified browser ZIP');
       const req = endpointSelections.at(-1);
       if(endpointSelections.length!==postsBefore+1 || req.ids.length ||
-          req.form_id!==String(form))
+          req.form_id!==String(form) || req.mode!=='all_matching' || !req.scope || !req.seal ||
+          downloadAll.suggestedFilename() !== 'gfbrc-flat-'+form+'-'+count+'-entries-'+
+            (caseName==='global154'?155:78)+'-files.zip')
         throw Error('Global browser path sent incorrect explicit ID set');
       fs.writeFileSync(path.join(lab,'browser-'+caseName+'-selected.json'),JSON.stringify({
         form_id:form,selected_ids:ids,zip_bytes:b.length,
