@@ -305,6 +305,12 @@ jobs:
           BRC_CHROME="$chrome" npm --version
           npm install --no-save --ignore-scripts --no-audit --package-lock=false playwright-core@1.55.0
           BRC_CHROME="$chrome" node tests/production-candidate/browser.cjs
+          # Qualification-only native GF source and browser selection discovery.
+          # Installed GF 3.1.1.1 is checksum-pinned above. Avoid inventing form
+          # search/filter semantics from our own checkbox collection.
+          grep -nEi 'select_all|select all entries|select_all_entries|select_all_leads|all_leads' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php" | head -n 45 || true
+          node --check tests/selection-qualification/discover.cjs
+          BRC_CHROME="$chrome" node tests/selection-qualification/discover.cjs
           php -l tests/production-candidate/verify-browser.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-browser.php
           test ! -e "$BRC_LAB_DIR/ifz-native-page-size"
