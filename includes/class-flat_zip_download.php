@@ -1,6 +1,6 @@
 <?php
 /**
- * Independent current-page-only verified flat ZIP download.
+ * Independently verified flat ZIP download with GF scoped all-matching selection.
  * @package GFBulkRename
  */
 namespace GFBulkRename;
@@ -21,7 +21,7 @@ final class Flat_Zip_Download {
 
     public static function add_action($actions, $form_id) {
         if (!is_array($actions) || !\GFCommon::current_user_can_any('gravityforms_view_entries')) { return $actions; }
-        $actions[self::ACTION] = __('Download Flat ZIP with Rename (selected on this page only)', 'gf-bulk-rename-counter');
+        $actions[self::ACTION] = __('Download Flat ZIP with Rename', 'gf-bulk-rename-counter');
         return $actions;
     }
 
@@ -30,13 +30,34 @@ final class Flat_Zip_Download {
             !\GFCommon::current_user_can_any('gravityforms_view_entries')) { return; }
         $form_id = isset($_GET['id']) ? absint($_GET['id']) : 0;
         if (!$form_id) { return; }
+        // Seal the actual Entry List query context as rendered for this user.
+        // The POST cannot invent a different form/filter/search scope.
+        $scope = [];
+        $scope_supported = true;
+        foreach ($_GET as $key => $value) {
+            if (in_array($key, ['page', 'id', 'paged'], true)) { continue; }
+            if (!is_string($key) || strlen($key) > 100 || !preg_match('/^[a-zA-Z0-9_-]+$/', $key) ||
+                !is_string($value) || strlen($value) > 4096 || count($scope) >= 32) {
+                $scope_supported = false;
+                break;
+            }
+            $scope[$key] = wp_unslash($value);
+        }
+        ksort($scope);
+        $scope_json = wp_json_encode($scope);
+        if (!is_string($scope_json) || strlen($scope_json) > 8192) { $scope_supported = false; }
         $config = [
+            'scope' => $scope_supported ? $scope_json : '',
+            'scopeSeal' => $scope_supported ? self::sign_scope($form_id, $scope_json) : '',
             'action' => self::ACTION,
             'postAction' => self::ENDPOINT,
             'formId' => $form_id,
             'nonce' => wp_create_nonce('gfbrc_independent_flat_zip_' . $form_id),
-            'required' => __('Select at least one entry on this page.', 'gf-bulk-rename-counter'),
-            'confirm' => __('Download files from only the %d selected entries on this page? Selections made on other pages are NOT included.', 'gf-bulk-rename-counter'),
+            'required' => __('Select at least one Entry or choose all matching Entries.', 'gf-bulk-rename-counter'),
+            'confirm' => __('Download eligible files from %d explicitly selected Entries? File count may differ.', 'gf-bulk-rename-counter'),
+            'confirmGlobal' => __('Download eligible files from ALL Entries matching this form and its current filters/search (including other pages)? The server verifies the complete Entry set before sending the ZIP.', 'gf-bulk-rename-counter'),
+            'scopeUnavailable' => __('This search/filter URL is not supported for a safe global download.', 'gf-bulk-rename-counter'),
+            'globalLabel' => __('All matching Entries (Flat ZIP only)', 'gf-bulk-rename-counter'),
         ];
         echo '<script id="gfbrc-independent-flat-zip" data-config="' .
             esc_attr(wp_json_encode($config)) . '">';
@@ -53,6 +74,21 @@ final class Flat_Zip_Download {
     var select = document.querySelector('select[name="' + name + '"]');
     return !!select && select.value === config.action;
   }
+  // Keep the native GF select-all switch authoritative when it is functional.
+  // The independent checkbox is an accessible fallback when pinned GF's
+  // .column-cb selector does not match its own rendered Entry List header.
+  var apply = document.getElementById('doaction');
+  if (apply) {
+    var label = document.createElement('label');
+    label.style.marginInlineStart = '12px';
+    var toggle = document.createElement('input');
+    toggle.type = 'checkbox';
+    toggle.id = 'gfbrc-all-matching';
+    toggle.style.marginInlineEnd = '5px';
+    label.appendChild(toggle);
+    label.appendChild(document.createTextNode(config.globalLabel));
+    apply.insertAdjacentElement('afterend', label);
+  }
   function intercept(ev) {
     var button = ev.target.closest('input,button');
     if (!button || !/^(doaction|doaction2)$/.test(button.id)) return;
@@ -66,8 +102,13 @@ final class Flat_Zip_Download {
     );
     var ids = Array.prototype.map.call(checked, function (x) { return x.value; })
       .filter(function (x) { return /^[1-9][0-9]*$/.test(x); });
-    if (!ids.length) { window.alert(config.required); return; }
-    if (!window.confirm(config.confirm.replace('%d', String(ids.length)))) return;
+    var gfGlobal = document.getElementById('all_entries');
+    var fallback = document.getElementById('gfbrc-all-matching');
+    var allMatching = (gfGlobal && gfGlobal.value === '1') || (fallback && fallback.checked);
+    if (allMatching && !config.scopeSeal) { window.alert(config.scopeUnavailable); return; }
+    if (!allMatching && !ids.length) { window.alert(config.required); return; }
+    if (!window.confirm(allMatching ? config.confirmGlobal :
+        config.confirm.replace('%d', String(ids.length)))) return;
     var form = document.createElement('form');
     form.method = 'POST';
     form.action = new URL('admin-post.php', window.location.href).href;
@@ -78,7 +119,13 @@ final class Flat_Zip_Download {
     hidden('action', config.postAction);
     hidden('form_id', config.formId);
     hidden('_wpnonce', config.nonce);
-    ids.forEach(function (id) { hidden('entry_ids[]', id); });
+    hidden('selection_mode', allMatching ? 'all_matching' : 'explicit');
+    if (allMatching) {
+      hidden('selection_scope', config.scope);
+      hidden('selection_scope_seal', config.scopeSeal);
+    } else {
+      ids.forEach(function (id) { hidden('entry_ids[]', id); });
+    }
     document.body.appendChild(form);
     form.submit();
   }
@@ -346,6 +393,101 @@ final class Flat_Zip_Download {
         }
     }
 
+    private static function sign_scope(int $form_id, string $scope_json): string {
+        return hash_hmac('sha256', $form_id . '|' . get_current_user_id() . '|' . $scope_json, wp_salt('auth'));
+    }
+
+    /** Recompute GF's native filtered selection rather than trusting any posted IDs/count. */
+    private static function all_matching_ids(int $form_id): array {
+        $scope_json = $_POST['selection_scope'] ?? null;
+        $seal = $_POST['selection_scope_seal'] ?? null;
+        if (!is_string($scope_json) || strlen($scope_json) > 8192 ||
+            !is_string($seal) || !hash_equals(self::sign_scope($form_id, wp_unslash($scope_json)), $seal)) {
+            self::fail(__('Invalid or forged Entry List scope', 'gf-bulk-rename-counter'), 403);
+        }
+        $scope = json_decode(wp_unslash($scope_json), true);
+        if (!is_array($scope) || count($scope) > 32) {
+            self::fail(__('Invalid Entry List scope', 'gf-bulk-rename-counter'), 403);
+        }
+        foreach ($scope as $key => $value) {
+            if (!is_string($key) || strlen($key) > 100 || !preg_match('/^[a-zA-Z0-9_-]+$/', $key) ||
+                in_array($key, ['page', 'id', 'paged'], true) ||
+                !is_string($value) || strlen($value) > 4096) {
+                self::fail(__('Invalid Entry List filter', 'gf-bulk-rename-counter'), 403);
+            }
+        }
+        if (!is_array(\GFAPI::get_form($form_id))) {
+            self::fail(__('Selected form unavailable', 'gf-bulk-rename-counter'), 404);
+        }
+        // In pinned GF 3.1.1.1, the native list's process_action() obtains its
+        // all_entries set with GF_Entry_List_Table::get_search_criteria().
+        if (!class_exists('\GF_Entry_List_Table', false)) {
+            require_once \GFCommon::get_base_path() . '/entry_list.php';
+        }
+        if (!class_exists('\GF_Entry_List_Table') ||
+            !method_exists('\GF_Entry_List_Table', 'get_search_criteria')) {
+            throw new RuntimeException('GF Entry List scope resolver unavailable');
+        }
+        $original_get = $_GET;
+        try {
+            $_GET = array_merge(['page' => 'gf_entries', 'id' => (string)$form_id], $scope);
+            $table = new \GF_Entry_List_Table([
+                'form_id' => $form_id,
+                'filter' => isset($scope['filter']) ? sanitize_text_field($scope['filter']) : '',
+            ]);
+            $criteria = $table->get_search_criteria();
+        } finally {
+            $_GET = $original_get;
+        }
+        if (!is_array($criteria) || !isset($criteria['status'])) {
+            throw new RuntimeException('GF selection criteria unavailable');
+        }
+
+        // Real GF/MariaDB qualification established that plain offset paging
+        // can drop/duplicate IDs during concurrent membership changes.
+        global $wpdb;
+        if ($wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false ||
+            $wpdb->query('START TRANSACTION WITH CONSISTENT SNAPSHOT') === false) {
+            throw new RuntimeException('Consistent Entry selection snapshot unavailable');
+        }
+        $committed = false;
+        try {
+            $ids = [];
+            $seen = [];
+            $total = 0;
+            for ($offset = 0; $offset <= 500; $offset += 100) {
+                $batch = \GFAPI::get_entry_ids($form_id, $criteria,
+                    ['key' => 'id', 'direction' => 'ASC', 'is_numeric' => true],
+                    ['offset' => $offset, 'page_size' => 100], $total);
+                if (!is_array($batch)) {
+                    throw new RuntimeException('GF Entry ID enumeration failed');
+                }
+                foreach ($batch as $id) {
+                    $id = (int)$id;
+                    if ($id <= 0 || isset($seen[$id])) {
+                        throw new RuntimeException('Non-unique or invalid Entry in selection');
+                    }
+                    $seen[$id] = true;
+                    $ids[] = $id;
+                }
+                if (count($ids) > 500) {
+                    throw new RuntimeException('Selection exceeds 500 Entries; no partial ZIP was generated');
+                }
+                if (count($batch) < 100) { break; }
+            }
+            if (count($ids) !== (int)$total || !$ids) {
+                throw new RuntimeException('Entry selection incomplete or empty');
+            }
+            if ($wpdb->query('COMMIT') === false) {
+                throw new RuntimeException('Entry selection snapshot commit failed');
+            }
+            $committed = true;
+            return $ids;
+        } finally {
+            if (!$committed) { $wpdb->query('ROLLBACK'); }
+        }
+    }
+
     public static function download(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') { self::fail(__('POST required', 'gf-bulk-rename-counter'), 405); }
         if (!\GFCommon::current_user_can_any('gravityforms_view_entries')) { self::fail(__('Not authorized', 'gf-bulk-rename-counter'), 403); }
@@ -355,21 +497,38 @@ final class Flat_Zip_Download {
             !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'gfbrc_independent_flat_zip_' . $form_id)) {
             self::fail(__('Invalid download request', 'gf-bulk-rename-counter'), 403);
         }
-        $raw = $_POST['entry_ids'] ?? null;
-        if (!is_array($raw) || count($raw) < 1 || count($raw) > 500) {
-            self::fail(__('Select between 1 and 500 entries', 'gf-bulk-rename-counter'));
+        $mode = $_POST['selection_mode'] ?? 'explicit';
+        if (!is_string($mode) || !in_array($mode, ['explicit', 'all_matching'], true)) {
+            self::fail(__('Invalid selection mode', 'gf-bulk-rename-counter'), 400);
         }
-        $ids = [];
-        foreach (wp_unslash($raw) as $value) {
-            if (!is_string($value) || !ctype_digit($value) || (int)$value <= 0 ||
-                (string)(int)$value !== $value || isset($ids[(int)$value])) {
-                self::fail(__('Invalid or duplicate entry selection', 'gf-bulk-rename-counter'));
+        if ($mode === 'all_matching') {
+            if (isset($_POST['entry_ids'])) {
+                self::fail(__('Ambiguous Entry selection', 'gf-bulk-rename-counter'), 400);
             }
-            $ids[(int)$value] = (int)$value;
+            try {
+                $ids = self::all_matching_ids($form_id);
+            } catch (Throwable $e) {
+                self::fail(sprintf(__('Cannot resolve all matching Entries: %s', 'gf-bulk-rename-counter'),
+                    $e->getMessage()), 422);
+            }
+        } else {
+            $raw = $_POST['entry_ids'] ?? null;
+            if (!is_array($raw) || count($raw) < 1 || count($raw) > 500) {
+                self::fail(__('Select between 1 and 500 Entries', 'gf-bulk-rename-counter'));
+            }
+            $ids = [];
+            foreach (wp_unslash($raw) as $value) {
+                if (!is_string($value) || !ctype_digit($value) || (int)$value <= 0 ||
+                    (string)(int)$value !== $value || isset($ids[(int)$value])) {
+                    self::fail(__('Invalid or duplicate Entry selection', 'gf-bulk-rename-counter'));
+                }
+                $ids[(int)$value] = (int)$value;
+            }
+            $ids = array_values($ids);
         }
         $temp = null;
         try {
-            $plan = self::plan($form_id, array_values($ids));
+            $plan = self::plan($form_id, $ids);
             $temp = self::write_verified_zip($plan);
             $size = filesize($temp);
             if ($size === false || $size <= 0 || headers_sent()) {
@@ -388,6 +547,8 @@ final class Flat_Zip_Download {
             nocache_headers();
             header('Cache-Control: private, no-store, max-age=0');
             header('Content-Type: application/zip');
+            header('X-GFBRC-Selected-Entries: ' . count($ids));
+            header('X-GFBRC-ZIP-Files: ' . count($plan));
             header('Content-Disposition: attachment; filename="gfbrc-flat-' . $form_id . '.zip"');
             header('Content-Length: ' . $size);
             while (!feof($f)) {
