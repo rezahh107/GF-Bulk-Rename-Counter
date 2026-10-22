@@ -291,6 +291,7 @@ jobs:
           # Exercise the same installed candidate through genuine authenticated
           # WordPress HTTP requests with real removable and non-removable stacks.
           python3 tests/production-candidate/verify-buffer-http.py "$BRC_LAB_DIR"
+          python3 tests/selection-qualification/verify-global-http.py "$BRC_LAB_DIR"
           # Cross-check an independent source-manifest-derived occurrence
           # multiset, not solely the prototype's own filename plan.
           for scenario in one n99 n100 n101 multiple shared sanitized_equal multi_entry_files host_folder_collision zero_counter empty_counter repeated_physical previously_deleted; do
