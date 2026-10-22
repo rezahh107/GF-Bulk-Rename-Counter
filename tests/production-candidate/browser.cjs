@@ -266,6 +266,8 @@ const {chromium} = require('playwright-core');
         ' submitted='+posted[0].ids.join(',')+' zip_bytes='+received.length);
     } finally { fs.rmSync(marker,{force:true}); }
 
+    fs.writeFileSync(marker, 'native pagination global all matching\n');
+    try {
     // Installed production path: user selects all matching from GFBRC's
     // accessible companion toggle, independently of a GF header bug.
     for (const [caseName, urlSuffix, count] of [
@@ -305,6 +307,8 @@ const {chromium} = require('playwright-core');
       console.log('PASS_BROWSER_ALL_MATCHING_'+count+
         ' visible='+visible+' browser_zip_bytes='+b.length+' form='+form);
     }
+
+    } finally { fs.rmSync(marker,{force:true}); }
 
     // Control: native Bulk Download must STILL work from the authentic GF
     // dropdown in the same browser, with the test-only plugin active.
