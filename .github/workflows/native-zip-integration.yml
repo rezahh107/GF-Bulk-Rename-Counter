@@ -313,6 +313,10 @@ jobs:
           grep -nEi 'select_all|select all entries|select_all_entries|select_all_leads|all_leads' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php" | head -n 45 || true
           grep -n 'search_criteria' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php" | head -n 65 || true
           sed -n '1490,1550p' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php"
+          sed -n '780,860p' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php"
+          grep -RIn --include='*.php' --include='*.js' 'all_entries' "$BRC_WP_PATH/wp-content/plugins/gravityforms" | head -n 60 || true
+          grep -RIn --include='*.php' 'function.*get_search_criteria' "$BRC_WP_PATH/wp-content/plugins/gravityforms" | head -n 25 || true
+
           node --check tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/selection-qualification/discover.cjs
           php -l tests/production-candidate/verify-browser.php
