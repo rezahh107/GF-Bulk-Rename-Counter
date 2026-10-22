@@ -11,6 +11,8 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   .split(/\r?\n/).filter(x=>x&&!x.startsWith('#')).map(x=>{
    const t=x.split(/\s+/);return {name:t[5],value:t[6],domain:t[0],path:t[2],secure:t[3]==='TRUE',expires:Number(t[4]),httpOnly:true};
   });
+ const marker=path.join(lab,'ifz-native-page-size');
+ fs.writeFileSync(marker,'probe native GF pagination');
  const browser=await chromium.launch({executablePath:process.env.BRC_CHROME,headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
  try{
   const context=await browser.newContext();
@@ -46,5 +48,5 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   if(!afterGlobal) throw Error('Could not exercise GF native Select all matching link');
   console.log('PASS_DISCOVERED_AUTHENTIC_GF_SELECT_ALL_LINK');
   await context.close();
- }finally{await browser.close();}
+ }finally{await browser.close();fs.rmSync(marker,{force:true});}
 })().catch(e=>{console.error(e.stack||e);process.exitCode=1;});
