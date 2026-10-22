@@ -24,8 +24,8 @@ const {chromium} = require('playwright-core');
     page.on('dialog', async d => {
       diagnostic.push('dialog='+d.message());
       if (d.type() === 'confirm') {
-        if (!d.message().includes('on this page') || !d.message().includes('NOT included'))
-          throw Error('Unclear page-scoped download confirmation: '+d.message());
+        if (!d.message().includes('explicitly selected Entries') && !d.message().includes('ALL Entries matching'))
+          throw Error('Unclear explicit/global download confirmation: '+d.message());
         if (cancelNext) { cancelNext = false; cancellations++; await d.dismiss(); }
         else { confirmations.push(d.message()); await d.accept(); }
       } else await d.dismiss();
@@ -220,8 +220,8 @@ const {chromium} = require('playwright-core');
         throw Error('Real GF pagination did not change rows');
       const pageTwoInitiallyChecked = await secondRows.evaluateAll(nodes => nodes.filter(x=>x.checked).map(x=>x.value));
       const visibleAction = await page.locator('select[name="action"] option[value="gfbrc_independent_flat_zip"]').textContent();
-      if (!visibleAction.includes('selected on this page only'))
-        throw Error('No user-visible page-only qualification label');
+      if (!visibleAction.includes('Flat ZIP with Rename') || visibleAction.includes('selected on this page only'))
+        throw Error('Independent action label misrepresents global selection');
       await secondRows.first().check();
       const secondChecked = await secondRows.evaluateAll(nodes => nodes.filter(x=>x.checked).map(x=>x.value));
       const submittedBefore = endpointSelections.length, promptsBefore = confirmations.length;
@@ -239,7 +239,7 @@ const {chromium} = require('playwright-core');
       if (posted.length !== 1 || posted[0].method !== 'POST' ||
           JSON.stringify(posted[0].ids) !== JSON.stringify(secondChecked) ||
           posted[0].ids.includes(firstPageId) || confirmations.length !== promptsBefore+1 ||
-          !confirmations.at(-1).includes(String(secondChecked.length)+' selected entries'))
+          !confirmations.at(-1).includes(String(secondChecked.length)+' explicitly selected Entries'))
         throw Error('Actual paged UI/post/confirmation entry mismatch: '+JSON.stringify({posted,secondChecked,firstPageId}));
       // Return through the REAL previous-page control to determine whether a
       // checkbox checked on page one remains checked after visiting page two.
@@ -259,12 +259,52 @@ const {chromium} = require('playwright-core');
         page_two_rows:pageTwoCount, page_scoped_confirmation:confirmations.at(-1),
         zip_bytes:received.length,
       }));
-      console.log('PASS_NATIVE_GF_PAGINATION_PAGE_SCOPED_DOWNLOAD page1_rows='+pageOneCount+
+      console.log('PASS_NATIVE_GF_PAGINATION_EXPLICIT_SELECTION page1_rows='+pageOneCount+
         ' page2_rows='+pageTwoCount+' page1_selected='+pageOneChecked.join(',')+
         ' page2_initial_checked='+pageTwoInitiallyChecked.join(',')+
         ' page1_retained_on_return='+pageOneRetainedOnReturn+
         ' submitted='+posted[0].ids.join(',')+' zip_bytes='+received.length);
     } finally { fs.rmSync(marker,{force:true}); }
+
+    // Installed production path: user selects all matching from GFBRC's
+    // accessible companion toggle, independently of a GF header bug.
+    for (const [caseName, urlSuffix, count] of [
+      ['global154', '', 154],
+      ['global_filtered', '&field_id=5&s=group-a&operator=is', 77],
+    ]) {
+      const ids = meta.cases[caseName].entry_ids.map(Number);
+      if (ids.length !== count || new Set(ids).size !== count) throw Error('Bad global fixture');
+      const form = meta.cases[caseName].form_id;
+      await page.goto(base+'/wp-admin/admin.php?page=gf_entries&id='+form+urlSuffix,
+        {waitUntil:'domcontentloaded',timeout:25000});
+      const gfRows = page.locator('input[type="checkbox"][name="entry[]"]');
+      const visible = await gfRows.count();
+      if (visible <= 0 || visible >= count) throw Error('Native paging not active');
+      const toggle = page.locator('#gfbrc-all-matching');
+      if (await toggle.count() !== 1) throw Error('Missing independent all-matching operator control');
+      await toggle.check();
+      await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
+      const postsBefore = endpointSelections.length;
+      const [downloadAll] = await Promise.all([
+        page.waitForEvent('download',{timeout:35000}),
+        page.locator('#doaction').click(),
+      ]);
+      const fullPath=path.join(lab,'browser-'+caseName+'.zip');
+      await downloadAll.saveAs(fullPath);
+      const b=fs.readFileSync(fullPath);
+      if(!downloadAll.suggestedFilename().endsWith('.zip')||b[0]!==0x50||b[1]!==0x4b)
+        throw Error('Global selection did not deliver a verified browser ZIP');
+      const req = endpointSelections.at(-1);
+      if(endpointSelections.length!==postsBefore+1 || req.ids.length ||
+          req.form_id!==String(form))
+        throw Error('Global browser path sent incorrect explicit ID set');
+      fs.writeFileSync(path.join(lab,'browser-'+caseName+'-selected.json'),JSON.stringify({
+        form_id:form,selected_ids:ids,zip_bytes:b.length,
+        visible_rows:visible,expected_entry_count:count,
+      }));
+      console.log('PASS_BROWSER_ALL_MATCHING_'+count+
+        ' visible='+visible+' browser_zip_bytes='+b.length+' form='+form);
+    }
 
     // Control: native Bulk Download must STILL work from the authentic GF
     // dropdown in the same browser, with the test-only plugin active.
