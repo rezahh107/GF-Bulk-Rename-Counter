@@ -26,7 +26,10 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
     .slice(0,80).map(x=>({name:x.name||'',id:x.id||'',type:x.type,value:x.type==='checkbox'?x.checked:x.value}));
    const links=[...document.querySelectorAll('a')].filter(x=>/select all|all selected|clear selection|全部|همه|انتخاب/i.test(x.textContent))
     .map(x=>({label:x.textContent.trim().slice(0,160),id:x.id,href:x.getAttribute('href'),onclick:x.getAttribute('onclick')}));
-   return {url:location.href,formId:form?.id,fields,links,
+   const buttons=[...document.querySelectorAll('button,input[type="button"],input[type="submit"],span,label')].filter(x=>/select all|all entries|selected|همه|انتخاب/i.test(x.textContent||x.value||'')).slice(0,20).map(x=>({tag:x.tagName,id:x.id,text:(x.textContent||x.value||'').trim().slice(0,150),outer:x.outerHTML.slice(0,400)}));
+   const forms=[...document.querySelectorAll('form')].map(x=>({id:x.id,action:x.getAttribute('action'),method:x.method})).slice(0,10);
+   const matchedHtml=(document.body.innerHTML.match(/.{0,120}(?:all_entries|select.all.entries|select_all|all.selected|select_all_leads).{0,160}/gi)||[]).slice(0,18);
+   return {url:location.href,formId:form?.id,fields,links,buttons,forms,matchedHtml,
     bodyLines:document.body.innerText.split('\n').filter(x=>/select all|all selected|selected entries|selected\s+[0-9]|entries selected/i.test(x)).slice(0,10),
     gfGlobals:Object.keys(window).filter(x=>/^(gf|gform|rg|entry)/i.test(x)).slice(0,65)};
   });
@@ -35,6 +38,7 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   const headers=page.locator('thead input[type="checkbox"]');
   if(!rowCount || !await headers.count()) throw Error('Authentic GF checkbox/header missing');
   await headers.first().check();
+  await page.waitForTimeout(1200);
   const afterPage=await summary();
   const selectAll=page.locator('a').filter({hasText:/select all\s+\d+|select all entries|select all/i});
   let afterGlobal=null;
@@ -44,7 +48,7 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   }
   const out={rowCount,before,afterPage,afterGlobal};
   fs.writeFileSync(path.join(lab,'gf-native-selection-seam.json'),JSON.stringify(out,null,2));
-  console.log('GF_NATIVE_SELECTION_SEAM '+JSON.stringify({rowCount,headers:await headers.count(),beforeLinks:before.links,afterPageLinks:afterPage.links,afterGlobalLinks:afterGlobal?.links,afterPageFields:afterPage.fields,afterGlobalFields:afterGlobal?.fields,bodyLines:afterGlobal?.bodyLines,gfGlobals:afterGlobal?.gfGlobals}).slice(0,15000));
+  console.log('GF_NATIVE_SELECTION_SEAM '+JSON.stringify({rowCount,headers:await headers.count(),beforeLinks:before.links,afterPageLinks:afterPage.links,afterPageButtons:afterPage.buttons,afterPageForms:afterPage.forms,afterPageHtml:afterPage.matchedHtml,afterPageBody:afterPage.bodyLines,afterGlobalLinks:afterGlobal?.links,afterGlobalFields:afterGlobal?.fields,bodyLines:afterGlobal?.bodyLines,gfGlobals:afterGlobal?.gfGlobals}).slice(0,18000));
   if(!afterGlobal) throw Error('Could not exercise GF native Select all matching link');
   console.log('PASS_DISCOVERED_AUTHENTIC_GF_SELECT_ALL_LINK');
   await context.close();
