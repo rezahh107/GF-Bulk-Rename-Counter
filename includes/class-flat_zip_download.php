@@ -549,7 +549,8 @@ final class Flat_Zip_Download {
             header('Content-Type: application/zip');
             header('X-GFBRC-Selected-Entries: ' . count($ids));
             header('X-GFBRC-ZIP-Files: ' . count($plan));
-            header('Content-Disposition: attachment; filename="gfbrc-flat-' . $form_id . '.zip"');
+            header('Content-Disposition: attachment; filename="gfbrc-flat-' . $form_id .
+                '-' . count($ids) . '-entries-' . count($plan) . '-files.zip"');
             header('Content-Length: ' . $size);
             while (!feof($f)) {
                 $bytes = fread($f, 65536);
