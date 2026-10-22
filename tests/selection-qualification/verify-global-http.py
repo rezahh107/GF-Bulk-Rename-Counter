@@ -73,7 +73,7 @@ def refused(label, *args, expect=None, **kwargs):
 
 
 all_cfg = selection_config("global154")
-assert all_cfg["scopeSeal"] and all_cfg["scope"] == "{}"
+assert all_cfg["scopeSeal"] and all_cfg["scope"] == "[]"
 status, hdr = post("global154", all_cfg)
 assert status == 200, ("all154", status)
 assert re.search(r"^x-gfbrc-selected-entries:\s*154\s*$", hdr, re.M), hdr
