@@ -18,6 +18,12 @@ The independent new Single Field/Composite strategy rejects tested Windows reser
 
 Noncolliding `d{counter}.{extension}` names remain unchanged. Collisions use the Legacy visual `d125-132.jpg`, `d125-132-1.jpg` suffix scheme, with natural names reserved first. Interrupted network delivery after streaming starts is outside pre-delivery atomicity.
 
+## Unmerged next-release candidate: all-matching selection (PR #19)
+
+This working-tree candidate supersedes **only the independent selection boundary**, not the already-published v2.1.0 ZIP described above. It retains manually checked Entries and adds a clearly labeled **All matching Entries (Flat ZIP only)** control for Gravity Forms filters/search across pagination. The server independently resolves native GF selection scope under permission, nonce and per-form/per-user scope seal, and validates a consistent snapshot before using the unchanged ZIP planner and writer. Download filenames and HTTP headers report distinct selected Entry and eligible file counts. See [operator flow and evidence limits](docs/FLAT_ZIP_ALL_MATCHING.md).
+
+**Not published:** main, Tag/Release v2.1.0 and Owner-site installations continue to use page-only behavior unless a separately approved new candidate is merged and released. Incremental NEW/acknowledgment is not part of PR #19.
+
 ## Per-form naming (EXT-001 first batch; included in v2.1.0)
 
 Settings → GF Bulk Rename now contains a separate **Per-form naming (independent flat ZIP only)** section. Choose a form, open its rule, then save **Legacy**, **Single Field**, or **Composite**. Composite fields use explicit consecutive order numbers and a configurable separator. Only ordinary single-value text, textarea and number fields are offered. **Use existing Legacy defaults** removes the per-form override. Saving one form does not replace another form's rule.
