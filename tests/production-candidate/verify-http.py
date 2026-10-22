@@ -24,10 +24,12 @@ successes = {
     "malformed_counter": 1, "larger_workload": 24,
     "repeated_physical": 3, "previously_deleted": 1,
     "natural_reserved": 3, "casefold_collision": 2,
+    "global154": 155, "global_filtered": 78, "global_group_b": 77,
 }
 failures = {"all_deleted", "actual_host_deleted", "deleted_flag_without_urls", "missing_mixed", "traversal", "remote_url",
             "unreadable", "cross_form", "duplicate_selected_id",
-            "malformed_deleted_list", "unrecognized_deleted_flag", "deleted_list_without_flag", "unknown_deleted_url"}
+            "malformed_deleted_list", "unrecognized_deleted_flag", "deleted_list_without_flag", "unknown_deleted_url",
+            "global_empty"}
 assert meta["threshold"] == 100, f"GF background threshold changed: {meta['threshold']}"
 assert set(successes) | failures == set(meta["cases"]), "Unexpected scenario inventory"
 
@@ -64,7 +66,11 @@ def check_zip(label, case, body):
     assert isinstance(plan, list), (case, plan)
     assert len(plan) == successes[case], (case, len(plan), successes[case])
     selected = meta["cases"][case]["entry_ids"]
-    assert set(x["entry_id"] for x in plan) == set(selected), (case, selected)
+    present = set(x["entry_id"] for x in plan)
+    if case in {"global154", "global_filtered"}:
+        assert present == set(selected[1:]) and selected[0] not in present, (case, selected)
+    else:
+        assert present == set(selected), (case, selected)
     with zipfile.ZipFile(body) as archive:
         members = archive.infolist()
         assert archive.testzip() is None, label
