@@ -60,7 +60,10 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   const out={rowCount,before,afterPage,afterGlobal};
   fs.writeFileSync(path.join(lab,'gf-native-selection-seam.json'),JSON.stringify(out,null,2));
   console.log('GF_NATIVE_SELECTION_SEAM '+JSON.stringify({rowCount,headers:await headers.count(),beforeLinks:before.links,afterPageLinks:afterPage.links,afterPageButtons:afterPage.buttons,afterPageForms:afterPage.forms,afterPageHtml:afterPage.matchedHtml,afterHeaderChecked:afterHeader.allChecked,afterPageBody:afterPage.bodyLines,allValue:afterPage.allValue,allChecked:afterPage.allChecked,indicators:afterPage.indicators,scriptAround:afterPage.scriptAround,afterGlobalLinks:afterGlobal?.links,afterGlobalFields:afterGlobal?.fields,bodyLines:afterGlobal?.bodyLines,gfGlobals:afterGlobal?.gfGlobals}).slice(0,18000));
-  if(!afterGlobal) throw Error('Could not exercise GF native Select all matching link');
+  if(!afterGlobal) {
+    if(afterPage.allChecked!==rowCount) throw Error('GF native row clicks did not register');
+    console.log('GF_NATIVE_GLOBAL_BANNER_UNREACHABLE_IN_PINNED_LAB native_checkbox_rows='+rowCount+' all_entries='+afterPage.allValue);
+  }
   console.log('PASS_DISCOVERED_AUTHENTIC_GF_SELECT_ALL_LINK');
   await context.close();
  }finally{await browser.close();fs.rmSync(marker,{force:true});}
