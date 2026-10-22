@@ -29,7 +29,12 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
    const buttons=[...document.querySelectorAll('button,input[type="button"],input[type="submit"],span,label')].filter(x=>/select all|all entries|selected|همه|انتخاب/i.test(x.textContent||x.value||'')).slice(0,20).map(x=>({tag:x.tagName,id:x.id,text:(x.textContent||x.value||'').trim().slice(0,150),outer:x.outerHTML.slice(0,400)}));
    const forms=[...document.querySelectorAll('form')].map(x=>({id:x.id,action:x.getAttribute('action'),method:x.method})).slice(0,10);
    const matchedHtml=(document.body.innerHTML.match(/.{0,120}(?:all_entries|select.all.entries|select_all|all.selected|select_all_leads).{0,160}/gi)||[]).slice(0,18);
-   return {url:location.href,formId:form?.id,fields,links,buttons,forms,matchedHtml,
+   const scriptIndex=document.body.innerHTML.indexOf('var all = jQuery');
+   const scriptAround=scriptIndex<0?'missing':document.body.innerHTML.slice(Math.max(0,scriptIndex-900),scriptIndex+3900);
+   const allInput=document.querySelector('#all_entries');
+   const allChecked=[...document.querySelectorAll('input[name="entry[]"]')].filter(x=>x.checked).length;
+   const indicators=[...document.querySelectorAll('[id*="select"],[class*="select"]')].slice(0,40).map(x=>({id:x.id,tag:x.tagName,cls:String(x.className).slice(0,150),text:(x.textContent||'').trim().slice(0,100)}));
+   return {url:location.href,formId:form?.id,fields,links,buttons,forms,matchedHtml,scriptAround,allValue:allInput?.value,allChecked,indicators,
     bodyLines:document.body.innerText.split('\n').filter(x=>/select all|all selected|selected entries|selected\s+[0-9]|entries selected/i.test(x)).slice(0,10),
     gfGlobals:Object.keys(window).filter(x=>/^(gf|gform|rg|entry)/i.test(x)).slice(0,65)};
   });
@@ -48,7 +53,7 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   }
   const out={rowCount,before,afterPage,afterGlobal};
   fs.writeFileSync(path.join(lab,'gf-native-selection-seam.json'),JSON.stringify(out,null,2));
-  console.log('GF_NATIVE_SELECTION_SEAM '+JSON.stringify({rowCount,headers:await headers.count(),beforeLinks:before.links,afterPageLinks:afterPage.links,afterPageButtons:afterPage.buttons,afterPageForms:afterPage.forms,afterPageHtml:afterPage.matchedHtml,afterPageBody:afterPage.bodyLines,afterGlobalLinks:afterGlobal?.links,afterGlobalFields:afterGlobal?.fields,bodyLines:afterGlobal?.bodyLines,gfGlobals:afterGlobal?.gfGlobals}).slice(0,18000));
+  console.log('GF_NATIVE_SELECTION_SEAM '+JSON.stringify({rowCount,headers:await headers.count(),beforeLinks:before.links,afterPageLinks:afterPage.links,afterPageButtons:afterPage.buttons,afterPageForms:afterPage.forms,afterPageHtml:afterPage.matchedHtml,afterPageBody:afterPage.bodyLines,allValue:afterPage.allValue,allChecked:afterPage.allChecked,indicators:afterPage.indicators,scriptAround:afterPage.scriptAround,afterGlobalLinks:afterGlobal?.links,afterGlobalFields:afterGlobal?.fields,bodyLines:afterGlobal?.bodyLines,gfGlobals:afterGlobal?.gfGlobals}).slice(0,18000));
   if(!afterGlobal) throw Error('Could not exercise GF native Select all matching link');
   console.log('PASS_DISCOVERED_AUTHENTIC_GF_SELECT_ALL_LINK');
   await context.close();
