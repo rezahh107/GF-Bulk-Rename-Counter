@@ -44,6 +44,12 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   if(!rowCount || !await headers.count()) throw Error('Authentic GF checkbox/header missing');
   await headers.first().check();
   await page.waitForTimeout(1200);
+  const afterHeader=await summary();
+  if(afterHeader.allChecked===0){
+    const rows=page.locator('input[type="checkbox"][name="entry[]"]');
+    for(let i=0;i<await rows.count();i++) await rows.nth(i).check();
+    await page.waitForTimeout(400);
+  }
   const afterPage=await summary();
   const selectAll=page.locator('a').filter({hasText:/select all\s+\d+|select all entries|select all/i});
   let afterGlobal=null;
@@ -53,7 +59,7 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   }
   const out={rowCount,before,afterPage,afterGlobal};
   fs.writeFileSync(path.join(lab,'gf-native-selection-seam.json'),JSON.stringify(out,null,2));
-  console.log('GF_NATIVE_SELECTION_SEAM '+JSON.stringify({rowCount,headers:await headers.count(),beforeLinks:before.links,afterPageLinks:afterPage.links,afterPageButtons:afterPage.buttons,afterPageForms:afterPage.forms,afterPageHtml:afterPage.matchedHtml,afterPageBody:afterPage.bodyLines,allValue:afterPage.allValue,allChecked:afterPage.allChecked,indicators:afterPage.indicators,scriptAround:afterPage.scriptAround,afterGlobalLinks:afterGlobal?.links,afterGlobalFields:afterGlobal?.fields,bodyLines:afterGlobal?.bodyLines,gfGlobals:afterGlobal?.gfGlobals}).slice(0,18000));
+  console.log('GF_NATIVE_SELECTION_SEAM '+JSON.stringify({rowCount,headers:await headers.count(),beforeLinks:before.links,afterPageLinks:afterPage.links,afterPageButtons:afterPage.buttons,afterPageForms:afterPage.forms,afterPageHtml:afterPage.matchedHtml,afterHeaderChecked:afterHeader.allChecked,afterPageBody:afterPage.bodyLines,allValue:afterPage.allValue,allChecked:afterPage.allChecked,indicators:afterPage.indicators,scriptAround:afterPage.scriptAround,afterGlobalLinks:afterGlobal?.links,afterGlobalFields:afterGlobal?.fields,bodyLines:afterGlobal?.bodyLines,gfGlobals:afterGlobal?.gfGlobals}).slice(0,18000));
   if(!afterGlobal) throw Error('Could not exercise GF native Select all matching link');
   console.log('PASS_DISCOVERED_AUTHENTIC_GF_SELECT_ALL_LINK');
   await context.close();
