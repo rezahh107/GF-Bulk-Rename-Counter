@@ -75,7 +75,7 @@ msgstr ""
 msgid "GF Bulk Rename"
 msgstr ""
 
-msgid "Gravity Forms Bulk Rename Counter requires \\\"Bulk Download for Gravity Forms\\\" plugin to be installed and active."
+msgid "Gravity Forms Bulk Rename Counter requires \"Bulk Download for Gravity Forms\" plugin to be installed and active."
 msgstr ""
 
 msgid "Gravity Forms Bulk Rename Counter requires Gravity Forms to be installed and active."
@@ -135,7 +135,7 @@ msgstr ""
 msgid "Save this form rule"
 msgstr ""
 
-msgid "Select a specific Gravity Form or leave as \\\"All forms\\\"."
+msgid "Select a specific Gravity Form or leave as \"All forms\"."
 msgstr ""
 
 msgid "Select at least one Entry or choose all matching Entries."
