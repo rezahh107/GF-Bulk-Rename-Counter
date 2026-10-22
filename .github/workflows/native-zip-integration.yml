@@ -311,6 +311,8 @@ jobs:
           # Installed GF 3.1.1.1 is checksum-pinned above. Avoid inventing form
           # search/filter semantics from our own checkbox collection.
           grep -nEi 'select_all|select all entries|select_all_entries|select_all_leads|all_leads' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php" | head -n 45 || true
+          grep -n 'search_criteria' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php" | head -n 65 || true
+          sed -n '1490,1550p' "$BRC_WP_PATH/wp-content/plugins/gravityforms/entry_list.php"
           node --check tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/selection-qualification/discover.cjs
           php -l tests/production-candidate/verify-browser.php
