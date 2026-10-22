@@ -353,6 +353,14 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/windows-names-verify.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
 
+      - name: Prove live server snapshot during actual GF membership changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l tests/selection-qualification/mutate.php
+          python3 -m py_compile tests/selection-qualification/verify-mutation-http.py
+          python3 tests/selection-qualification/verify-mutation-http.py "$BRC_LAB_DIR"
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
