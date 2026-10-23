@@ -4,7 +4,7 @@ set -euo pipefail
 zip="${1:?exact downloaded ZIP required}"
 version="${2:?expected release version required}"
 test -f "$zip"
-test "$(php -r 'echo PHP_VERSION;')" = 8.2.34
+php -r 'exit((PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 2) ? 0 : 1);'
 wp_path="${RUNNER_TEMP:?}/brc-consumer-wordpress"
 wp_cli="$RUNNER_TEMP/wp-cli.phar"
 mkdir -p "$wp_path"
