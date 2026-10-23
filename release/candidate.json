@@ -1,0 +1,10 @@
+{
+  "base": {
+    "commit": "8c1e65886a28ccc677f230ebf01c4a6fc9d1ee5b",
+    "tree": "107763557279487e2968926280d728cfc714ca66"
+  },
+  "branch": "release-candidate/v2.1.1-from-8c1e65886a28ccc677f230ebf01c4a6fc9d1ee5b",
+  "intent": "patch",
+  "schema": 1,
+  "version": "2.1.1"
+}
