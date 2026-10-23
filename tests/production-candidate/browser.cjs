@@ -24,7 +24,7 @@ const {chromium} = require('playwright-core');
     page.on('dialog', async d => {
       diagnostic.push('dialog='+d.message());
       if (d.type() === 'confirm') {
-        if (!d.message().includes('explicitly checked Entries') && !d.message().includes('ALL Entries matching'))
+        if (!d.message().includes('explicitly checked Entries') && !/ALL [0-9]+ Entries matching/.test(d.message()))
           throw Error('Unclear explicit/global download confirmation: '+d.message());
         if (cancelNext) { cancelNext = false; cancellations++; await d.dismiss(); }
         else { confirmations.push(d.message()); await d.accept(); }
