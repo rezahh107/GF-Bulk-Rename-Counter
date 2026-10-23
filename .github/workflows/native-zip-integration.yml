@@ -392,6 +392,14 @@ jobs:
           # The step measures and reports real divergence, but never mutates
           # production code or treats a diagnostic workflow success as equivalence.
           cat "$BRC_LAB_DIR/hook-result.json"
+          # Next, compare supported documented hook replay (A) against
+          # read-only capture of GF's final display args (B) on authentic HTTP.
+          rm "$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-hook-qualification.php"
+          cp tests/selection-qualification/method-mu.php \
+            "$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-method-qualification.php"
+          php -l tests/selection-qualification/method-mu.php
+          python3 -m py_compile tests/selection-qualification/method-test.py
+          python3 tests/selection-qualification/method-test.py "$BRC_LAB_DIR"
 
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash

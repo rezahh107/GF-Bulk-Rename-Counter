@@ -10,6 +10,7 @@ $form_id = GFAPI::add_form([
     'fields' => [
         ['id' => 1, 'type' => 'fileupload', 'label' => 'Upload'],
         ['id' => 5, 'type' => 'text', 'label' => 'Group'],
+        ['id' => 6, 'type' => 'text', 'label' => 'Eligibility'],
     ],
     'button' => ['type' => 'text', 'text' => 'Submit'],
 ]);
@@ -25,7 +26,7 @@ foreach (['included' => 'hook-a', 'excluded' => 'hook-b'] as $group => $value) {
         }
         $id = GFAPI::add_entry([
             'form_id' => (int)$form_id, '1' => $upload['url'],
-            '5' => $value, 'status' => 'active',
+            '5' => $value, '6' => $i <= 2 ? 'allow' : 'deny', 'status' => 'active',
         ]);
         if (is_wp_error($id) || (int)$id <= 0) { throw new RuntimeException('GF entry creation failed'); }
         $fixture[$group][] = (int)$id;
