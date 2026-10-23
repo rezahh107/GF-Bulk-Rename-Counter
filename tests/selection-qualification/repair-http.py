@@ -51,6 +51,10 @@ def refusal(label,p,**kw):
  print('PASS_EFFECTIVE_FAIL_CLOSED',label,'HTTP='+str(code),flush=True)
 
 p=fetch('')
+for case in ('expired','cross_user','cross_form','changed_criteria_same_ids'):
+ source=json.loads((lab/('effective-negative-'+case+'.json')).read_text())
+ refusal('signed_'+case,p,selection_effective=source['payload'],
+         selection_effective_seal=source['seal'])
 assert sorted(p.rows)==sorted(fixture['included']) and p.cfg['matchingCount']==3
 assert p.cfg['effectiveSeal'] and p.cfg['effectiveCapture']
 badseal='0'*64
@@ -87,6 +91,11 @@ with zipfile.ZipFile(lab/'composed.body') as archive:
   ids=sorted(byhash[hashlib.sha256(archive.read(m)).hexdigest()] for m in archive.namelist())
   assert ids==sorted(p.rows),(ids,p.rows)
 print('PASS_COMPOSED_DOCUMENTED_HOOKS_SOURCE_HASHES',flush=True)
+# Deliberate unsupported native query modifications cannot authorize ALL.
+for case in ('unsupported_form','unsupported_sorting','unsupported_paging'):
+ p=fetch(case)
+ assert not p.cfg['scopeSeal'] and not p.cfg['effectiveSeal'],(case,p.cfg)
+ print('PASS_UNSUPPORTED_NATIVE_HOOK_SHAPE_BLOCKED',case,flush=True)
 # A late callback after GFBRC's maximum-priority observer must disable global.
 p=fetch('late')
 assert not p.cfg['scopeSeal'] and not p.cfg['effectiveSeal'],(p.cfg['scopeSeal'],p.cfg['effectiveSeal'])

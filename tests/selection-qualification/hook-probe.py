@@ -53,7 +53,10 @@ for name,filename in [('browser',lab/'hook-browser.zip'),('http',archive)]:
    digest=hashlib.sha256(z.read(x)).hexdigest()
    assert digest in by_hash,(name,x,'ZIP contains unrecognized source bytes')
    assert digest not in extracted,(name,x,'duplicate original file occurrence')
-   extracted[digest]=by_hash[digest]['entry_id']
+   source=by_hash[digest]
+   assert source['group'] in x, (name,x,'renamed member lost original cohort identity')
+   assert x.lower().endswith('.jpg'), (name,x,'source extension not preserved')
+   extracted[digest]=source['entry_id']
   ids=sorted(extracted.values())
   results.append((name,ids,len(names)))
   print('HOOK_ZIP_RESULT',name,'entry_ids='+','.join(map(str,ids)),

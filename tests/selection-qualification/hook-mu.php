@@ -16,6 +16,18 @@ add_filter('gform_get_entries_args_entry_list', static function ($args, $form_id
 
     $case = $_GET['gfbrc_lab_case'] ?? '';
     $group = 'hook-a';
+    if ($case === 'unsupported_form') {
+        $args['form_id'] = 0;
+        return $args;
+    }
+    if ($case === 'unsupported_sorting') {
+        $args['sorting'] = ['key' => 'id', 'direction' => 'DESC'];
+        return $args;
+    }
+    if ($case === 'unsupported_paging') {
+        $args['paging'] = ['offset' => 0, 'page_size' => 1];
+        return $args;
+    }
     if ($case === 'policy') {
         $group = get_user_meta(get_current_user_id(), 'gfbrc_hook_allowed', true) === 'hook-b' ?
             'hook-b' : 'hook-a';
