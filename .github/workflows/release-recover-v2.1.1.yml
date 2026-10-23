@@ -143,4 +143,5 @@ jobs:
 
       - name: Report recovery failure without republishing or overwriting
         if: failure()
-        run: echo "RECOVERY_INCOMPLETE: Do not rerun PUBLISH or overwrite tag/assets; inspect failed step and existing public Release before recovery retry." >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "RECOVERY_INCOMPLETE: Do not rerun PUBLISH or overwrite tag/assets; inspect failed step and existing public Release before recovery retry." >> "$GITHUB_STEP_SUMMARY"
