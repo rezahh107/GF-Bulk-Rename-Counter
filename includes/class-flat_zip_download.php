@@ -52,9 +52,9 @@ final class Flat_Zip_Download {
         if ($scope_supported) {
             try {
                 if (!class_exists('\\GF_Entry_List_Table', false)) {
-                    require_once \\GFCommon::get_base_path() . '/entry_list.php';
+                    require_once \GFCommon::get_base_path() . '/entry_list.php';
                 }
-                $table = new \\GF_Entry_List_Table([
+                $table = new \GF_Entry_List_Table([
                     'form_id' => $form_id,
                     'filter' => isset($scope['filter']) ? sanitize_text_field($scope['filter']) : '',
                 ]);
@@ -62,7 +62,7 @@ final class Flat_Zip_Download {
                 if (!is_array($criteria) || !isset($criteria['status'])) {
                     throw new RuntimeException('Native Entry List criteria unavailable');
                 }
-                $matching_count = \\GFAPI::count_entries($form_id, $criteria);
+                $matching_count = \GFAPI::count_entries($form_id, $criteria);
                 if (!is_int($matching_count) || $matching_count < 0) {
                     throw new RuntimeException('Native Entry List count unavailable');
                 }
