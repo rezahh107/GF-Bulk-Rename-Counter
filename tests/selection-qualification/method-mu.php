@@ -82,13 +82,16 @@ add_action('init', static function () {
     add_filter('gform_get_entries_args_entry_list', static function ($args) use ($target) {
         $case = gfbrc_method_case();
         if ((int)($args['form_id'] ?? 0) !== $target ||
-            !in_array($case, ['single','stacked','multi','same_count','context','policy','user_policy','unsupported'], true)) {
+            !in_array($case, ['single','stacked','multi','same_count','context','policy','user_policy','unsupported','shape_drift','malformed_criteria'], true)) {
             return $args;
         }
         $group = $case === 'same_count' ? 'hook-b' : gfbrc_method_select_group($case);
-        if ($case === 'unsupported') {
+        if ($case === 'unsupported' ||
+            ($case === 'shape_drift' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST')) {
             $args['form_id'] = 0; // Deliberately unsupported cross-form query shape.
-        } else {
+        } elseif ($case === 'malformed_criteria' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+            $args['search_criteria']['field_filters'] = [['key' => '5', 'value' => new stdClass()]];
+        } elseif (!in_array($case, ['shape_drift','malformed_criteria'], true)) {
             $args['search_criteria']['field_filters'][] = ['key' => '5', 'value' => $group];
         }
         return $args;
@@ -152,7 +155,7 @@ add_action('admin_post_gfbrc_method_qualify', static function () {
     }
     $case = $p['case'] ?? '';
     if (!is_string($case) || $case !== gfbrc_method_case() ||
-        !in_array($case, ['none','single','stacked','multi','same_count','context','policy','user_policy'], true)) {
+        !in_array($case, ['none','single','stacked','multi','same_count','context','policy','user_policy','shape_drift','malformed_criteria'], true)) {
         $respond(['state' => 'BLOCK_CONTEXT'], 403);
     }
     if (!gfbrc_method_normalize($p['args'], $form_id)) {

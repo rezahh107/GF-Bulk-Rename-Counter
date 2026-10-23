@@ -26,7 +26,7 @@ class Reader(html.parser.HTMLParser):
   if 'displaying-num' in (x.get('class') or '').split():
    self.count.append('native-count-present')
 def curl(args):
- p=subprocess.run(['curl','--silent','--show-error','--fail-with-body','--max-time','45',
+ p=subprocess.run(['curl','--silent','--show-error','--max-time','45',
        '--cookie',str(cookie),*args],capture_output=True,text=True)
  if p.returncode: raise AssertionError((p.returncode,p.stderr,p.stdout[:800]))
  return p.stdout
@@ -59,6 +59,10 @@ def scenario(case,expected,policy_before=None,policy_after=None,expected_state='
    '--data-urlencode','seal='+parser.seal,
    base+'admin-post.php']))
  assert result['state']==expected_state,(case,result)
+ if expected_state in ('BLOCK_CURRENT_SHAPE','BLOCK_CAPTURE_SHAPE'):
+  print('METHOD_SHAPE_REJECT',json.dumps({'case':case,'native_display':shown,
+    'decision':result['state']},sort_keys=True),flush=True)
+  return parser,result
  assert sorted(result['display_ids'])==shown,(case,'captured member mismatch',result,shown)
  if expected_state=='ALLOW_SAME_MEMBERSHIP':
   current_expected=expected
@@ -90,6 +94,9 @@ scenario('user_policy',in_a,policy_before='hook-a',policy_after='hook-b',
          expected_state='BLOCK_MEMBERSHIP_CHANGED')
 # A callback choosing the B cohort on both requests remains composable.
 scenario('same_count',in_b)
+# Safe denial when an args hook unexpectedly changes form or emits non-scalar criteria.
+scenario('shape_drift',sorted(in_a+in_b),expected_state='BLOCK_CURRENT_SHAPE')
+scenario('malformed_criteria',sorted(in_a+in_b),expected_state='BLOCK_CURRENT_SHAPE')
 # Context changed but policy returned to A: no false admission of the old B group.
 scenario('policy',in_b,policy_before='hook-b',policy_after='hook-a',
          expected_state='BLOCK_MEMBERSHIP_CHANGED')
