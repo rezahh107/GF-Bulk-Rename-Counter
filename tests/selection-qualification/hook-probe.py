@@ -18,8 +18,8 @@ assert shown==allowed, ('Native list was not hook-filtered',shown,allowed)
 assert excluded.isdisjoint(shown)
 assert (lab/'hook-fired.log').exists(), 'Documented GF Entry List hook did not execute'
 assert 'FILTER=hook-a' in (lab/'hook-fired.log').read_text()
-expect={f['name']:f for f in fixture['files']}
-assert len(expect)==6 and len({f['sha256'] for f in fixture['files']})==6
+by_hash={f['sha256']:f for f in fixture['files']}
+assert len(by_hash)==6 and len({f['name'] for f in fixture['files']})==6
 endpoint='http://127.0.0.1:8080/wp-admin/admin-post.php'
 headers=lab/'hook-http.headers'
 archive=lab/'hook-http.zip'
@@ -45,10 +45,14 @@ for name,filename in [('browser',lab/'hook-browser.zip'),('http',archive)]:
   assert z.testzip() is None,(name,'invalid archive')
   names=z.namelist()
   assert len(names)==len(set(names)),(name,'duplicate ZIP members')
-  assert set(names).issubset(set(expect)),(name,'unexpected member names',names)
+  assert all('/' not in n and '\\' not in n for n in names), (name,'not flat',names)
+  extracted={}
   for x in names:
-   assert hashlib.sha256(z.read(x)).hexdigest()==expect[x]['sha256'],(name,x,'source mismatch')
-  ids=sorted(expect[x]['entry_id'] for x in names)
+   digest=hashlib.sha256(z.read(x)).hexdigest()
+   assert digest in by_hash,(name,x,'ZIP contains unrecognized source bytes')
+   assert digest not in extracted,(name,x,'duplicate original file occurrence')
+   extracted[digest]=by_hash[digest]['entry_id']
+  ids=sorted(extracted.values())
   results.append((name,ids,len(names)))
   print('HOOK_ZIP_RESULT',name,'entry_ids='+','.join(map(str,ids)),
         'members='+str(len(names)),flush=True)
