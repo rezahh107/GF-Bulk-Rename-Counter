@@ -18,6 +18,9 @@ function gfbrc_method_select_group(string $case): string {
     if ($case === 'context') {
         return ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' ? 'hook-b' : 'hook-a';
     }
+    if ($case === 'user_policy') {
+        return get_user_meta(get_current_user_id(), 'gfbrc_method_allowed_cohort', true) === 'hook-b' ? 'hook-b' : 'hook-a';
+    }
     if ($case === 'policy') {
         $lab = getenv('BRC_LAB_DIR');
         $p = $lab ? $lab . '/method-policy.txt' : '';
@@ -79,7 +82,7 @@ add_action('init', static function () {
     add_filter('gform_get_entries_args_entry_list', static function ($args) use ($target) {
         $case = gfbrc_method_case();
         if ((int)($args['form_id'] ?? 0) !== $target ||
-            !in_array($case, ['single','stacked','multi','same_count','context','policy','unsupported'], true)) {
+            !in_array($case, ['single','stacked','multi','same_count','context','policy','user_policy','unsupported'], true)) {
             return $args;
         }
         $group = $case === 'same_count' ? 'hook-b' : gfbrc_method_select_group($case);
@@ -149,7 +152,7 @@ add_action('admin_post_gfbrc_method_qualify', static function () {
     }
     $case = $p['case'] ?? '';
     if (!is_string($case) || $case !== gfbrc_method_case() ||
-        !in_array($case, ['none','single','stacked','multi','same_count','context','policy'], true)) {
+        !in_array($case, ['none','single','stacked','multi','same_count','context','policy','user_policy'], true)) {
         $respond(['state' => 'BLOCK_CONTEXT'], 403);
     }
     if (!gfbrc_method_normalize($p['args'], $form_id)) {

@@ -32,7 +32,13 @@ def curl(args):
  return p.stdout
 def scenario(case,expected,policy_before=None,policy_after=None,expected_state='ALLOW_SAME_MEMBERSHIP'):
  policy=lab/'method-policy.txt'
- if policy_before:policy.write_text(policy_before)
+ if policy_before:
+  if case=='user_policy':
+   result=subprocess.run(['php','/tmp/brc-wp-cli.phar','--path=/tmp/brc-wordpress','--user=bootstrap_admin',
+      'user','meta','update','bootstrap_admin','gfbrc_method_allowed_cohort',policy_before],
+      capture_output=True,text=True)
+   assert result.returncode==0,(case,'user policy setup',result.stderr)
+  else:policy.write_text(policy_before)
  url=base+'admin.php?'+urlencode({'page':'gf_entries','id':fid,'gfbrc_method_case':case})
  page=curl([url]);parser=Reader();parser.feed(page)
  assert parser.capture and parser.seal,(case,'Capture absent')
@@ -40,7 +46,13 @@ def scenario(case,expected,policy_before=None,policy_after=None,expected_state='
  assert shown==sorted(expected),(case,'native ids differ',shown,expected)
  p=json.loads(parser.capture)
  assert p['case']==case and p['form_id']==fid
- if policy_after:policy.write_text(policy_after)
+ if policy_after:
+  if case=='user_policy':
+   result=subprocess.run(['php','/tmp/brc-wp-cli.phar','--path=/tmp/brc-wordpress','--user=bootstrap_admin',
+      'user','meta','update','bootstrap_admin','gfbrc_method_allowed_cohort',policy_after],
+      capture_output=True,text=True)
+   assert result.returncode==0,(case,'user policy change',result.stderr)
+  else:policy.write_text(policy_after)
  result=json.loads(curl(['--data-urlencode','action=gfbrc_method_qualify',
    '--data-urlencode','gfbrc_method_case='+case,
    '--data-urlencode','payload='+parser.capture,
@@ -48,8 +60,15 @@ def scenario(case,expected,policy_before=None,policy_after=None,expected_state='
    base+'admin-post.php']))
  assert result['state']==expected_state,(case,result)
  assert sorted(result['display_ids'])==shown,(case,'captured member mismatch',result,shown)
- assert sorted(result['current_ids'])==sorted(expected if expected_state=='ALLOW_SAME_MEMBERSHIP'
-    else (in_b if case in ('policy','context','same_count') else expected))
+ if expected_state=='ALLOW_SAME_MEMBERSHIP':
+  current_expected=expected
+ elif case=='context':
+  current_expected=in_b
+ elif policy_after in ('hook-a','hook-b'):
+  current_expected=in_a if policy_after=='hook-a' else in_b
+ else:
+  raise AssertionError((case,'Undefined dynamic policy control'))
+ assert sorted(result['current_ids'])==sorted(current_expected),(case,'server replay ids',result,current_expected)
  if expected_state=='BLOCK_MEMBERSHIP_CHANGED':
   assert result['display_count']==result['current_count']==3,(case,result)
  print('METHOD_DIFF',json.dumps({'case':case,'native_display':shown,
@@ -66,6 +85,9 @@ scenario('policy',in_a,policy_before='hook-a',policy_after='hook-b',
          expected_state='BLOCK_MEMBERSHIP_CHANGED')
 # Even with stable saved user policy, a request-method-dependent callback diverges.
 scenario('context',in_a,expected_state='BLOCK_MEMBERSHIP_CHANGED')
+# User-specific authorization rule changes, while the base GF capability stays true.
+scenario('user_policy',in_a,policy_before='hook-a',policy_after='hook-b',
+         expected_state='BLOCK_MEMBERSHIP_CHANGED')
 # A callback choosing the B cohort on both requests remains composable.
 scenario('same_count',in_b)
 # Context changed but policy returned to A: no false admission of the old B group.
