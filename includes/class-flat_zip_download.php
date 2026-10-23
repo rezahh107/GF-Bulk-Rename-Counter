@@ -12,11 +12,203 @@ if (!defined('ABSPATH')) { exit; }
 final class Flat_Zip_Download {
     const ACTION = 'gfbrc_independent_flat_zip';
     const ENDPOINT = 'gfbrc_flat_zip_download';
+    private const CAPTURE_TTL = 600;
+    private static $native_initial = null;
+    private static $native_effective = null;
+    private static $initial_calls = 0;
+    private static $effective_calls = 0;
 
     public static function register(): void {
         add_filter('gform_entry_list_bulk_actions', [__CLASS__, 'add_action'], 20, 2);
+        add_action('admin_init', [__CLASS__, 'register_capture'], 1);
         add_action('admin_footer', [__CLASS__, 'footer']);
         add_action('admin_post_' . self::ENDPOINT, [__CLASS__, 'download']);
+    }
+
+
+    /**
+     * Observe the actual native Entry List query, not a second guessed query.
+     * GF's gf_apply_filters executes the generic hook followed by the
+     * form-specific hook. Guard observer ordering after prepare_items().
+     */
+    public static function register_capture(): void {
+        if (($_GET['page'] ?? null) !== 'gf_entries' ||
+            !\GFCommon::current_user_can_any('gravityforms_view_entries')) { return; }
+        $form_id = isset($_GET['id']) && is_scalar($_GET['id']) ? absint($_GET['id']) : 0;
+        if (!$form_id) { return; }
+        add_filter('gform_get_entries_args_entry_list', [__CLASS__, 'capture_initial'], PHP_INT_MIN, 1);
+        add_filter('gform_get_entries_args_entry_list_' . $form_id, [__CLASS__, 'capture_effective'], PHP_INT_MAX, 1);
+    }
+
+    public static function capture_initial($args) {
+        self::$initial_calls++;
+        self::$native_initial = $args;
+        return $args;
+    }
+
+    public static function capture_effective($args) {
+        self::$effective_calls++;
+        self::$native_effective = $args;
+        return $args;
+    }
+
+    private static function hook_boundary(int $form_id): bool {
+        global $wp_filter;
+        $positions = [
+            ['gform_get_entries_args_entry_list', 'capture_initial', PHP_INT_MIN, true],
+            ['gform_get_entries_args_entry_list_' . $form_id, 'capture_effective', PHP_INT_MAX, false],
+        ];
+        foreach ($positions as [$name, $method, $priority, $first]) {
+            $hook = $wp_filter[$name] ?? null;
+            if (!($hook instanceof \WP_Hook) || !is_array($hook->callbacks) || !$hook->callbacks) {
+                return false;
+            }
+            $priorities = array_keys($hook->callbacks);
+            $at = $first ? reset($priorities) : end($priorities);
+            if ($at !== $priority) { return false; }
+            $callbacks = $hook->callbacks[$priority];
+            $entry = $first ? reset($callbacks) : end($callbacks);
+            if (!is_array($entry) || ($entry['function'] ?? null) !== [__CLASS__, $method]) {
+                // A callback registered before the initial observer or after
+                // the final observer invalidates our observation boundary.
+                return false;
+            }
+        }
+        return self::$initial_calls === 1 && self::$effective_calls === 1;
+    }
+
+    /** Conservative supported subset of GFAPI search criteria, without coercion. */
+    private static function supported_criteria($criteria): bool {
+        if (!is_array($criteria) || !isset($criteria['status']) ||
+            !in_array($criteria['status'], ['active', 'spam', 'trash'], true) ||
+            array_diff(array_keys($criteria), ['status', 'field_filters', 'start_date', 'end_date'])) {
+            return false;
+        }
+        foreach (['start_date', 'end_date'] as $date_key) {
+            if (isset($criteria[$date_key]) && !is_string($criteria[$date_key])) { return false; }
+        }
+        if (!isset($criteria['field_filters'])) { return true; }
+        $filters = $criteria['field_filters'];
+        if (!is_array($filters) || count($filters) > 50) { return false; }
+        foreach ($filters as $index => $filter) {
+            if ($index === 'mode') {
+                if (!in_array($filter, ['all', 'any'], true)) { return false; }
+                continue;
+            }
+            if (!is_int($index) || !is_array($filter) ||
+                array_diff(array_keys($filter), ['key', 'operator', 'value']) ||
+                !isset($filter['key']) || !is_scalar($filter['key']) ||
+                !array_key_exists('value', $filter)) { return false; }
+            if (isset($filter['operator']) && !is_string($filter['operator'])) { return false; }
+            $value = $filter['value'];
+            if (is_array($value)) {
+                if (count($value) > 50 || array_filter($value, static function ($v) {
+                    return !is_scalar($v) && $v !== null;
+                })) { return false; }
+            } elseif (!is_scalar($value) && $value !== null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static function supported_args($args, int $form_id): bool {
+        return is_array($args) && count($args) === 4 &&
+            isset($args['form_id'], $args['search_criteria'], $args['sorting'], $args['paging']) &&
+            (int)$args['form_id'] === $form_id &&
+            is_array($args['sorting']) && is_array($args['paging']) &&
+            self::supported_criteria($args['search_criteria']) &&
+            is_string(wp_json_encode($args)) && strlen(wp_json_encode($args)) <= 8192;
+    }
+
+    /** Sort only associative keys. Preserve positional filter order/mode. */
+    private static function canonical($value) {
+        if (!is_array($value)) { return $value; }
+        if (!array_is_list($value)) { ksort($value); }
+        foreach ($value as $key => $part) { $value[$key] = self::canonical($part); }
+        return $value;
+    }
+
+    private static function sign_effective(string $payload): string {
+        return hash_hmac('sha256', 'gfbrc-effective-v1|' . $payload, wp_salt('auth'));
+    }
+
+    /** Only genuine complete native render output can authorize ALL. */
+    private static function effective_for_display(int $form_id, string $scope_json): array {
+        if (!self::hook_boundary($form_id) ||
+            !self::supported_args(self::$native_initial, $form_id) ||
+            !self::supported_args(self::$native_effective, $form_id) ||
+            self::canonical(self::$native_initial['sorting']) !== self::canonical(self::$native_effective['sorting']) ||
+            self::canonical(self::$native_initial['paging']) !== self::canonical(self::$native_effective['paging'])) {
+            throw new RuntimeException('Native Entry List effective filter boundary is unsupported');
+        }
+        $payload = [
+            'v' => 1, 'form_id' => $form_id, 'user_id' => get_current_user_id(),
+            'scope' => $scope_json, 'issued_at' => time(),
+            'criteria' => self::$native_effective['search_criteria'],
+            'sorting' => self::$native_initial['sorting'],
+            'paging' => self::$native_initial['paging'],
+        ];
+        $json = wp_json_encode($payload);
+        if (!is_string($json) || strlen($json) > 8192) {
+            throw new RuntimeException('Native Entry List capture exceeds safe size');
+        }
+        return [$json, self::sign_effective($json), $payload['criteria']];
+    }
+
+    /** Current documented callbacks revalidate display criteria; no ID/number shortcuts. */
+    private static function revalidated_criteria(int $form_id, array $scope, string $scope_json): array {
+        $raw = $_POST['selection_effective'] ?? null;
+        $seal = $_POST['selection_effective_seal'] ?? null;
+        if (!is_string($raw) || strlen($raw) > 8192 || !is_string($seal) ||
+            !hash_equals(self::sign_effective(wp_unslash($raw)), $seal)) {
+            throw new RuntimeException('Missing or invalid signed native Entry List criteria');
+        }
+        $payload = json_decode(wp_unslash($raw), true);
+        if (!is_array($payload) || ($payload['v'] ?? null) !== 1 ||
+            ($payload['form_id'] ?? null) !== $form_id ||
+            ($payload['user_id'] ?? null) !== get_current_user_id() ||
+            ($payload['scope'] ?? null) !== $scope_json ||
+            !is_int($payload['issued_at'] ?? null) ||
+            $payload['issued_at'] > time() + 60 ||
+            time() - $payload['issued_at'] > self::CAPTURE_TTL ||
+            !is_array($payload['sorting'] ?? null) || !is_array($payload['paging'] ?? null) ||
+            !self::supported_criteria($payload['criteria'] ?? null)) {
+            throw new RuntimeException('Entry List authorization context changed or expired');
+        }
+        if (!class_exists('\GF_Entry_List_Table', false)) {
+            require_once \GFCommon::get_base_path() . '/entry_list.php';
+        }
+        if (!class_exists('\GF_Entry_List_Table') ||
+            !method_exists('\GF_Entry_List_Table', 'get_search_criteria') ||
+            !function_exists('gf_apply_filters')) {
+            throw new RuntimeException('Native Gravity Forms query resolver unavailable');
+        }
+        $old_get = $_GET;
+        try {
+            $_GET = array_merge(['page' => 'gf_entries', 'id' => (string)$form_id], $scope);
+            $table = new \GF_Entry_List_Table([
+                'form_id' => $form_id,
+                'filter' => isset($scope['filter']) ? sanitize_text_field($scope['filter']) : '',
+            ]);
+            $base = $table->get_search_criteria();
+            if (!self::supported_criteria($base)) {
+                throw new RuntimeException('Native Entry List base filter shape unavailable');
+            }
+            $current = gf_apply_filters(['gform_get_entries_args_entry_list', $form_id], [
+                'form_id' => $form_id, 'search_criteria' => $base,
+                'sorting' => $payload['sorting'], 'paging' => $payload['paging'],
+            ]);
+        } finally {
+            $_GET = $old_get;
+        }
+        if (!self::supported_args($current, $form_id) ||
+            self::canonical($current['sorting']) !== self::canonical($payload['sorting']) ||
+            self::canonical($current['paging']) !== self::canonical($payload['paging']) ||
+            self::canonical($current['search_criteria']) !== self::canonical($payload['criteria'])) {
+            throw new RuntimeException('Effective Entry List filter criteria changed; reload the list');
+        }
+        return $current['search_criteria'];
     }
 
     public static function add_action($actions, $form_id) {
@@ -49,19 +241,12 @@ final class Flat_Zip_Download {
         // Show the operator the actual native matching Entry count at page render.
         // The download separately resolves the same criteria and rejects stale counts.
         $matching_count = null;
+        $effective_json = '';
+        $effective_seal = '';
         if ($scope_supported) {
             try {
-                if (!class_exists('\\GF_Entry_List_Table', false)) {
-                    require_once \GFCommon::get_base_path() . '/entry_list.php';
-                }
-                $table = new \GF_Entry_List_Table([
-                    'form_id' => $form_id,
-                    'filter' => isset($scope['filter']) ? sanitize_text_field($scope['filter']) : '',
-                ]);
-                $criteria = $table->get_search_criteria();
-                if (!is_array($criteria) || !isset($criteria['status'])) {
-                    throw new RuntimeException('Native Entry List criteria unavailable');
-                }
+                [$effective_json, $effective_seal, $criteria] =
+                    self::effective_for_display($form_id, $scope_json);
                 $matching_count = \GFAPI::count_entries($form_id, $criteria);
                 if (!is_int($matching_count) || $matching_count < 0) {
                     throw new RuntimeException('Native Entry List count unavailable');
@@ -74,6 +259,8 @@ final class Flat_Zip_Download {
             'scope' => $scope_supported ? $scope_json : '',
             'scopeSeal' => $scope_supported ? self::sign_scope($form_id, $scope_json) : '',
             'matchingCount' => $scope_supported ? $matching_count : null,
+            'effectiveCapture' => $scope_supported ? $effective_json : '',
+            'effectiveSeal' => $scope_supported ? $effective_seal : '',
             'action' => self::ACTION,
             'postAction' => self::ENDPOINT,
             'formId' => $form_id,
@@ -132,7 +319,7 @@ final class Flat_Zip_Download {
     var gfGlobal = document.getElementById('all_entries');
     var fallback = document.getElementById('gfbrc-all-matching');
     var allMatching = (gfGlobal && gfGlobal.value === '1') || (fallback && fallback.checked);
-    if (allMatching && (!config.scopeSeal || !Number.isSafeInteger(config.matchingCount))) {
+    if (allMatching && (!config.scopeSeal || !config.effectiveSeal || !config.effectiveCapture || !Number.isSafeInteger(config.matchingCount))) {
       window.alert(config.scopeUnavailable); return;
     }
     if (allMatching && config.matchingCount === 0) { window.alert(config.noMatches); return; }
@@ -155,6 +342,8 @@ final class Flat_Zip_Download {
     if (allMatching) {
       hidden('selection_scope', config.scope);
       hidden('selection_scope_seal', config.scopeSeal);
+      hidden('selection_effective', config.effectiveCapture);
+      hidden('selection_effective_seal', config.effectiveSeal);
       hidden('expected_entry_count', String(config.matchingCount));
     } else {
       ids.forEach(function (id) { hidden('entry_ids[]', id); });
@@ -452,29 +641,9 @@ final class Flat_Zip_Download {
         if (!is_array(\GFAPI::get_form($form_id))) {
             self::fail(__('Selected form unavailable', 'gf-bulk-rename-counter'), 404);
         }
-        // In pinned GF 3.1.1.1, the native list's process_action() obtains its
-        // all_entries set with GF_Entry_List_Table::get_search_criteria().
-        if (!class_exists('\GF_Entry_List_Table', false)) {
-            require_once \GFCommon::get_base_path() . '/entry_list.php';
-        }
-        if (!class_exists('\GF_Entry_List_Table') ||
-            !method_exists('\GF_Entry_List_Table', 'get_search_criteria')) {
-            throw new RuntimeException('GF Entry List scope resolver unavailable');
-        }
-        $original_get = $_GET;
-        try {
-            $_GET = array_merge(['page' => 'gf_entries', 'id' => (string)$form_id], $scope);
-            $table = new \GF_Entry_List_Table([
-                'form_id' => $form_id,
-                'filter' => isset($scope['filter']) ? sanitize_text_field($scope['filter']) : '',
-            ]);
-            $criteria = $table->get_search_criteria();
-        } finally {
-            $_GET = $original_get;
-        }
-        if (!is_array($criteria) || !isset($criteria['status'])) {
-            throw new RuntimeException('GF selection criteria unavailable');
-        }
+        // The signed final display criteria, not the unfiltered base query,
+        // own membership. Replaying the documented callbacks must agree.
+        $criteria = self::revalidated_criteria($form_id, $scope, wp_unslash($scope_json));
 
         // Real GF/MariaDB qualification established that plain offset paging
         // can drop/duplicate IDs during concurrent membership changes.
