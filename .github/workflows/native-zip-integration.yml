@@ -389,6 +389,7 @@ jobs:
           test -n "$chrome"
           BRC_CHROME="$chrome" node tests/selection-qualification/hook-browser.cjs
           python3 tests/selection-qualification/hook-probe.py "$BRC_LAB_DIR"
+          python3 tests/selection-qualification/repair-http.py "$BRC_LAB_DIR"
           # The step measures and reports real divergence, but never mutates
           # production code or treats a diagnostic workflow success as equivalence.
           cat "$BRC_LAB_DIR/hook-result.json"

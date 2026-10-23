@@ -54,6 +54,9 @@ def post(case, config, *, form_id=None, nonce=None, scope=None, seal=None,
     if seal is not False:
         args += ["--data-urlencode", "selection_scope_seal=" + (
             config["scopeSeal"] if seal is None else seal)]
+    if mode == "all_matching":
+        args += ["--data-urlencode", "selection_effective=" + config["effectiveCapture"],
+                 "--data-urlencode", "selection_effective_seal=" + config["effectiveSeal"]]
     if expected is not None:
         args += ["--data-urlencode", "expected_entry_count=" + str(expected)]
     if ids:
@@ -75,7 +78,7 @@ def refused(label, *args, expect=None, **kwargs):
 
 
 all_cfg = selection_config("global154")
-assert all_cfg["scopeSeal"] and all_cfg["scope"] == "[]" and all_cfg["matchingCount"] == 154
+assert all_cfg["scopeSeal"] and all_cfg["effectiveSeal"] and all_cfg["scope"] == "[]" and all_cfg["matchingCount"] == 154
 status, hdr = post("global154", all_cfg)
 assert status == 200, ("all154", status)
 assert re.search(r"^x-gfbrc-selected-entries:\s*154\s*$", hdr, re.M), hdr

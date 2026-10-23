@@ -46,6 +46,8 @@ args = ["curl", "--fail-with-body", "--silent", "--show-error", "--max-time", "9
         "--data-urlencode", "selection_mode=all_matching",
         "--data-urlencode", "selection_scope=" + cfg["scope"],
         "--data-urlencode", "selection_scope_seal=" + cfg["scopeSeal"],
+        "--data-urlencode", "selection_effective=" + cfg["effectiveCapture"],
+        "--data-urlencode", "selection_effective_seal=" + cfg["effectiveSeal"],
         "--data-urlencode", "gfbrc_mutation_lab=snapshot-membership", endpoint]
 proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 try:

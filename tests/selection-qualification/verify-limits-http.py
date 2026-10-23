@@ -41,7 +41,9 @@ def status(args):
     return int(codes[-1])
 global_req=prefix+["--data-urlencode","selection_mode=all_matching",
     "--data-urlencode","selection_scope="+p.config["scope"],
-    "--data-urlencode","selection_scope_seal="+p.config["scopeSeal"]]
+    "--data-urlencode","selection_scope_seal="+p.config["scopeSeal"],
+    "--data-urlencode","selection_effective="+p.config["effectiveCapture"],
+    "--data-urlencode","selection_effective_seal="+p.config["effectiveSeal"]]
 assert status(global_req)==422,"501 Entry all-matching should reject before archive"
 print("PASS_GLOBAL_501_ENTRIES_REJECTED_NO_PARTIAL_ZIP",flush=True)
 explicit_req=prefix+["--data-urlencode","selection_mode=explicit"]

@@ -31,6 +31,8 @@ args=['curl','--fail-with-body','--silent','--show-error','--max-time','80',
       '--data-urlencode','selection_mode=all_matching',
       '--data-urlencode','selection_scope='+observed['scope'],
       '--data-urlencode','selection_scope_seal='+observed['scope_seal'],
+      '--data-urlencode','selection_effective='+observed['effective'],
+      '--data-urlencode','selection_effective_seal='+observed['effective_seal'],
       '--data-urlencode','expected_entry_count='+str(observed['rendered_matching_count']),
       endpoint]
 proc=subprocess.run(args,capture_output=True,text=True,timeout=90)
@@ -57,6 +59,8 @@ for name,filename in [('browser',lab/'hook-browser.zip'),('http',archive)]:
   print('HOOK_ZIP_RESULT',name,'entry_ids='+','.join(map(str,ids)),
         'members='+str(len(names)),flush=True)
 assert results[0][1]==results[1][1], 'Browser and HTTP ZIP Entry membership disagrees'
+assert results[0][1]==sorted(allowed), ('Repaired ZIP did not match hooked Entry List',results)
+assert observed['rendered_matching_count']==len(allowed), 'Operator was shown incorrect effective count'
 assert members==results[1][2], 'ZIP member header mismatch'
 assert selected==len(results[1][1]), 'Selected Entry header mismatch'
 outside=sorted(set(results[1][1])-shown)
@@ -72,8 +76,5 @@ report={'base_head':'0868ac4685ed415ea2ce06ce642412970af80335',
         'source_hashes_verified':True}
 (lab/'hook-result.json').write_text(json.dumps(report,indent=2))
 print('HOOK_SELECTION_COMPARISON '+json.dumps(report,sort_keys=True),flush=True)
-if outside:
- print('CONFIRMED_FINDING_HOOK_SELECTION_DIVERGENCE '
-       'archive_contains_entries_outside_effective_GF_entry_list',flush=True)
-else:
- print('NO_MATERIAL_ISSUE_HOOK_MEMBERSHIP_EQUIVALENT_FOR_FIXTURE',flush=True)
+assert not outside, ('Repaired ZIP includes out-of-scope Entry',outside)
+print('PASS_REPAIRED_HOOK_EFFECTIVE_MEMBERSHIP_BROWSER_AND_HTTP_ZIP',flush=True)

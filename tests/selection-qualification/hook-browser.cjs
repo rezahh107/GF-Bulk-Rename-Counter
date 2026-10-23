@@ -38,7 +38,7 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
   const nativeCountText=await page.locator('.displaying-num').allTextContents();
   const config=await page.locator('#gfbrc-independent-flat-zip')
     .evaluate(e=>JSON.parse(e.dataset.config));
-  if(!config || !config.scopeSeal)throw Error('GFBRC count/scope config not rendered');
+  if(!config || !config.scopeSeal || !config.effectiveCapture || !config.effectiveSeal)throw Error('GFBRC signed effective criteria not rendered');
   const beforeNative=await page.locator('#all_entries').inputValue();
   const header=page.locator('thead input[type="checkbox"]').first();
   let banner='not_reachable';
@@ -72,6 +72,7 @@ const fs=require('node:fs'), path=require('node:path'), {chromium}=require('play
     rendered_matching_count:config.matchingCount,post:posts[0],
     confirmation:dialogs[0].text,download_name:download.suggestedFilename(),
     scope:config.scope,scope_seal:config.scopeSeal,nonce:config.nonce,
+    effective:config.effectiveCapture,effective_seal:config.effectiveSeal,
     page_error_count:errors.length,page_errors_sample:errors.slice(0,5)};
   fs.writeFileSync(path.join(lab,'hook-browser.json'),JSON.stringify(report,null,2));
   console.log('HOOK_BROWSER_DISPLAY_AND_DOWNLOAD '+JSON.stringify({
