@@ -1,0 +1,146 @@
+name: Recover v2.1.1 published consumer verification (no republish)
+
+# One-time recovery of a release whose tag and immutable-by-policy assets already exist.
+# Do not change the public release, re-tag, replace assets, or run the normal publish workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type RECOVER-v2.1.1 to verify the EXISTING release and retire its candidate marker"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: brc-owner-release-operation
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    if: ${{ inputs.confirmation == 'RECOVER-v2.1.1' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write # Needed only for guarded post-verification candidate-marker retirement.
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BRC_TAG: v2.1.1
+      BRC_VERSION: 2.1.1
+      BRC_RELEASE_COMMIT: b9e86d15f04a030f1a4c75abc2491461e75022dd
+      BRC_ZIP_SHA256: a57b5bf3c9be6bbe6bd13af7dc415f98dba62c14e57bc0349cdf48820ff7ab39
+      BRC_CANDIDATE_BRANCH: release-candidate/v2.1.1-from-8c1e65886a28ccc677f230ebf01c4a6fc9d1ee5b
+    services:
+      database:
+        image: mariadb:11.4.8@sha256:bc474f00629f0123c10f9e1bca193a45d18af15a274cf0656acda64f1086c3b6
+        env:
+          MARIADB_ROOT_PASSWORD: brc-consumer-ci-only
+          MARIADB_DATABASE: wordpress
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mariadb-admin ping -h 127.0.0.1 -uroot -pbrc-consumer-ci-only --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240
+        with:
+          php-version: "8.2"
+          extensions: zip, mysqli
+          coverage: none
+      - name: Verify recovery preconditions and original published identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "rezahh107/GF-Bulk-Rename-Counter"
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          test "$(python3 scripts/release/release.py version)" = "$BRC_VERSION"
+          test -f release/candidate.json
+          jq -e --arg v "$BRC_VERSION" --arg branch "$BRC_CANDIDATE_BRANCH" \
+            --arg base "8c1e65886a28ccc677f230ebf01c4a6fc9d1ee5b" \
+            '.schema == 1 and .intent == "patch" and .version == $v and .branch == $branch and .base.commit == $base' \
+            release/candidate.json >/dev/null
+          git fetch origin "refs/tags/$BRC_TAG:refs/tags/$BRC_TAG"
+          test "$(git rev-parse "refs/tags/$BRC_TAG^{commit}")" = "$BRC_RELEASE_COMMIT"
+          test "$(git rev-parse "refs/tags/$BRC_TAG^{tree}")" = "50b98d9dc36a5ca094630d9f6febc3f355552c97"
+          # Inspect the authoritative GitHub annotated-tag object, not an eventually-consistent
+          # peeled ls-remote result immediately after a freshly published tag.
+          remote_type="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.type')"
+          test "$remote_type" = tag
+          remote_tag="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.sha')"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$remote_tag" --jq '.object.type')" = commit
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$remote_tag" --jq '.object.sha')" = "$BRC_RELEASE_COMMIT"
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$BRC_TAG" > "$RUNNER_TEMP/release.json"
+          jq -e --arg v "$BRC_TAG" --arg digest "sha256:$BRC_ZIP_SHA256" '
+            .tag_name == $v and .draft == false and .prerelease == false
+            and ([.assets[].name] | sort) ==
+              (["gf-bulk-rename-counter-2.1.1.zip",
+                "gf-bulk-rename-counter-2.1.1.zip.sha256",
+                "gf-bulk-rename-counter-2.1.1.zip.manifest.json"] | sort)
+            and ([.assets[] | select(.name == "gf-bulk-rename-counter-2.1.1.zip") | .digest] == [$digest])
+          ' "$RUNNER_TEMP/release.json" >/dev/null
+          echo "PUBLISHED_TAG_RELEASE_AND_ASSET_IDENTITY_VERIFIED" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Download and verify the exact EXISTING public artifacts against the published source
+        shell: bash
+        run: |
+          set -euo pipefail
+          dest="$RUNNER_TEMP/consumer"
+          src="$RUNNER_TEMP/published-source"
+          rebuilt="$RUNNER_TEMP/rebuilt"
+          mkdir -p "$dest" "$rebuilt"
+          z="gf-bulk-rename-counter-$BRC_VERSION.zip"
+          gh release download "$BRC_TAG" --dir "$dest" \
+            --pattern "$z" --pattern "$z.sha256" --pattern "$z.manifest.json"
+          printf '%s  %s\n' "$BRC_ZIP_SHA256" "$dest/$z" | sha256sum -c -
+          git worktree add --detach "$src" "$BRC_RELEASE_COMMIT"
+          python3 "$src/scripts/release/release.py" validate --root "$src" \
+            --zip "$dest/$z" --checksum "$dest/$z.sha256" \
+            --manifest "$dest/$z.manifest.json" --expected-head "$BRC_RELEASE_COMMIT"
+          python3 "$src/scripts/release/release.py" build --root "$src" \
+            --output-dir "$rebuilt" --expected-head "$BRC_RELEASE_COMMIT"
+          cmp "$rebuilt/$z" "$dest/$z"
+          cmp "$rebuilt/$z.sha256" "$dest/$z.sha256"
+          cmp "$rebuilt/$z.manifest.json" "$dest/$z.manifest.json"
+          # Keep the original published release smoke semantics. Only the overly precise
+          # PHP 8.2.34 patch check is relaxed to actual PHP 8.2.x in the current CI script.
+          python3 - "$src/scripts/release/consumer-smoke.sh" scripts/release/consumer-smoke.sh <<'PY'
+          from pathlib import Path
+          import sys
+          original = Path(sys.argv[1]).read_text()
+          current = Path(sys.argv[2]).read_text()
+          old = """test "$(php -r 'echo PHP_VERSION;')" = 8.2.34"""
+          new = """php -r 'exit((PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 2) ? 0 : 1);'"""
+          assert original.count(old) == 1
+          assert original.replace(old, new) == current, "consumer smoke differs beyond approved PHP patch guard"
+          PY
+          bash scripts/release/consumer-smoke.sh "$dest/$z" "$BRC_VERSION"
+          echo "EXISTING_PUBLIC_ZIP_CONSUMER_INSTALL_AND_ACTIVATION_PASS" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Retire ONLY the consumed candidate marker after consumer verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          test -f release/candidate.json
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.type')" = tag
+          remote_tag="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.sha')"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$remote_tag" --jq '.object.sha')" = "$BRC_RELEASE_COMMIT"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm release/candidate.json
+          git commit -m "chore(release): retire verified v2.1.1 recovery marker"
+          git push origin HEAD:main
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)"
+          echo "RECOVERED_EXISTING_PUBLIC_V2_1_1_CONSUMER_VERIFIED_AND_MARKER_RETIRED" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report recovery failure without republishing or overwriting
+        if: failure()
+        run: echo "RECOVERY_INCOMPLETE: Do not rerun PUBLISH or overwrite tag/assets; inspect failed step and existing public Release before recovery retry." >> "$GITHUB_STEP_SUMMARY"
