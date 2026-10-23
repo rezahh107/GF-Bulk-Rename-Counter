@@ -48,7 +48,7 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | --- | --- |
 | `gf-bulk-rename-counter.php` | Plugin metadata, dependency checks, WordPress hooks and loader |
 | `includes/class-rename_handler.php` | Filename transformation and within-handler duplicate handling |
-| `includes/class-flat_zip_download.php` | Separate current-page-only authenticated ZIP download, source planner, deleted-state validator, archive writer/verifier |
+| `includes/class-flat_zip_download.php` | Separate explicit-page / scoped all-matching ZIP download, source planner, deleted-state validator, archive writer/verifier |
 | `includes/class-form_naming_rules.php` | Independent per-form rule persistence and validation |
 | `includes/class-naming_strategy.php` | Strict Single Field / Composite filename candidates for independent ZIP only |
 | `includes/class-settings_page.php` | WordPress Settings API page and option sanitization |
@@ -58,6 +58,8 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | `tests/verify.php` and `tests/rename-handler-test.php` | Canonical dependency-free PHP lint and isolated regressions |
 | `tests/integration/` | Synthetic WordPress / Gravity Forms fixtures, genuine Bulk Download ZIP checks, and negative integrity control |
 | `.github/workflows/native-zip-integration.yml` | Repeatable native ZIP qualification CI, separate from source verification |
+
+The unmerged PR #19 candidate shows the active native matching Entry count before an all-matching download, warns about the 500-Entry bound, and rechecks the count on browser submission. The public v2.1.0 release remains page-scoped. See [candidate all-matching behavior](docs/FLAT_ZIP_ALL_MATCHING.md).
 
 The plugin began from an owner-supplied v2.0.6 ZIP. The published v2.1.0 adds the independent ZIP and per-form naming strategies, while preserving Legacy. The approved Author is **Reza Hashemi Hosseini**; the Plugin URI points to this repository. Author URI is intentionally omitted and no unverified WordPress.org contributor username is claimed. Publication was through GitHub Releases, **not** WordPress.org.
 

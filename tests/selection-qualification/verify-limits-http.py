@@ -27,6 +27,7 @@ page=subprocess.run(["curl","-fsSL","--cookie",str(lab/'auth.cookies'),
    capture_output=True,text=True,check=True).stdout
 p=Parser();p.feed(page)
 assert p.config and p.config["formId"]==fid and p.config["scopeSeal"]
+assert p.config["matchingCount"]==501, "Operator preview must disclose over-500 scope"
 prefix=["curl","--silent","--show-error","--max-time","75",
         "--cookie",str(lab/'auth.cookies'),"-D","-","-o","/dev/null",
         "--data-urlencode","action=gfbrc_flat_zip_download",

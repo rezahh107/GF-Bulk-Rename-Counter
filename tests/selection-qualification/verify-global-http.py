@@ -40,7 +40,7 @@ def selection_config(case, suffix=""):
 
 
 def post(case, config, *, form_id=None, nonce=None, scope=None, seal=None,
-         mode="all_matching", cookie=cookies, ids=None):
+         mode="all_matching", cookie=cookies, ids=None, expected=None):
     fid = form_id if form_id is not None else meta["cases"][case]["form_id"]
     args = ["curl", "--silent", "--show-error", "-D", "-", "-o", "/dev/null",
             "--max-time", "80", "--cookie", str(cookie),
@@ -54,6 +54,8 @@ def post(case, config, *, form_id=None, nonce=None, scope=None, seal=None,
     if seal is not False:
         args += ["--data-urlencode", "selection_scope_seal=" + (
             config["scopeSeal"] if seal is None else seal)]
+    if expected is not None:
+        args += ["--data-urlencode", "expected_entry_count=" + str(expected)]
     if ids:
         for item in ids:
             args += ["--data-urlencode", "entry_ids[]=" + str(item)]
@@ -73,7 +75,7 @@ def refused(label, *args, expect=None, **kwargs):
 
 
 all_cfg = selection_config("global154")
-assert all_cfg["scopeSeal"] and all_cfg["scope"] == "[]"
+assert all_cfg["scopeSeal"] and all_cfg["scope"] == "[]" and all_cfg["matchingCount"] == 154
 status, hdr = post("global154", all_cfg)
 assert status == 200, ("all154", status)
 assert re.search(r"^x-gfbrc-selected-entries:\s*154\s*$", hdr, re.M), hdr
@@ -81,7 +83,7 @@ assert re.search(r"^x-gfbrc-zip-files:\s*155\s*$", hdr, re.M), hdr
 print("PASS_HTTP_GLOBAL_154_ENTRIES_155_FILES", flush=True)
 
 filter_cfg = selection_config("global_filtered", "&field_id=5&s=group-a&operator=is")
-assert filter_cfg["scopeSeal"] and "group-a" in filter_cfg["scope"]
+assert filter_cfg["scopeSeal"] and "group-a" in filter_cfg["scope"] and filter_cfg["matchingCount"] == 77
 status, hdr = post("global_filtered", filter_cfg)
 assert status == 200, ("filtered", status, hdr[:300])
 assert re.search(r"^x-gfbrc-selected-entries:\s*77\s*$", hdr, re.M), hdr
@@ -90,6 +92,7 @@ print("PASS_HTTP_GLOBAL_FILTER_77_ENTRIES_78_FILES", flush=True)
 
 empty_cfg = selection_config("global_empty")
 refused("zero_files", "global_empty", empty_cfg, expect=422)
+refused("stale_displayed_count", "global154", all_cfg, expected=153, expect=422)
 refused("wrong_scope_sig", "global154", all_cfg, scope='{"filter":"spam"}', expect=403)
 refused("missing_seal", "global154", all_cfg, seal=False, expect=403)
 refused("missing_scope", "global154", all_cfg, scope=False, expect=403)

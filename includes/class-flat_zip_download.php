@@ -46,18 +46,45 @@ final class Flat_Zip_Download {
         ksort($scope);
         $scope_json = wp_json_encode($scope);
         if (!is_string($scope_json) || strlen($scope_json) > 8192) { $scope_supported = false; }
+        // Show the operator the actual native matching Entry count at page render.
+        // The download separately resolves the same criteria and rejects stale counts.
+        $matching_count = null;
+        if ($scope_supported) {
+            try {
+                if (!class_exists('\\GF_Entry_List_Table', false)) {
+                    require_once \\GFCommon::get_base_path() . '/entry_list.php';
+                }
+                $table = new \\GF_Entry_List_Table([
+                    'form_id' => $form_id,
+                    'filter' => isset($scope['filter']) ? sanitize_text_field($scope['filter']) : '',
+                ]);
+                $criteria = $table->get_search_criteria();
+                if (!is_array($criteria) || !isset($criteria['status'])) {
+                    throw new RuntimeException('Native Entry List criteria unavailable');
+                }
+                $matching_count = \\GFAPI::count_entries($form_id, $criteria);
+                if (!is_int($matching_count) || $matching_count < 0) {
+                    throw new RuntimeException('Native Entry List count unavailable');
+                }
+            } catch (Throwable $e) {
+                $scope_supported = false;
+            }
+        }
         $config = [
             'scope' => $scope_supported ? $scope_json : '',
             'scopeSeal' => $scope_supported ? self::sign_scope($form_id, $scope_json) : '',
+            'matchingCount' => $scope_supported ? $matching_count : null,
             'action' => self::ACTION,
             'postAction' => self::ENDPOINT,
             'formId' => $form_id,
             'nonce' => wp_create_nonce('gfbrc_independent_flat_zip_' . $form_id),
             'required' => __('Select at least one Entry or choose all matching Entries.', 'gf-bulk-rename-counter'),
-            'confirm' => __('Download eligible files from %d explicitly selected Entries? File count may differ.', 'gf-bulk-rename-counter'),
-            'confirmGlobal' => __('Download eligible files from ALL Entries matching this form and its current filters/search (including other pages)? The server verifies the complete Entry set before sending the ZIP.', 'gf-bulk-rename-counter'),
+            'confirm' => __('Download eligible files from %d explicitly checked Entries on this page? File count may differ.', 'gf-bulk-rename-counter'),
+            'confirmGlobal' => __('Download eligible files from ALL %d Entries matching this form and its current filters/search, across every page? Individually checked rows do not limit this choice. Maximum 500 Entries per ZIP; the server rechecks the count before download.', 'gf-bulk-rename-counter'),
             'scopeUnavailable' => __('This search/filter URL is not supported for a safe global download.', 'gf-bulk-rename-counter'),
-            'globalLabel' => __('All matching Entries (Flat ZIP only)', 'gf-bulk-rename-counter'),
+            'globalLabel' => __('All matching Entries (Flat ZIP only; maximum 500)', 'gf-bulk-rename-counter'),
+            'noMatches' => __('No Entries match the current form and filters.', 'gf-bulk-rename-counter'),
+            'overLimit' => __('More than 500 Entries match. Narrow the current search or filters before downloading.', 'gf-bulk-rename-counter'),
         ];
         echo '<script id="gfbrc-independent-flat-zip" data-config="' .
             esc_attr(wp_json_encode($config)) . '">';
@@ -105,9 +132,14 @@ final class Flat_Zip_Download {
     var gfGlobal = document.getElementById('all_entries');
     var fallback = document.getElementById('gfbrc-all-matching');
     var allMatching = (gfGlobal && gfGlobal.value === '1') || (fallback && fallback.checked);
-    if (allMatching && !config.scopeSeal) { window.alert(config.scopeUnavailable); return; }
+    if (allMatching && (!config.scopeSeal || !Number.isSafeInteger(config.matchingCount))) {
+      window.alert(config.scopeUnavailable); return;
+    }
+    if (allMatching && config.matchingCount === 0) { window.alert(config.noMatches); return; }
+    if (allMatching && config.matchingCount > 500) { window.alert(config.overLimit); return; }
     if (!allMatching && !ids.length) { window.alert(config.required); return; }
-    if (!window.confirm(allMatching ? config.confirmGlobal :
+    if (!window.confirm(allMatching ?
+        config.confirmGlobal.replace('%d', String(config.matchingCount)) :
         config.confirm.replace('%d', String(ids.length)))) return;
     var form = document.createElement('form');
     form.method = 'POST';
@@ -123,6 +155,7 @@ final class Flat_Zip_Download {
     if (allMatching) {
       hidden('selection_scope', config.scope);
       hidden('selection_scope_seal', config.scopeSeal);
+      hidden('expected_entry_count', String(config.matchingCount));
     } else {
       ids.forEach(function (id) { hidden('entry_ids[]', id); });
     }
@@ -507,6 +540,11 @@ final class Flat_Zip_Download {
             }
             try {
                 $ids = self::all_matching_ids($form_id);
+                $expected = $_POST['expected_entry_count'] ?? null;
+                if ($expected !== null && (!is_string($expected) || !ctype_digit($expected) ||
+                    (string)(int)$expected !== $expected || (int)$expected !== count($ids))) {
+                    throw new RuntimeException('Matching Entry count changed; reload the Entry List and retry');
+                }
             } catch (Throwable $e) {
                 self::fail(sprintf(__('Cannot resolve all matching Entries: %s', 'gf-bulk-rename-counter'),
                     $e->getMessage()), 422);

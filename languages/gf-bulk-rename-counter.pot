@@ -15,7 +15,7 @@ msgstr ""
 msgid "— Select a form —"
 msgstr ""
 
-msgid "All matching Entries (Flat ZIP only)"
+msgid "All matching Entries (Flat ZIP only; maximum 500)"
 msgstr ""
 
 msgid "Ambiguous Entry selection"
@@ -54,10 +54,10 @@ msgstr ""
 msgid "Counter Field ID"
 msgstr ""
 
-msgid "Download eligible files from %d explicitly selected Entries? File count may differ."
+msgid "Download eligible files from %d explicitly checked Entries on this page? File count may differ."
 msgstr ""
 
-msgid "Download eligible files from ALL Entries matching this form and its current filters/search (including other pages)? The server verifies the complete Entry set before sending the ZIP."
+msgid "Download eligible files from ALL %d Entries matching this form and its current filters/search, across every page? Individually checked rows do not limit this choice. Maximum 500 Entries per ZIP; the server rechecks the count before download."
 msgstr ""
 
 msgid "Download Flat ZIP with Rename"
@@ -111,10 +111,16 @@ msgstr ""
 msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."
 msgstr ""
 
+msgid "More than 500 Entries match. Narrow the current search or filters before downloading."
+msgstr ""
+
 msgid "Naming method"
 msgstr ""
 
 msgid "Naming rule not saved: %s"
+msgstr ""
+
+msgid "No Entries match the current form and filters."
 msgstr ""
 
 msgid "Not authorized"

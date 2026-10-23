@@ -35,7 +35,8 @@ const {chromium} = require('playwright-core');
       if (req.url().includes('admin-post.php')) {
         const body = new URLSearchParams(req.postData() || '');
         endpointSelections.push({method:req.method(), ids:body.getAll('entry_ids[]'), form_id:body.get('form_id'),
-          mode:body.get('selection_mode'), scope:body.get('selection_scope'), seal:body.get('selection_scope_seal')});
+          mode:body.get('selection_mode'), scope:body.get('selection_scope'),
+          seal:body.get('selection_scope_seal'), expected_count:body.get('expected_entry_count')});
         diagnostic.push('endpoint-request='+req.method()+' entry_count='+body.getAll('entry_ids[]').length+
           ' body_keys='+Array.from(new Set(body.keys())).join(','));
       }
@@ -285,7 +286,18 @@ const {chromium} = require('playwright-core');
       if (visible <= 0 || visible >= count) throw Error('Native paging not active');
       const toggle = page.locator('#gfbrc-all-matching');
       if (await toggle.count() !== 1) throw Error('Missing independent all-matching operator control');
+      const config = await page.locator('#gfbrc-independent-flat-zip')
+        .evaluate(el => JSON.parse(el.dataset.config));
+      if (config.matchingCount !== count || !config.globalLabel.includes('500'))
+        throw Error('Displayed all-matching count/bound does not match native GF criteria');
+      let independentlyChecked = null;
+      if (caseName === 'global154') {
+        independentlyChecked = await gfRows.first().inputValue();
+        await gfRows.first().check();
+      }
       await toggle.check();
+      if (independentlyChecked && !(await gfRows.first().isChecked()))
+        throw Error('All-matching toggle unexpectedly changed native row selection');
       await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
       const postsBefore = endpointSelections.length;
       const [downloadAll] = await Promise.all([
@@ -300,6 +312,8 @@ const {chromium} = require('playwright-core');
       const req = endpointSelections.at(-1);
       if(endpointSelections.length!==postsBefore+1 || req.ids.length ||
           req.form_id!==String(form) || req.mode!=='all_matching' || !req.scope || !req.seal ||
+          req.expected_count!==String(count) ||
+          !confirmations.at(-1).includes('ALL '+count+' Entries') ||
           downloadAll.suggestedFilename() !== 'gfbrc-flat-'+form+'-'+count+'-entries-'+
             (caseName==='global154'?155:78)+'-files.zip')
         throw Error('Global browser path sent incorrect explicit ID set');
@@ -309,6 +323,27 @@ const {chromium} = require('playwright-core');
       }));
       console.log('PASS_BROWSER_ALL_MATCHING_'+count+
         ' visible='+visible+' browser_zip_bytes='+b.length+' form='+form);
+      if (independentlyChecked) {
+        await toggle.uncheck();
+        if (!(await gfRows.first().isChecked()))
+          throw Error('Unchecking all-matching erased an independent checked row');
+        const beforeExplicit = endpointSelections.length;
+        const [explicitDownload] = await Promise.all([
+          page.waitForEvent('download',{timeout:25000}),
+          page.locator('#doaction').click(),
+        ]);
+        await explicitDownload.saveAs(path.join(lab,'browser-mixed-explicit.zip'));
+        const explicitRequest = endpointSelections.at(-1);
+        if (endpointSelections.length !== beforeExplicit+1 || explicitRequest.mode !== 'explicit' ||
+            JSON.stringify(explicitRequest.ids) !== JSON.stringify([independentlyChecked]) ||
+            explicitRequest.expected_count !== null ||
+            !confirmations.at(-1).includes('1 explicitly checked Entries')) {
+          throw Error('Manual row selection did not remain independent after all-matching');
+        }
+        fs.writeFileSync(path.join(lab,'browser-mixed-explicit-selected.json'),
+          JSON.stringify({form_id:form, selected_ids:[independentlyChecked]}));
+        console.log('PASS_BROWSER_MIXED_SELECTION_GLOBAL_AND_INDEPENDENT_EXPLICIT');
+      }
     }
 
     } finally { fs.rmSync(marker,{force:true}); }
