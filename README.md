@@ -18,6 +18,12 @@ The independent new Single Field/Composite strategy rejects tested Windows reser
 
 Noncolliding `d{counter}.{extension}` names remain unchanged. Collisions use the Legacy visual `d125-132.jpg`, `d125-132-1.jpg` suffix scheme, with natural names reserved first. Interrupted network delivery after streaming starts is outside pre-delivery atomicity.
 
+## Unmerged next-release candidate: all-matching selection (PR #19)
+
+This working-tree candidate supersedes **only the independent selection boundary**, not the already-published v2.1.0 ZIP described above. It retains manually checked Entries and adds a clearly labeled **All matching Entries (Flat ZIP only)** control for Gravity Forms filters/search across pagination. For all-matching downloads, the candidate observes the final supported native Entry List criteria after documented hooks, validates the observer ordering, signs a short-lived form/user/URL-scoped capture, and replays the documented hooks in POST to reject changed criteria before resolving a consistent GFAPI snapshot. Unsupported or uncertain hook query shapes fail closed for global mode. The previously approved expected Entry-count comparison is retained; the server still uses the unchanged ZIP planner and writer. Download filenames and HTTP headers report distinct selected Entry and eligible file counts. See [operator flow and evidence limits](docs/FLAT_ZIP_ALL_MATCHING.md).
+
+**Not published:** main, Tag/Release v2.1.0 and Owner-site installations continue to use page-only behavior unless a separately approved new candidate is merged and released. Incremental NEW/acknowledgment is not part of PR #19.
+
 ## Per-form naming (EXT-001 first batch; included in v2.1.0)
 
 Settings → GF Bulk Rename now contains a separate **Per-form naming (independent flat ZIP only)** section. Choose a form, open its rule, then save **Legacy**, **Single Field**, or **Composite**. Composite fields use explicit consecutive order numbers and a configurable separator. Only ordinary single-value text, textarea and number fields are offered. **Use existing Legacy defaults** removes the per-form override. Saving one form does not replace another form's rule.
@@ -42,7 +48,7 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | --- | --- |
 | `gf-bulk-rename-counter.php` | Plugin metadata, dependency checks, WordPress hooks and loader |
 | `includes/class-rename_handler.php` | Filename transformation and within-handler duplicate handling |
-| `includes/class-flat_zip_download.php` | Separate current-page-only authenticated ZIP download, source planner, deleted-state validator, archive writer/verifier |
+| `includes/class-flat_zip_download.php` | Separate explicit-page / scoped all-matching ZIP download, source planner, deleted-state validator, archive writer/verifier |
 | `includes/class-form_naming_rules.php` | Independent per-form rule persistence and validation |
 | `includes/class-naming_strategy.php` | Strict Single Field / Composite filename candidates for independent ZIP only |
 | `includes/class-settings_page.php` | WordPress Settings API page and option sanitization |
@@ -52,6 +58,8 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | `tests/verify.php` and `tests/rename-handler-test.php` | Canonical dependency-free PHP lint and isolated regressions |
 | `tests/integration/` | Synthetic WordPress / Gravity Forms fixtures, genuine Bulk Download ZIP checks, and negative integrity control |
 | `.github/workflows/native-zip-integration.yml` | Repeatable native ZIP qualification CI, separate from source verification |
+
+The unmerged PR #19 candidate shows the display-effective matching Entry count, warns about the 500-Entry bound, and rejects changed effective criteria independently of its preserved expected-count check. Captures expire after ten minutes. Unverifiable late hooks or unsupported form/sorting/paging changes disable only the independent global mode. The public v2.1.0 release remains page-scoped. See [candidate all-matching behavior](docs/FLAT_ZIP_ALL_MATCHING.md).
 
 The plugin began from an owner-supplied v2.0.6 ZIP. The published v2.1.0 adds the independent ZIP and per-form naming strategies, while preserving Legacy. The approved Author is **Reza Hashemi Hosseini**; the Plugin URI points to this repository. Author URI is intentionally omitted and no unverified WordPress.org contributor username is claimed. Publication was through GitHub Releases, **not** WordPress.org.
 

@@ -19,6 +19,48 @@ $cases = [
     'n100' => ['form_id' => $form_id, 'entry_ids' => array_slice($all, 0, 100)],
     'n101' => ['form_id' => $form_id, 'entry_ids' => array_slice($all, 0, 101)],
 ];
+// Separate 154-Entry form exercises actual native pagination, scoped
+// selection, zero-file Entries and repeated physical source occurrences.
+$global_form = GFAPI::add_form([
+    'title' => 'GFBRC global selection 154',
+    'fields' => [
+        ['id' => 1, 'type' => 'fileupload', 'label' => 'Single'],
+        ['id' => 2, 'type' => 'fileupload', 'label' => 'Multiple', 'multipleFiles' => true],
+        ['id' => 5, 'type' => 'text', 'label' => 'Group'],
+    ],
+    'button' => ['type' => 'text', 'text' => 'Submit'],
+]);
+if (is_wp_error($global_form)) { throw new RuntimeException('Global form creation failed'); }
+$global_ids = []; $a_ids = []; $b_ids = [];
+for ($i = 0; $i < 154; $i++) {
+    $group = $i < 77 ? 'group-a' : 'group-b';
+    $values = ['form_id' => (int)$global_form, '5' => $group];
+    if ($i > 0) { $values['1'] = $first['1']; }
+    if ($i === 1) { $values['2'] = wp_json_encode([$first['1'], $first['1']]); }
+    $id = GFAPI::add_entry($values);
+    if (is_wp_error($id)) { throw new RuntimeException('Global Entry insertion failed'); }
+    $global_ids[] = (int)$id;
+    if ($group === 'group-a') { $a_ids[] = (int)$id; }
+    else { $b_ids[] = (int)$id; }
+}
+$cases['global154'] = ['form_id' => (int)$global_form, 'entry_ids' => $global_ids];
+$cases['global_filtered'] = ['form_id' => (int)$global_form, 'entry_ids' => $a_ids];
+$cases['global_group_b'] = ['form_id' => (int)$global_form, 'entry_ids' => $b_ids];
+// All-matching Empty cannot produce an archive or count as a successful ZIP.
+$empty_form = GFAPI::add_form([
+    'title' => 'GFBRC global zero files',
+    'fields' => [['id' => 1, 'type' => 'fileupload', 'label' => 'Single']],
+    'button' => ['type' => 'text', 'text' => 'Submit'],
+]);
+if (is_wp_error($empty_form)) { throw new RuntimeException('No-file form unavailable'); }
+$empty_ids = [];
+for ($i = 0; $i < 3; $i++) {
+    $id = GFAPI::add_entry(['form_id' => (int)$empty_form]);
+    if (is_wp_error($id)) { throw new RuntimeException('No-file entry unavailable'); }
+    $empty_ids[] = (int)$id;
+}
+$cases['global_empty'] = ['form_id' => (int)$empty_form, 'entry_ids' => $empty_ids];
+
 foreach (['multiple','shared','sanitized_equal','multi_entry_files','host_folder_collision','custom_folder_mixed','entry_folder_mixed_multi'] as $name) {
     $s = $manifest['scenarios'][$name];
     $cases[$name] = ['form_id' => $s['form_id'], 'entry_ids' => $s['entry_ids']];

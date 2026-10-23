@@ -24,8 +24,8 @@ const {chromium} = require('playwright-core');
     page.on('dialog', async d => {
       diagnostic.push('dialog='+d.message());
       if (d.type() === 'confirm') {
-        if (!d.message().includes('on this page') || !d.message().includes('NOT included'))
-          throw Error('Unclear page-scoped download confirmation: '+d.message());
+        if (!d.message().includes('explicitly checked Entries') && !/ALL [0-9]+ Entries matching/.test(d.message()))
+          throw Error('Unclear explicit/global download confirmation: '+d.message());
         if (cancelNext) { cancelNext = false; cancellations++; await d.dismiss(); }
         else { confirmations.push(d.message()); await d.accept(); }
       } else await d.dismiss();
@@ -34,7 +34,9 @@ const {chromium} = require('playwright-core');
     page.on('request', req => {
       if (req.url().includes('admin-post.php')) {
         const body = new URLSearchParams(req.postData() || '');
-        endpointSelections.push({method:req.method(), ids:body.getAll('entry_ids[]'), form_id:body.get('form_id')});
+        endpointSelections.push({method:req.method(), ids:body.getAll('entry_ids[]'), form_id:body.get('form_id'),
+          mode:body.get('selection_mode'), scope:body.get('selection_scope'),
+          seal:body.get('selection_scope_seal'), expected_count:body.get('expected_entry_count')});
         diagnostic.push('endpoint-request='+req.method()+' entry_count='+body.getAll('entry_ids[]').length+
           ' body_keys='+Array.from(new Set(body.keys())).join(','));
       }
@@ -220,8 +222,8 @@ const {chromium} = require('playwright-core');
         throw Error('Real GF pagination did not change rows');
       const pageTwoInitiallyChecked = await secondRows.evaluateAll(nodes => nodes.filter(x=>x.checked).map(x=>x.value));
       const visibleAction = await page.locator('select[name="action"] option[value="gfbrc_independent_flat_zip"]').textContent();
-      if (!visibleAction.includes('selected on this page only'))
-        throw Error('No user-visible page-only qualification label');
+      if (!visibleAction.includes('Flat ZIP with Rename') || visibleAction.includes('selected on this page only'))
+        throw Error('Independent action label misrepresents global selection');
       await secondRows.first().check();
       const secondChecked = await secondRows.evaluateAll(nodes => nodes.filter(x=>x.checked).map(x=>x.value));
       const submittedBefore = endpointSelections.length, promptsBefore = confirmations.length;
@@ -239,7 +241,7 @@ const {chromium} = require('playwright-core');
       if (posted.length !== 1 || posted[0].method !== 'POST' ||
           JSON.stringify(posted[0].ids) !== JSON.stringify(secondChecked) ||
           posted[0].ids.includes(firstPageId) || confirmations.length !== promptsBefore+1 ||
-          !confirmations.at(-1).includes(String(secondChecked.length)+' selected entries'))
+          !confirmations.at(-1).includes(String(secondChecked.length)+' explicitly checked Entries'))
         throw Error('Actual paged UI/post/confirmation entry mismatch: '+JSON.stringify({posted,secondChecked,firstPageId}));
       // Return through the REAL previous-page control to determine whether a
       // checkbox checked on page one remains checked after visiting page two.
@@ -259,11 +261,91 @@ const {chromium} = require('playwright-core');
         page_two_rows:pageTwoCount, page_scoped_confirmation:confirmations.at(-1),
         zip_bytes:received.length,
       }));
-      console.log('PASS_NATIVE_GF_PAGINATION_PAGE_SCOPED_DOWNLOAD page1_rows='+pageOneCount+
+      console.log('PASS_NATIVE_GF_PAGINATION_EXPLICIT_SELECTION page1_rows='+pageOneCount+
         ' page2_rows='+pageTwoCount+' page1_selected='+pageOneChecked.join(',')+
         ' page2_initial_checked='+pageTwoInitiallyChecked.join(',')+
         ' page1_retained_on_return='+pageOneRetainedOnReturn+
         ' submitted='+posted[0].ids.join(',')+' zip_bytes='+received.length);
+    } finally { fs.rmSync(marker,{force:true}); }
+
+    fs.writeFileSync(marker, 'native pagination global all matching\n');
+    try {
+    // Installed production path: user selects all matching from GFBRC's
+    // accessible companion toggle, independently of a GF header bug.
+    for (const [caseName, urlSuffix, count] of [
+      ['global154', '', 154],
+      ['global_filtered', '&field_id=5&s=group-a&operator=is', 77],
+    ]) {
+      const ids = meta.cases[caseName].entry_ids.map(Number);
+      if (ids.length !== count || new Set(ids).size !== count) throw Error('Bad global fixture');
+      const form = meta.cases[caseName].form_id;
+      await page.goto(base+'/wp-admin/admin.php?page=gf_entries&id='+form+urlSuffix,
+        {waitUntil:'domcontentloaded',timeout:25000});
+      const gfRows = page.locator('input[type="checkbox"][name="entry[]"]');
+      const visible = await gfRows.count();
+      if (visible <= 0 || visible >= count) throw Error('Native paging not active');
+      const toggle = page.locator('#gfbrc-all-matching');
+      if (await toggle.count() !== 1) throw Error('Missing independent all-matching operator control');
+      const config = await page.locator('#gfbrc-independent-flat-zip')
+        .evaluate(el => JSON.parse(el.dataset.config));
+      if (config.matchingCount !== count || !config.globalLabel.includes('500'))
+        throw Error('Displayed all-matching count/bound does not match native GF criteria');
+      let independentlyChecked = null;
+      if (caseName === 'global154') {
+        independentlyChecked = await gfRows.first().inputValue();
+        await gfRows.first().check();
+      }
+      await toggle.check();
+      if (independentlyChecked && !(await gfRows.first().isChecked()))
+        throw Error('All-matching toggle unexpectedly changed native row selection');
+      await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
+      const postsBefore = endpointSelections.length;
+      const [downloadAll] = await Promise.all([
+        page.waitForEvent('download',{timeout:35000}),
+        page.locator('#doaction').click(),
+      ]);
+      const fullPath=path.join(lab,'browser-'+caseName+'.zip');
+      await downloadAll.saveAs(fullPath);
+      const b=fs.readFileSync(fullPath);
+      if(!downloadAll.suggestedFilename().endsWith('.zip')||b[0]!==0x50||b[1]!==0x4b)
+        throw Error('Global selection did not deliver a verified browser ZIP');
+      const req = endpointSelections.at(-1);
+      if(endpointSelections.length!==postsBefore+1 || req.ids.length ||
+          req.form_id!==String(form) || req.mode!=='all_matching' || !req.scope || !req.seal ||
+          req.expected_count!==String(count) ||
+          !confirmations.at(-1).includes('ALL '+count+' Entries') ||
+          downloadAll.suggestedFilename() !== 'gfbrc-flat-'+form+'-'+count+'-entries-'+
+            (caseName==='global154'?155:78)+'-files.zip')
+        throw Error('Global browser path sent incorrect explicit ID set');
+      fs.writeFileSync(path.join(lab,'browser-'+caseName+'-selected.json'),JSON.stringify({
+        form_id:form,selected_ids:ids,zip_bytes:b.length,
+        visible_rows:visible,expected_entry_count:count,
+      }));
+      console.log('PASS_BROWSER_ALL_MATCHING_'+count+
+        ' visible='+visible+' browser_zip_bytes='+b.length+' form='+form);
+      if (independentlyChecked) {
+        await toggle.uncheck();
+        if (!(await gfRows.first().isChecked()))
+          throw Error('Unchecking all-matching erased an independent checked row');
+        const beforeExplicit = endpointSelections.length;
+        const [explicitDownload] = await Promise.all([
+          page.waitForEvent('download',{timeout:25000}),
+          page.locator('#doaction').click(),
+        ]);
+        await explicitDownload.saveAs(path.join(lab,'browser-mixed-explicit.zip'));
+        const explicitRequest = endpointSelections.at(-1);
+        if (endpointSelections.length !== beforeExplicit+1 || explicitRequest.mode !== 'explicit' ||
+            JSON.stringify(explicitRequest.ids) !== JSON.stringify([independentlyChecked]) ||
+            explicitRequest.expected_count !== null ||
+            !confirmations.at(-1).includes('1 explicitly checked Entries')) {
+          throw Error('Manual row selection did not remain independent after all-matching');
+        }
+        fs.writeFileSync(path.join(lab,'browser-mixed-explicit-selected.json'),
+          JSON.stringify({form_id:form, selected_ids:[independentlyChecked]}));
+        console.log('PASS_BROWSER_MIXED_SELECTION_GLOBAL_AND_INDEPENDENT_EXPLICIT');
+      }
+    }
+
     } finally { fs.rmSync(marker,{force:true}); }
 
     // Control: native Bulk Download must STILL work from the authentic GF

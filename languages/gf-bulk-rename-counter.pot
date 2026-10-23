@@ -6,181 +6,171 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: includes/class-settings_page.php:214
-msgid "Avoid personal data in selected fields; missing or unsafe values cause a visible ZIP preparation error."
-msgstr ""
-
-#: includes/class-settings_page.php:43
-msgid "Bulk Download Rename Settings"
-msgstr ""
-
-#: includes/class-flat_zip_download.php:403
-msgid "Cannot prepare flat ZIP: %s"
-msgstr ""
-
-#: includes/class-settings_page.php:197
-msgid "Check at least two fields and assign consecutive positions 1, 2, 3 … to control filename order."
-msgstr ""
-
-#: includes/class-settings_page.php:140
-msgid "Choose a form to edit"
-msgstr ""
-
-#: includes/class-settings_page.php:176
-msgid "Composite"
-msgstr ""
-
-#: includes/class-settings_page.php:193
-#: includes/class-settings_page.php:195
-msgid "Composite fields and order"
-msgstr ""
-
-#: includes/class-settings_page.php:210
-msgid "Composite separator"
-msgstr ""
-
-#: includes/class-settings_page.php:73
-msgid "Configure which form and which field holds the unique counter number. The downloaded files will be renamed to d[COUNTER].extension"
-msgstr ""
-
-#: includes/class-settings_page.php:58
-msgid "Counter Field ID"
-msgstr ""
-
-#: includes/class-flat_zip_download.php:24
-msgid "Download Flat ZIP with Rename (selected on this page only)"
-msgstr ""
-
-#: includes/class-flat_zip_download.php:39
-msgid "Download files from only the %d selected entries on this page? Selections made on other pages are NOT included."
-msgstr ""
-
-#: includes/class-settings_page.php:102
-msgid "Enter the ID of the field that stores the unique counter number (e.g., 5)."
-msgstr ""
-
-#: includes/class-flat_zip_download.php:93
-msgid "Flat ZIP download not available"
-msgstr ""
-
-#: includes/class-settings_page.php:153
-msgid "Form unavailable."
-msgstr ""
-
-#: gf-bulk-rename-counter.php:124
-msgid "GF Bulk Rename"
-msgstr ""
-
-#: gf-bulk-rename-counter.php:116
-msgid "Gravity Forms Bulk Rename Counter requires \"Bulk Download for Gravity Forms\" plugin to be installed and active."
-msgstr ""
-
-#: gf-bulk-rename-counter.php:108
-msgid "Gravity Forms Bulk Rename Counter requires Gravity Forms to be installed and active."
-msgstr ""
-
-#: gf-bulk-rename-counter.php:123
-#: includes/class-settings_page.php:118
-msgid "Gravity Forms Bulk Rename Settings"
-msgstr ""
-
-#: includes/class-flat_zip_download.php:356
-msgid "Invalid download request"
-msgstr ""
-
-#: includes/class-flat_zip_download.php:366
-msgid "Invalid or duplicate entry selection"
-msgstr ""
-
-#: includes/class-settings_page.php:174
-msgid "Legacy (existing counter configuration)"
-msgstr ""
-
-#: includes/class-settings_page.php:134
-msgid "Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients."
-msgstr ""
-
-#: includes/class-settings_page.php:182
-msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."
-msgstr ""
-
-#: includes/class-settings_page.php:170
-msgid "Naming method"
-msgstr ""
-
-#: includes/class-form_naming_rules.php:147
-msgid "Naming rule not saved: %s"
-msgstr ""
-
-#: includes/class-flat_zip_download.php:351
-msgid "Not authorized"
-msgstr ""
-
-#: includes/class-settings_page.php:148
-msgid "Open form rule"
-msgstr ""
-
-#: includes/class-flat_zip_download.php:350
-msgid "POST required"
-msgstr ""
-
-#: includes/class-settings_page.php:133
-msgid "Per-form naming (independent flat ZIP only)"
-msgstr ""
-
-#: includes/class-settings_page.php:204
-msgid "Position"
-msgstr ""
-
-#: includes/class-settings_page.php:216
-msgid "Save this form rule"
-msgstr ""
-
-#: includes/class-settings_page.php:93
-msgid "Select a specific Gravity Form or leave as \"All forms\"."
-msgstr ""
-
-#: includes/class-flat_zip_download.php:38
-msgid "Select at least one entry on this page."
-msgstr ""
-
-#: includes/class-flat_zip_download.php:360
-msgid "Select between 1 and 500 entries"
-msgstr ""
-
-#: includes/class-settings_page.php:175
-msgid "Single Field"
-msgstr ""
-
-#: includes/class-settings_page.php:185
-msgid "Single Field source"
-msgstr ""
-
-#: includes/class-settings_page.php:50
-msgid "Target Form"
-msgstr ""
-
-#: includes/class-settings_page.php:173
-msgid "Use existing Legacy defaults (remove override)"
-msgstr ""
-
-#: includes/class-settings_page.php:107
-msgid "Warning: This field ID does not exist in the selected form."
-msgstr ""
-
-#: includes/class-settings_page.php:114
-msgid "You do not have sufficient permissions to access this page."
-msgstr ""
-
-#: includes/class-settings_page.php:86
 msgid "— Apply to all forms —"
 msgstr ""
 
-#: includes/class-settings_page.php:187
 msgid "— Choose a text or number field —"
 msgstr ""
 
-#: includes/class-settings_page.php:142
 msgid "— Select a form —"
+msgstr ""
+
+msgid "All matching Entries (Flat ZIP only; maximum 500)"
+msgstr ""
+
+msgid "Ambiguous Entry selection"
+msgstr ""
+
+msgid "Avoid personal data in selected fields; missing or unsafe values cause a visible ZIP preparation error."
+msgstr ""
+
+msgid "Bulk Download Rename Settings"
+msgstr ""
+
+msgid "Cannot prepare flat ZIP: %s"
+msgstr ""
+
+msgid "Cannot resolve all matching Entries: %s"
+msgstr ""
+
+msgid "Check at least two fields and assign consecutive positions 1, 2, 3 … to control filename order."
+msgstr ""
+
+msgid "Choose a form to edit"
+msgstr ""
+
+msgid "Composite"
+msgstr ""
+
+msgid "Composite fields and order"
+msgstr ""
+
+msgid "Composite separator"
+msgstr ""
+
+msgid "Configure which form and which field holds the unique counter number. The downloaded files will be renamed to d[COUNTER].extension"
+msgstr ""
+
+msgid "Counter Field ID"
+msgstr ""
+
+msgid "Download eligible files from %d explicitly checked Entries on this page? File count may differ."
+msgstr ""
+
+msgid "Download eligible files from ALL %d Entries matching this form and its current filters/search, across every page? Individually checked rows do not limit this choice. Maximum 500 Entries per ZIP; the server rechecks the count before download."
+msgstr ""
+
+msgid "Download Flat ZIP with Rename"
+msgstr ""
+
+msgid "Enter the ID of the field that stores the unique counter number (e.g., 5)."
+msgstr ""
+
+msgid "Flat ZIP download not available"
+msgstr ""
+
+msgid "Form unavailable."
+msgstr ""
+
+msgid "GF Bulk Rename"
+msgstr ""
+
+msgid "Gravity Forms Bulk Rename Counter requires \"Bulk Download for Gravity Forms\" plugin to be installed and active."
+msgstr ""
+
+msgid "Gravity Forms Bulk Rename Counter requires Gravity Forms to be installed and active."
+msgstr ""
+
+msgid "Gravity Forms Bulk Rename Settings"
+msgstr ""
+
+msgid "Invalid download request"
+msgstr ""
+
+msgid "Invalid Entry List filter"
+msgstr ""
+
+msgid "Invalid Entry List scope"
+msgstr ""
+
+msgid "Invalid or duplicate Entry selection"
+msgstr ""
+
+msgid "Invalid or forged Entry List scope"
+msgstr ""
+
+msgid "Invalid selection mode"
+msgstr ""
+
+msgid "Legacy (existing counter configuration)"
+msgstr ""
+
+msgid "Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients."
+msgstr ""
+
+msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."
+msgstr ""
+
+msgid "More than 500 Entries match. Narrow the current search or filters before downloading."
+msgstr ""
+
+msgid "Naming method"
+msgstr ""
+
+msgid "Naming rule not saved: %s"
+msgstr ""
+
+msgid "No Entries match the current form and filters."
+msgstr ""
+
+msgid "Not authorized"
+msgstr ""
+
+msgid "Open form rule"
+msgstr ""
+
+msgid "Per-form naming (independent flat ZIP only)"
+msgstr ""
+
+msgid "Position"
+msgstr ""
+
+msgid "POST required"
+msgstr ""
+
+msgid "Save this form rule"
+msgstr ""
+
+msgid "Select a specific Gravity Form or leave as \"All forms\"."
+msgstr ""
+
+msgid "Select at least one Entry or choose all matching Entries."
+msgstr ""
+
+msgid "Select between 1 and 500 Entries"
+msgstr ""
+
+msgid "Selected form unavailable"
+msgstr ""
+
+msgid "Single Field"
+msgstr ""
+
+msgid "Single Field source"
+msgstr ""
+
+msgid "Target Form"
+msgstr ""
+
+msgid "This search/filter URL is not supported for a safe global download."
+msgstr ""
+
+msgid "Use existing Legacy defaults (remove override)"
+msgstr ""
+
+msgid "Warning: This field ID does not exist in the selected form."
+msgstr ""
+
+msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
