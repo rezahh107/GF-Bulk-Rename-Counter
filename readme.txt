@@ -34,7 +34,9 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 == Changelog ==
 
 = 2.1.1 =
-* Release candidate; see reviewed GitHub changes for details.
+* Fix independent Flat ZIP selection across Gravity Forms Entry List pages with an explicit All matching Entries option for the current form, search and filters (maximum 500 Entries per request).
+* Preserve manually checked current-page selection and the existing Legacy, Single Field, Composite and native Bulk Download workflows.
+* Reject invalid or changed matching scopes and oversized requests before sending a partial ZIP; distinguish selected Entry count from ZIP file count.
 
 = 2.1.0 =
 * Add a separate, verified flat ZIP download with integrity checks and safe filename collision handling.
