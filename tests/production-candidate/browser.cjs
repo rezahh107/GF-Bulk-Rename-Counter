@@ -24,7 +24,7 @@ const {chromium} = require('playwright-core');
     page.on('dialog', async d => {
       diagnostic.push('dialog='+d.message());
       if (d.type() === 'confirm') {
-        if (!d.message().includes('explicitly selected Entries') && !d.message().includes('ALL Entries matching'))
+        if (!d.message().includes('explicitly checked Entries') && !d.message().includes('ALL Entries matching'))
           throw Error('Unclear explicit/global download confirmation: '+d.message());
         if (cancelNext) { cancelNext = false; cancellations++; await d.dismiss(); }
         else { confirmations.push(d.message()); await d.accept(); }
@@ -241,7 +241,7 @@ const {chromium} = require('playwright-core');
       if (posted.length !== 1 || posted[0].method !== 'POST' ||
           JSON.stringify(posted[0].ids) !== JSON.stringify(secondChecked) ||
           posted[0].ids.includes(firstPageId) || confirmations.length !== promptsBefore+1 ||
-          !confirmations.at(-1).includes(String(secondChecked.length)+' explicitly selected Entries'))
+          !confirmations.at(-1).includes(String(secondChecked.length)+' explicitly checked Entries'))
         throw Error('Actual paged UI/post/confirmation entry mismatch: '+JSON.stringify({posted,secondChecked,firstPageId}));
       // Return through the REAL previous-page control to determine whether a
       // checkbox checked on page one remains checked after visiting page two.
