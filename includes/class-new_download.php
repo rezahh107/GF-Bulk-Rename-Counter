@@ -400,9 +400,13 @@ final class New_Download {
             if ($op['zero'] || !in_array($op['status'], ['prepared', 'ready'], true)) {
                 throw new RuntimeException('NEW download generation is no longer active');
             }
-            $op['zip_sha'] = $sha;
-            $op['status'] = 'ready';
-            self::update_pending($form, $op);
+            // Retrying the exact same verified ZIP may legitimately be a
+            // no-op; generation validation is still enforced by FOR UPDATE.
+            if ($op['status'] !== 'ready' || !hash_equals((string)$op['zip_sha'], $sha)) {
+                $op['zip_sha'] = $sha;
+                $op['status'] = 'ready';
+                self::update_pending($form, $op);
+            }
             if ($wpdb->query('COMMIT') === false) {
                 throw new RuntimeException('NEW download generation COMMIT failed');
             }
