@@ -380,5 +380,11 @@ const {chromium} = require('playwright-core');
     console.log('PASS_REAL_CHROMIUM_NATIVE_BULK_DOWNLOAD_UNCHANGED entry='+nativeEntry+
       ' zip_bytes='+nBytes.length);
     await context.close();
+    // Same pinned installed WordPress ZIP; the NEW browser exercise runs
+    // only after the existing Legacy/Selected/all-matching regressions passed.
+    require('node:child_process').execFileSync(process.execPath,
+      [path.join(__dirname, 'new-browser.cjs')], {
+        stdio:'inherit', env:process.env, timeout:240000
+      });
   } finally {await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1);});
