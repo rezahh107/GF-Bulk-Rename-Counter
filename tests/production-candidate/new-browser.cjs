@@ -66,6 +66,21 @@ const {chromium} = require('playwright-core');
       return data;
     }
     async function receive(label) {
+      const candidate=page.locator('#gfbrc-new-download');
+      await candidate.scrollIntoViewIfNeeded();
+      const hit=await candidate.evaluate(el=>{
+        const r=el.getBoundingClientRect();
+        const x=r.left+r.width/2,y=r.top+r.height/2;
+        const above=document.elementFromPoint(x,y);
+        const info=node=>node?{tag:node.tagName,id:node.id,cls:String(node.className).slice(0,100)}:null;
+        return {button:info(el),atCenter:info(above),
+          selfHit:above===el||el.contains(above),
+          rect:{x:r.x,y:r.y,width:r.width,height:r.height},
+          hidden:el.hidden,disabled:el.disabled,
+          parent:info(el.parentElement),
+          ancestors:[el.parentElement,el.parentElement?.parentElement].map(info)};
+      });
+      console.log('NEW_BROWSER_DOWNLOAD_HITTEST',JSON.stringify(hit));
       const response=page.waitForResponse(r=>r.url().includes('admin-ajax.php') &&
         r.request().postData()?.includes('action=gfbrc_new_download'),{timeout:45000});
       const [download]=await Promise.all([
