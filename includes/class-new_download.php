@@ -153,11 +153,14 @@ final class New_Download {
                 throw new RuntimeException('Invalid GF Entry identity for upload lock');
             }
             $rows = $wpdb->get_results($wpdb->prepare(
-                "SELECT id FROM {$table} FORCE INDEX (\`{$index}\`)
+                "SELECT id FROM {$table} FORCE INDEX (`{$index}`)
                  WHERE entry_id = %d FOR UPDATE",
                 $entry_id
             ), ARRAY_A);
-            if (!is_array($rows)) {
+            // WPDB may return an empty array on SQL failure as well as for
+            // a legitimate absent-field range. Never mistake an invalid
+            // locking statement for a successfully protected empty gap.
+            if (!is_array($rows) || $wpdb->last_error !== '') {
                 throw new RuntimeException('Unable to lock GF upload rows and insertion gap');
             }
         }
