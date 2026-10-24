@@ -401,7 +401,7 @@ final class New_Download {
             'url' => admin_url('admin-ajax.php'),
         ]);
         echo '<script id="gfbrc-new-config" type="application/json">' .
-            esc_html($config) . '</script>';
+            wp_json_encode(json_decode($config, true), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>';
         ?>
 <script id="gfbrc-new-workflow">
 (function () {
