@@ -155,6 +155,88 @@ const {chromium} = require('playwright-core');
     await confirm();
     console.log('PASS_NEW_BROWSER_UNACKNOWLEDGED_RETRY_NO_SILENT_SKIP');
 
+    // Genuine late-commit counterexample: the lower allocated GF Entry ID
+    // remains uncommitted while a higher Entry is downloaded and acknowledged.
+    // Exact known identities, unlike max-ID frontiers, must recover it.
+    const barrier=path.join(lab,'new-delayed-commit');
+    for(const suffix of ['.ready','.go']) {
+      try {fs.unlinkSync(barrier+suffix);} catch(e) {if(e.code!=='ENOENT')throw e;}
+    }
+    const child=cp.spawn('php',[wpcli,'--path='+wp,'--user=bootstrap_admin',
+      'eval-file','tests/production-candidate/new-delayed-worker.php'],{
+      env:{...process.env,BRC_NEW_BARRIER:barrier},stdio:['ignore','pipe','pipe']});
+    let output='',errors='';
+    child.stdout.on('data',b=>{output+=String(b);});
+    child.stderr.on('data',b=>{errors+=String(b);});
+    let lower;
+    try {
+      const deadline=Date.now()+30000;
+      while(!fs.existsSync(barrier+'.ready')) {
+        if(Date.now()>deadline||child.exitCode!==null)throw Error('Delayed GF writer failed: '+errors);
+        await new Promise(resolve=>setTimeout(resolve,75));
+      }
+      lower=Number(fs.readFileSync(barrier+'.ready','utf8'));
+      const higher=mutate('add_backdated').id;
+      if(!(higher>lower))throw Error('Real delayed GF IDs not ordered as intended '+lower+'/'+higher);
+      await open(); await pending(1,1);
+      await receive('high-before-low'); await confirm();
+      fs.writeFileSync(barrier+'.go','commit');
+      await new Promise((resolve,reject)=>{
+        if(child.exitCode!==null) return child.exitCode===0?resolve():reject(Error(errors));
+        const timer=setTimeout(()=>{child.kill();reject(Error('Delayed writer exit timeout'));},15000);
+        child.once('close',code=>{clearTimeout(timer);code===0?resolve():reject(Error(errors));});
+      });
+      if(!output.includes('PASS_REAL_GF_DELAYED_NEW_COMMIT'))throw Error('No real delayed commit oracle: '+output);
+      await open(); await pending(1,1);
+      await receive('late-lower-id'); await confirm();
+      console.log('PASS_NEW_BROWSER_DELAYED_LOWER_ID_RESCUED lower='+lower+' higher='+higher);
+    } finally {
+      fs.writeFileSync(barrier+'.go','release');
+      if(child.exitCode===null)child.kill();
+    }
+
+    // A separate new pending operation in another real browser tab invalidates
+    // the original tab token; no stale confirmation may advance coverage.
+    mutate('add_backdated');
+    await open();
+    await pending(1,1); await receive('stale-tab');
+    const beforeRace=mutate('read_coverage').state.rev;
+    const secondTab=await context.newPage();
+    try {
+      await secondTab.goto(base+'/wp-admin/admin.php?page=gf_entries&id='+form,
+        {waitUntil:'domcontentloaded',timeout:25000});
+      await secondTab.locator('#gfbrc-new-prepare').click();
+      await secondTab.locator('#gfbrc-new-result').filter({hasText:'1 Entries / 1 eligible files'}).waitFor();
+      await page.locator('#gfbrc-new-review').check();
+      await page.locator('#gfbrc-new-ack').click();
+      await page.locator('#gfbrc-new-result').filter({hasText:'expired or replaced'}).waitFor();
+      if(mutate('read_coverage').state.rev!==beforeRace)throw Error('Stale tab advanced coverage');
+      const [tabSaved]=await Promise.all([
+        secondTab.waitForEvent('download',{timeout:45000}),
+        secondTab.locator('#gfbrc-new-download').click()
+      ]);
+      await tabSaved.saveAs(path.join(lab,'new-race-winner.zip'));
+      await secondTab.locator('#gfbrc-new-result').filter({hasText:'SHA-256 matched'}).waitFor();
+      await secondTab.locator('#gfbrc-new-review').check();
+      await secondTab.locator('#gfbrc-new-ack').click();
+      await secondTab.locator('#gfbrc-new-result').filter({hasText:'NEW acknowledged'}).waitFor();
+      if(mutate('read_coverage').state.rev!==beforeRace+1)throw Error('Fresh second tab failed to persist');
+      console.log('PASS_NEW_BROWSER_TWO_TABS_STALE_REJECTED_FRESH_CONFIRMED');
+    } finally {await secondTab.close();}
+
+    // Missing upload must fail visibly before ZIP and before any checkpoint.
+    mutate('add_missing');
+    await open();
+    const revBeforeBad=mutate('read_coverage').state.rev;
+    const failure=page.waitForResponse(r=>r.url().includes('admin-ajax.php') &&
+      r.request().postData()?.includes('action=gfbrc_new_prepare'),{timeout:30000});
+    await page.locator('#gfbrc-new-prepare').click();
+    const bad=await failure;
+    const badJson=await bad.json();
+    if(bad.status()===200||badJson.success)throw Error('Missing upload silently admitted');
+    if(mutate('read_coverage').state.rev!==revBeforeBad)throw Error('Missing upload advanced coverage');
+    console.log('PASS_NEW_BROWSER_MISSING_SOURCE_REJECTED_NO_CHECKPOINT');
+
     fs.writeFileSync(path.join(lab,'new-browser-summary.json'),JSON.stringify({
       initial:{entries:154,files:155,sha:firstZip.sha,bytes:firstZip.bytes},
       incremental:{entries:2,files:1,sha:incZip.sha,bytes:incZip.bytes},
