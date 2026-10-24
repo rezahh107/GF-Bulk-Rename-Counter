@@ -29,6 +29,7 @@ jobs:
       BRC_TAG: v2.1.1
       BRC_VERSION: 2.1.1
       BRC_RELEASE_COMMIT: b9e86d15f04a030f1a4c75abc2491461e75022dd
+      BRC_TAG_OBJECT_SHA: 1bb05cc4e264f9f82ff24529a80c4fb6b7b0c0f7
       BRC_ZIP_SHA256: a57b5bf3c9be6bbe6bd13af7dc415f98dba62c14e57bc0349cdf48820ff7ab39
       BRC_CANDIDATE_BRANCH: release-candidate/v2.1.1-from-8c1e65886a28ccc677f230ebf01c4a6fc9d1ee5b
     services:
@@ -71,11 +72,7 @@ jobs:
           test "$(git rev-parse "refs/tags/$BRC_TAG^{tree}")" = "50b98d9dc36a5ca094630d9f6febc3f355552c97"
           # Inspect the authoritative GitHub annotated-tag object, not an eventually-consistent
           # peeled ls-remote result immediately after a freshly published tag.
-          remote_type="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.type')"
-          test "$remote_type" = tag
-          remote_tag="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.sha')"
-          test "$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$remote_tag" --jq '.object.type')" = commit
-          test "$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$remote_tag" --jq '.object.sha')" = "$BRC_RELEASE_COMMIT"
+          bash scripts/release/verify-published-tag.sh
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$BRC_TAG" > "$RUNNER_TEMP/release.json"
           jq -e --arg v "$BRC_TAG" --arg digest "sha256:$BRC_ZIP_SHA256" '
             .tag_name == $v and .draft == false and .prerelease == false
@@ -130,9 +127,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
           test -f release/candidate.json
-          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.type')" = tag
-          remote_tag="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$BRC_TAG" --jq '.object.sha')"
-          test "$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$remote_tag" --jq '.object.sha')" = "$BRC_RELEASE_COMMIT"
+          bash scripts/release/verify-published-tag.sh
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm release/candidate.json
