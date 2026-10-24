@@ -88,7 +88,7 @@ const {chromium} = require('playwright-core');
     }
     const old=mutate('mark_old_inactive');
     await open();
-    const initial=await pending(153,155);
+    const initial=await pending(154,155);
     if(!initial.first)throw Error('First-use baseline advanced automatically');
     const baseline=mutate('read_coverage').state;
     if(!baseline||baseline.rev!==0||baseline.known.length!==0)
@@ -97,7 +97,7 @@ const {chromium} = require('playwright-core');
     if(mutate('read_coverage').state.rev!==0)throw Error('ZIP download automatically advanced NEW');
     await confirm();
     if(mutate('read_coverage').state.rev!==1)throw Error('Initial acknowledgment not durable');
-    console.log('PASS_NEW_BROWSER_INITIAL_PENDING_EXPLICIT_ACK entries=153 files=155 sha='+firstZip.sha);
+    console.log('PASS_NEW_BROWSER_INITIAL_PENDING_EXPLICIT_ACK entries=154 files=155 sha='+firstZip.sha);
 
     mutate('restore_old_with_upload');
     const fresh=mutate('add_backdated'), zero=mutate('add_zero');
@@ -153,7 +153,7 @@ const {chromium} = require('playwright-core');
     console.log('PASS_NEW_BROWSER_UNACKNOWLEDGED_RETRY_NO_SILENT_SKIP');
 
     fs.writeFileSync(path.join(lab,'new-browser-summary.json'),JSON.stringify({
-      initial:{entries:153,files:155,sha:firstZip.sha,bytes:firstZip.bytes},
+      initial:{entries:154,files:155,sha:firstZip.sha,bytes:firstZip.bytes},
       incremental:{entries:2,files:1,sha:incZip.sha,bytes:incZip.bytes},
       backdated_new_entry:fresh.id,old_reactivated_entry:old.id,zero_file_entry:zero.id,
       acknowledgment:'real authenticated browser requests; synthetic operator clicked receipt checkbox'
