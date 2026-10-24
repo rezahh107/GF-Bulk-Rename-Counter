@@ -32,7 +32,7 @@ class PublishedRecoverySafety(unittest.TestCase):
         self.assertIn("git worktree add --detach", text)
         self.assertIn('--expected-head "$BRC_RELEASE_COMMIT"', text)
         self.assertIn("cmp \"$rebuilt/$z\" \"$dest/$z\"", text)
-        self.assertIn('gh api "repos/$GITHUB_REPOSITORY/git/tags/$remote_tag"', text)
+        self.assertIn("bash scripts/release/verify-published-tag.sh", text)
         self.assertNotIn('ls-remote --tags origin "refs/tags/$BRC_TAG^{}"', text)
 
     def test_candidate_marker_cannot_be_retired_before_real_install(self):
