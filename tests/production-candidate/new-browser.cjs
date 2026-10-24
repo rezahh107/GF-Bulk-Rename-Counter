@@ -213,7 +213,7 @@ const {chromium} = require('playwright-core');
       await secondTab.locator('#gfbrc-new-result').filter({hasText:'1 Entries / 1 eligible files'}).waitFor();
       await page.locator('#gfbrc-new-review').check();
       await page.locator('#gfbrc-new-ack').click();
-      await page.locator('#gfbrc-new-result').filter({hasText:'expired or replaced'}).waitFor();
+      await page.locator('#gfbrc-new-result').filter({hasText:'expired or superseded'}).waitFor();
       if(mutate('read_coverage').state.rev!==beforeRace)throw Error('Stale tab advanced coverage');
       const [tabSaved]=await Promise.all([
         secondTab.waitForEvent('download',{timeout:45000}),
