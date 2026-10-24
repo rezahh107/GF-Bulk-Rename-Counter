@@ -336,6 +336,8 @@ jobs:
           node --check tests/production-candidate/all-browser.cjs
           python3 -m py_compile tests/production-candidate/all-assert.py
           BRC_CHROME="$chrome" node tests/production-candidate/all-browser.cjs
+          php -l tests/production-candidate/all-resource-check.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/all-resource-check.php
           # Required GF/WordPress scripts must execute, not just appear in DOM.
           node --check tests/production-candidate/script-fidelity.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/script-fidelity.cjs
