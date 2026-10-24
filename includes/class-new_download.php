@@ -416,7 +416,6 @@ final class New_Download {
         if (!$form) { return; }
         $config = wp_json_encode([
             'form' => $form, 'nonce' => wp_create_nonce('gfbrc_new_' . $form),
-            'url' => admin_url('admin-ajax.php'),
         ]);
         echo '<script id="gfbrc-new-config" type="application/json">' .
             wp_json_encode(json_decode($config, true), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>';
@@ -428,6 +427,9 @@ final class New_Download {
   var apply = document.getElementById('doaction');
   if (!source || !apply) return;
   var cfg = JSON.parse(source.textContent);
+  // Use the actual native Entry List admin path. WP's admin_url can contain
+  // mismatched site-directory rewriting in the pinned CI installation.
+  cfg.url = new URL('admin-ajax.php', window.location.href).href;
   var panel = document.createElement('section');
   panel.id = 'gfbrc-new-panel';
   panel.style.cssText = 'display:inline-block;vertical-align:middle;margin:10px;padding:10px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
