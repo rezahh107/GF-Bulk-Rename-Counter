@@ -90,7 +90,7 @@ class ExecutedTagIdentityGates(unittest.TestCase):
             "base": {"commit": "8c1e65886a28ccc677f230ebf01c4a6fc9d1ee5b"}
         }))
         z = "gf-bulk-rename-counter-2.1.1.zip"
-        (self.root / "release.json").write_text(json.dumps({
+        (self.root / "mock-release.json").write_text(json.dumps({
             "tag_name": "v2.1.1", "draft": False, "prerelease": False,
             "assets": [
                 {"name": z, "digest": "sha256:a57b5bf3c9be6bbe6bd13af7dc415f98dba62c14e57bc0349cdf48820ff7ab39"},
@@ -150,7 +150,7 @@ esac
             "RUNNER_TEMP": str(self.root),
             "GITHUB_STEP_SUMMARY": str(self.root / "summary"),
             "MOCK_GIT_EFFECTS": str(self.root / "effects"),
-            "MOCK_RELEASE_JSON": str(self.root / "release.json"),
+            "MOCK_RELEASE_JSON": str(self.root / "mock-release.json"),
             "MOCK_REF_TYPE": "tag",
             "MOCK_REF_SHA": self.PINNED_OBJECT,
             "MOCK_OBJECT_SHA": self.PINNED_OBJECT,
