@@ -303,7 +303,7 @@ final class New_Download {
                 fclose($handle);
                 throw new RuntimeException('Unable to bind verified ZIP to pending NEW operation');
             }
-            Flat_Zip_Download::clear_output_buffers();
+            Flat_Zip_Download::prepare_output_buffers_for_new();
             if (headers_sent()) { fclose($handle); throw new RuntimeException('NEW ZIP headers unavailable'); }
             nocache_headers();
             header('Cache-Control: private, no-store, max-age=0');
