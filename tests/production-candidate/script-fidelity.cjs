@@ -79,6 +79,8 @@ const {chromium}=require('playwright-core');
     jquery:typeof window.jQuery,
     wp:typeof window.wp,
     gf_global:typeof window.gf_global,
+    gform:typeof window.gform,
+    gform_addAction:typeof window.gform?.addAction,
     new_prepare_present:!!document.querySelector('#gfbrc-new-prepare'),
     new_ack_present:!!document.querySelector('#gfbrc-new-ack'),
     entry_rows:document.querySelectorAll('tr[id*="lead_row"], tr[id*="entry_row"]').length,
@@ -99,7 +101,12 @@ const {chromium}=require('playwright-core');
   if(report.pageerrors.length!==0)report.failures.push('Uncaught JavaScript page errors');
   if(report.runtime.jquery!=='function')report.failures.push('jQuery global unavailable');
   if(report.runtime.wp!=='object')report.failures.push('WordPress wp global unavailable');
-  if(report.runtime.gf_global==='undefined')report.failures.push('Gravity Forms admin runtime unavailable');
+  // Gravity Forms exposes the documented gform JS API; the legacy
+  // gf_global is not required on every admin screen in GF 3.1.1.1.
+  if(!['object','function'].includes(report.runtime.gform))
+    report.failures.push('Documented Gravity Forms gform runtime unavailable');
+  if(report.runtime.gform_addAction!=='function')
+    report.failures.push('Gravity Forms hook API unavailable');
   if(!report.runtime.native_bulk_selects.length)report.failures.push('Native GF bulk selectors missing');
   const failed=report.script_responses.filter(x=>x.starts_html||x.status>=400);
   console.log('PASS_NATIVE_SCRIPT_FIDELITY_SUMMARY',JSON.stringify(report.summary));
