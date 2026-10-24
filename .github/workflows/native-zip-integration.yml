@@ -162,7 +162,11 @@ jobs:
         run: |
           set -euo pipefail
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/create-http-auth.php
-          php "$BRC_WP_CLI" server --path="$BRC_WP_PATH" --host=127.0.0.1 --port=8080 >"$BRC_LAB_DIR/http-server.log" 2>&1 &
+          # The WP-CLI server router exposes script paths with an erroneous
+          # /brc-wordpress/ prefix under this synthetic docroot. PHP's
+          # built-in static-file server with an explicit document root resolves
+          # genuine WP/GF scripts at /wp-admin, /wp-includes, /wp-content.
+          php -S 127.0.0.1:8080 -t "$BRC_WP_PATH" >"$BRC_LAB_DIR/http-server.log" 2>&1 &
           for i in $(seq 1 30); do
             if curl -fsS "$BRC_BASE_URL/wp-login.php" -o /dev/null; then break; fi
             sleep 1
@@ -424,6 +428,9 @@ jobs:
           test -n "$chrome"
           BRC_CHROME="$chrome" node tests/qualification/qf-browser.cjs
           python3 tests/qualification/qf-runtime.py
+          php -l tests/qualification/qf-meta-probe.php
+          python3 -m py_compile tests/qualification/qf-meta-lock.py
+          python3 tests/qualification/qf-meta-lock.py
           echo 'QF qualification evidence recorded; installed production PHP restored.'
 
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
@@ -478,6 +485,7 @@ jobs:
           path: |
             /tmp/brc-lab/reports/qf-runtime-results.json
             /tmp/brc-lab/reports/qf-browser-network.json
+            /tmp/brc-lab/reports/qf-meta-lock-results.json
             /tmp/brc-lab/reports/package-identities.txt
 
       - name: Summarize qualification evidence
