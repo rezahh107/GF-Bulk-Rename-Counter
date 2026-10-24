@@ -435,6 +435,21 @@ jobs:
           python3 tests/qualification/qf-meta-lock.py
           echo 'PASS_NEW_EXACT_GFP_META_LOCK_AND_SNAPSHOT_CONTRACT'
 
+      - name: Qualify status mutation across genuine ACK commit boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Contract: baseline candidate ZIP is untouched. The actual
+          # installed class is temporarily instrumented, then byte-restored.
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)(tests/qualification|qf-status)'; then
+            echo 'Qualification-only worker unexpectedly included in release ZIP' >&2
+            exit 1
+          fi
+          php -l tests/qualification/qf-status-worker.php
+          python3 -m py_compile tests/qualification/qf-status-race.py
+          python3 tests/qualification/qf-status-race.py
+          echo 'PASS_STATUS_ACK_CUTOFF_AUTHENTIC_GFAPI_INDEPENDENT_PROCESS'
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
@@ -488,6 +503,7 @@ jobs:
             /tmp/brc-lab/reports/native-script-fidelity.json
             /tmp/brc-lab/reports/qf-runtime-results.json
             /tmp/brc-lab/reports/qf-meta-lock-results.json
+            /tmp/brc-lab/reports/qf-status-ack-cutoff.json
             /tmp/brc-lab/reports/package-identities.txt
 
       - name: Summarize qualification evidence
