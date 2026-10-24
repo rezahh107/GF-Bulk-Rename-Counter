@@ -41,4 +41,16 @@ for filename, expected in [
                 found[sha.hexdigest()] += 1
         if found != collections.Counter({source_hash: expected}):
             raise AssertionError(f"{filename}: missing/corrupted source occurrences")
+    if filename.startswith("all-large-"):
+        # Every eligible Entry identity must be represented; equal source
+        # hashes alone would not detect replacing one Entry with another.
+        fixture = json.loads((lab / "all-independent-form.json").read_text())
+        assert len(fixture["ids"]) == 503
+        natural = "single-a.jpg"
+        assert natural in names, f"{filename}: missing natural source name"
+        assert "single-a-" + str(fixture["ids"][1]) + "-1.jpg" in names, f"{filename}: lost multi-file occurrence"
+        for entry_id in fixture["ids"][1:]:
+            expected_name = "single-a-" + str(entry_id) + ".jpg"
+            assert expected_name in names, f"{filename}: omitted Entry {entry_id}"
+        assert all(str(fixture["inactive"]) not in item for item in names), f"{filename}: ineligible spam Entry included"
     print(f"PASS_ALL_SAVED_ZIP_MATCHES_SOURCE_SHA256 {filename} entries={expected} source_bytes={source_size}")
