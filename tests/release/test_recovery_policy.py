@@ -82,6 +82,8 @@ class ExecutedTagIdentityGates(unittest.TestCase):
         dst = self.root / "scripts/release/verify-published-tag.sh"
         dst.parent.mkdir(parents=True)
         shutil.copyfile(helper, dst)
+        shutil.copyfile(ROOT / "scripts/release/verify-published-release.sh",
+                        self.root / "scripts/release/verify-published-release.sh")
         marker = self.root / "release/candidate.json"
         marker.parent.mkdir()
         marker.write_text(json.dumps({
