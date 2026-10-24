@@ -435,6 +435,21 @@ jobs:
           python3 tests/qualification/qf-meta-lock.py
           echo 'PASS_NEW_EXACT_GFP_META_LOCK_AND_SNAPSHOT_CONTRACT'
 
+      - name: Falsify status changes across actual NEW ACK commit boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Runner-only barrier. Never include status worker or instrumentation
+          # in the canonical installable plugin ZIP.
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)(tests/qualification|qf-status)'; then
+            echo 'Status qualification files leaked into distribution' >&2
+            exit 1
+          fi
+          php -l tests/qualification/qf-status-worker.php
+          python3 -m py_compile tests/qualification/qf-status-race.py
+          python3 tests/qualification/qf-status-race.py
+          echo 'PASS_REAL_PRODUCTION_ACK_STATUS_ROW_LOCK_BARRIER'
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
@@ -488,6 +503,7 @@ jobs:
             /tmp/brc-lab/reports/native-script-fidelity.json
             /tmp/brc-lab/reports/qf-runtime-results.json
             /tmp/brc-lab/reports/qf-meta-lock-results.json
+            /tmp/brc-lab/reports/qf-status-ack-cutoff.json
             /tmp/brc-lab/reports/package-identities.txt
 
       - name: Summarize qualification evidence
