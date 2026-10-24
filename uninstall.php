@@ -14,3 +14,8 @@ $keys = $wpdb->get_col( $wpdb->prepare(
     $wpdb->esc_like( 'gfbrc_new_coverage_' ) . '%'
 ) );
 foreach ( $keys as $key ) { delete_option( $key ); }
+$pending_keys = $wpdb->get_col( $wpdb->prepare(
+    "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s",
+    $wpdb->esc_like( 'gfbrc_new_pending_' ) . '%'
+) );
+foreach ( $pending_keys as $key ) { delete_option( $key ); }
