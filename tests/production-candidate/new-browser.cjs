@@ -122,11 +122,39 @@ const {chromium} = require('playwright-core');
     if(mutate('read_coverage').state.rev!==1)throw Error('Initial acknowledgment not durable');
     console.log('PASS_NEW_BROWSER_INITIAL_PENDING_EXPLICIT_ACK entries=154 files=155 sha='+firstZip.sha);
 
+    // Operator sequence: NEW acknowledgment → independent ALL → subsequent NEW.
+    // Both the coverage revision and the exact pending operation must survive.
+    const afterAckCoverage=JSON.stringify(mutate('read_coverage').state);
+    const afterAckPending=JSON.stringify(mutate('read_pending').state);
+    const allPanel=page.locator('#gfbrc-all-prepare');
+    if(await allPanel.count()!==1)throw Error('Dedicated ALL panel absent in Entries');
+    const previewResponse=page.waitForResponse(r=>r.url().includes('admin-ajax.php') &&
+      r.request().postData()?.includes('action=gfbrc_all_prepare'),{timeout:45000});
+    await allPanel.click();
+    const allPreview=await (await previewResponse).json();
+    if(!allPreview.success||allPreview.data.entries!==154||
+       allPreview.data.files!==155||allPreview.data.zero_entries!==1) {
+      throw Error('ALL preview wrong after NEW acknowledgment '+JSON.stringify(allPreview));
+    }
+    await page.locator('#gfbrc-all-result').filter({hasText:'154 active Entries / 155 eligible files'}).waitFor();
+    page.once('dialog',dialog=>dialog.accept());
+    const [allFile]=await Promise.all([
+      page.waitForEvent('download',{timeout:60000}),
+      page.locator('#gfbrc-all-download').click()
+    ]);
+    await allFile.saveAs(path.join(lab,'new-all-after-ack.zip'));
+    if(JSON.stringify(mutate('read_coverage').state)!==afterAckCoverage ||
+       JSON.stringify(mutate('read_pending').state)!==afterAckPending) {
+      throw Error('ALL unexpectedly mutated NEW known/covered/pending/ack state');
+    }
+    console.log('PASS_NEW_ACK_THEN_ALL_NO_INCREMENTAL_STATE_CHANGE');
+
     mutate('restore_old_with_upload');
     const fresh=mutate('add_backdated'), zero=mutate('add_zero');
     if(!fresh.backdated||fresh.id<=old.id||zero.id<=fresh.id)throw Error('GF chronology fixture invalid');
     await open();
     const inc=await pending(2,1,1);
+    console.log('PASS_NEW_SELECTION_AFTER_ALL_STILL_DISCOVERS_CREATIONS');
     const incZip=await receive('incremental');
     await confirm();
     if(mutate('read_coverage').state.rev!==2)throw Error('Second acknowledgment missing');
