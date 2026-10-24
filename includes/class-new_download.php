@@ -700,7 +700,7 @@ final class New_Download {
   cfg.url = new URL('admin-ajax.php', window.location.href).href;
   var panel = document.createElement('section');
   panel.id = 'gfbrc-new-panel';
-  panel.style.cssText = 'display:inline-block;vertical-align:middle;margin:10px;padding:10px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
+  panel.style.cssText = 'display:block;box-sizing:border-box;margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
   panel.innerHTML = '<strong>NEW — newly created Entries</strong> ' +
     '<button type="button" class="button" id="gfbrc-new-prepare">Check NEW</button> ' +
     '<span id="gfbrc-new-result" role="status" aria-live="polite"></span>' +
@@ -708,7 +708,12 @@ final class New_Download {
     '<label id="gfbrc-new-review-wrap" hidden><input type="checkbox" id="gfbrc-new-review"> ' +
     'I saved and checked the ZIP (or reviewed the zero-file Entries)</label> ' +
     '<button type="button" class="button" id="gfbrc-new-ack" hidden>Confirm receipt and advance NEW</button></div>';
-  apply.insertAdjacentElement('afterend', panel);
+  // The real GF Entry List JavaScript positions the native table on top
+  // of content that protrudes beyond its fixed-height bulk-action toolbar.
+  // Keep NEW in normal document flow AFTER the complete toolbar so neither
+  // native row links nor the toolbar overlap download/receipt controls.
+  var toolbar = apply.closest('.tablenav');
+  (toolbar || apply).insertAdjacentElement('afterend', panel);
   var prepare = panel.querySelector('#gfbrc-new-prepare'),
       download = panel.querySelector('#gfbrc-new-download'),
       ack = panel.querySelector('#gfbrc-new-ack'),
