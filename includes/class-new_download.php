@@ -69,8 +69,38 @@ final class New_Download {
         return $op;
     }
 
+    /**
+     * The NEW consistent read and ACK both depend on InnoDB semantics in
+     * Gravity Forms' live Entry identity and field-metadata storage. Engine
+     * admission is capability-based, never a pinned-GF-version whitelist.
+     */
+    private static function require_transactional_gf_storage(): void {
+        global $wpdb;
+        if (!class_exists('\GFFormsModel') ||
+            !method_exists('\GFFormsModel', 'get_entry_table_name') ||
+            !method_exists('\GFFormsModel', 'get_entry_meta_table_name')) {
+            throw new RuntimeException('Gravity Forms transactional Entry storage unavailable');
+        }
+        foreach ([
+            \GFFormsModel::get_entry_table_name(),
+            \GFFormsModel::get_entry_meta_table_name(),
+        ] as $table) {
+            if (!is_string($table) || !preg_match('/^[A-Za-z0-9_]+$/', $table)) {
+                throw new RuntimeException('Unrecognized Gravity Forms Entry storage identifier');
+            }
+            $engine = $wpdb->get_var($wpdb->prepare(
+                'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s',
+                $table
+            ));
+            if ($engine !== 'InnoDB') {
+                throw new RuntimeException('NEW requires transactional Gravity Forms Entry and field storage');
+            }
+        }
+    }
+
     private static function begin_operation_transaction(): void {
         global $wpdb;
+        self::require_transactional_gf_storage();
         $engine = $wpdb->get_var($wpdb->prepare(
             'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s',
             $wpdb->options
@@ -254,6 +284,7 @@ final class New_Download {
         if (!class_exists('\GFFormsModel') || !method_exists('\GFFormsModel', 'get_entry_table_name')) {
             throw new RuntimeException('Installed GF Entry storage contract unavailable');
         }
+        self::require_transactional_gf_storage();
         $table = \GFFormsModel::get_entry_table_name();
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) ||
             $wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false ||
