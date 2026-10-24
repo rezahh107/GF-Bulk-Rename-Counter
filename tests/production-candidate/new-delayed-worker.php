@@ -10,7 +10,7 @@ if (!is_string($barrier) || !str_starts_with($barrier, $lab . '/')) {
     throw new RuntimeException('Unsafe delayed-writer barrier');
 }
 $cases = json_decode(file_get_contents($lab . '/independent.json'), true, 512, JSON_THROW_ON_ERROR)['cases'];
-$form = (int)$cases['global154']['form_id'];
+$form = (int)(json_decode(file_get_contents($lab . '/new-independent-form.json'), true)['form'] ?? 0);
 $source = GFAPI::get_entry((int)$cases['one']['entry_ids'][0]);
 global $wpdb;
 if ($wpdb->query('START TRANSACTION') === false) {
