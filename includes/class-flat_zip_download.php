@@ -23,6 +23,7 @@ final class Flat_Zip_Download {
         add_action('admin_init', [__CLASS__, 'register_capture'], 1);
         add_action('admin_footer', [__CLASS__, 'footer']);
         add_action('admin_post_' . self::ENDPOINT, [__CLASS__, 'download']);
+        New_Download::register();
     }
 
 
@@ -613,6 +614,11 @@ final class Flat_Zip_Download {
                 throw new RuntimeException('Output buffer cleanup failed to make progress');
             }
         }
+    }
+
+    /** Share the verified pre-header guard with the separate NEW response. */
+    public static function prepare_output_buffers_for_new(): void {
+        self::clear_output_buffers();
     }
 
     private static function sign_scope(int $form_id, string $scope_json): string {

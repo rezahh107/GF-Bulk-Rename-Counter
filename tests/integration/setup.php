@@ -270,3 +270,6 @@ if ( false === file_put_contents( $path, wp_json_encode( $manifest, JSON_PRETTY_
     throw new RuntimeException( 'Cannot write fixture manifest.' );
 }
 echo 'Native hook and filename filter reachability: PASS; synthetic forms and entries: PASS' . PHP_EOL;
+// Reuse this existing disposable, authentic WordPress/GF/MariaDB CI process;
+// no product checkpoint or upload is written by the probe.
+require_once __DIR__ . '/../experimental-new/coverage-stress.php';

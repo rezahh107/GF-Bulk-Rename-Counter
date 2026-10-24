@@ -295,7 +295,9 @@ const {chromium} = require('playwright-core');
         independentlyChecked = await gfRows.first().inputValue();
         await gfRows.first().check();
       }
-      await toggle.check();
+      await toggle.focus();
+       await page.keyboard.press('Space');
+       if (!(await toggle.isChecked())) throw Error('Keyboard all-matching activation failed');
       if (independentlyChecked && !(await gfRows.first().isChecked()))
         throw Error('All-matching toggle unexpectedly changed native row selection');
       await page.locator('select[name="action"]').selectOption('gfbrc_independent_flat_zip');
@@ -324,7 +326,9 @@ const {chromium} = require('playwright-core');
       console.log('PASS_BROWSER_ALL_MATCHING_'+count+
         ' visible='+visible+' browser_zip_bytes='+b.length+' form='+form);
       if (independentlyChecked) {
-        await toggle.uncheck();
+        await toggle.focus();
+         await page.keyboard.press('Space');
+         if (await toggle.isChecked()) throw Error('Keyboard all-matching deactivation failed');
         if (!(await gfRows.first().isChecked()))
           throw Error('Unchecking all-matching erased an independent checked row');
         const beforeExplicit = endpointSelections.length;
@@ -380,5 +384,11 @@ const {chromium} = require('playwright-core');
     console.log('PASS_REAL_CHROMIUM_NATIVE_BULK_DOWNLOAD_UNCHANGED entry='+nativeEntry+
       ' zip_bytes='+nBytes.length);
     await context.close();
+    // Same pinned installed WordPress ZIP; the NEW browser exercise runs
+    // only after the existing Legacy/Selected/all-matching regressions passed.
+    require('node:child_process').execFileSync(process.execPath,
+      [path.join(__dirname, 'new-browser.cjs')], {
+        stdio:'inherit', env:process.env, timeout:240000
+      });
   } finally {await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1);});

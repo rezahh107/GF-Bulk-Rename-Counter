@@ -82,6 +82,13 @@ jobs:
           php "$BRC_WP_CLI" core download --path="$BRC_WP_PATH" --version=6.8.3 --force
           php "$BRC_WP_CLI" config create --path="$BRC_WP_PATH" --dbname=wordpress --dbuser=root --dbpass=brc-lab-root --dbhost=127.0.0.1:3306 --skip-check
           php "$BRC_WP_CLI" core install --path="$BRC_WP_PATH" --url="$BRC_BASE_URL" --title="Synthetic BRC Lab" --admin_user=bootstrap_admin --admin_password="brc-ci-only-2026" --admin_email="bootstrap@example.invalid" --skip-email
+          # WP-CLI installed this path-based sandbox with /brc-wordpress/
+          # appended to home/siteurl, while the HTTP document root is /.
+          # Pin both genuine WP URL options to the actual sandbox origin.
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option update siteurl "$BRC_BASE_URL"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option update home "$BRC_BASE_URL"
+          test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option get siteurl)" = "$BRC_BASE_URL"
+          test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option get home)" = "$BRC_BASE_URL"
           test "$(php "$BRC_WP_CLI" core version --path="$BRC_WP_PATH")" = "6.8.3"
 
       - name: Acquire authentic plugin distributions and assert identities
@@ -162,7 +169,10 @@ jobs:
         run: |
           set -euo pipefail
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/create-http-auth.php
-          php "$BRC_WP_CLI" server --path="$BRC_WP_PATH" --host=127.0.0.1 --port=8080 >"$BRC_LAB_DIR/http-server.log" 2>&1 &
+          # Serve the installed site from its actual document root. The
+          # WP-CLI server router returned HTML for /brc-wordpress/ script
+          # URLs while / was the configured WordPress site URL.
+          php -S 127.0.0.1:8080 -t "$BRC_WP_PATH" >"$BRC_LAB_DIR/http-server.log" 2>&1 &
           for i in $(seq 1 30); do
             if curl -fsS "$BRC_BASE_URL/wp-login.php" -o /dev/null; then break; fi
             sleep 1
@@ -320,6 +330,9 @@ jobs:
           node --check tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/browser.cjs
+          # Required GF/WordPress scripts must execute, not just appear in DOM.
+          node --check tests/production-candidate/script-fidelity.cjs
+          BRC_CHROME="$chrome" node tests/production-candidate/script-fidelity.cjs
           php -l tests/production-candidate/verify-browser.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-browser.php
           test ! -e "$BRC_LAB_DIR/ifz-native-page-size"
@@ -405,6 +418,38 @@ jobs:
           python3 -m py_compile tests/selection-qualification/method-test.py
           python3 tests/selection-qualification/method-test.py "$BRC_LAB_DIR"
 
+      - name: Falsify NEW storage-engine and ACK metadata race controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only the disposable installed PHP is momentarily instrumented;
+          # the authentic canonical release ZIP remains unchanged.
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)(tests/qualification|qf-runtime|qf-meta)'; then
+            echo 'Qualification fixture leaked into release ZIP' >&2
+            exit 1
+          fi
+          php -l tests/qualification/qf-runtime-worker.php
+          php -l tests/qualification/qf-meta-probe.php
+          python3 -m py_compile tests/qualification/qf-runtime.py tests/qualification/qf-meta-lock.py
+          python3 tests/qualification/qf-runtime.py
+          python3 tests/qualification/qf-meta-lock.py
+          echo 'PASS_NEW_EXACT_GFP_META_LOCK_AND_SNAPSHOT_CONTRACT'
+
+      - name: Falsify status changes across actual NEW ACK commit boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Runner-only barrier. Never include status worker or instrumentation
+          # in the canonical installable plugin ZIP.
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)(tests/qualification|qf-status)'; then
+            echo 'Status qualification files leaked into distribution' >&2
+            exit 1
+          fi
+          php -l tests/qualification/qf-status-worker.php
+          python3 -m py_compile tests/qualification/qf-status-race.py
+          python3 tests/qualification/qf-status-race.py
+          echo 'PASS_REAL_PRODUCTION_ACK_STATUS_ROW_LOCK_BARRIER'
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
@@ -446,6 +491,20 @@ jobs:
           lifecycle uninstall
           rm -rf "$temp"
           echo "PASS_WP_AUTHENTIC_UPDATE_ROLLBACK_AND_UNINSTALL_SCOPE"
+
+      - name: Preserve browser source-response fidelity diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-script-fidelity-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            /tmp/brc-lab/reports/native-script-fidelity.json
+            /tmp/brc-lab/reports/qf-runtime-results.json
+            /tmp/brc-lab/reports/qf-meta-lock-results.json
+            /tmp/brc-lab/reports/qf-status-ack-cutoff.json
+            /tmp/brc-lab/reports/package-identities.txt
 
       - name: Summarize qualification evidence
         if: always()
