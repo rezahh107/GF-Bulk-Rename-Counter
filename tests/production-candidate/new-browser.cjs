@@ -142,5 +142,7 @@ const {chromium} = require('playwright-core');
       backdated_new_entry:fresh.id,old_reactivated_entry:old.id,zero_file_entry:zero.id,
       acknowledgment:'real authenticated browser requests; synthetic operator clicked receipt checkbox'
     },null,2));
+    cp.execFileSync('python3',[path.join(__dirname,'new-assert.py'),lab],
+      {stdio:'inherit',timeout:30000});
   } finally { await browser.close(); }
 })().catch(e=>{console.error('NEW_BROWSER_FAILURE',e.stack||String(e));process.exit(1);});
