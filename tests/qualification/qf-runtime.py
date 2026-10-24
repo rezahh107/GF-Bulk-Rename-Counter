@@ -171,16 +171,13 @@ try:
             mutation=invoke("mutate",case)
             result=release(gate,p,"ack")
             final=record(case,"after_during_mutation_ack",{"mutation":mutation,"ack":result})
-            # NOT an arbitrary 'PASS' assumption: encode observation, and
-            # assert invariant/readback consistency without blessing the policy.
-            if result.get("success") is True:
-                assert final["rev"]==1 and final["known"]==[[final["entry"],final["entry"]]]
-                assert final["covered"]==[[final["entry"],final["entry"]]]
-                assert final["next_new"]==[],final
-                outcome="DURING_ACK_MUTATION_ACCEPTED_AND_COVERED"
-            else:
-                assert final["rev"]==0 and final["covered"]==[] and final["next_new"]==[final["entry"]]
-                outcome="DURING_ACK_MUTATION_REJECTED"
+            # The original head admitted this stale mutation. The repaired
+            # atomic boundary MUST reject it when the independent GFAPI writer
+            # committed before release of the post-validation barrier.
+            assert result.get("success") is False,(case,result)
+            assert final["rev"]==0 and final["covered"]==[] and final["known"]==[]
+            assert final["next_new"]==[final["entry"]],final
+            outcome="REPAIRED_DURING_ACK_MUTATION_REJECTED_NO_COVERAGE"
         else:
             result=invoke("ack",case,"ack")
             assert result.get("success") is True,(case,result)
@@ -210,16 +207,17 @@ try:
     try:
         dbquery("ALTER TABLE "+table+" ENGINE=MyISAM")
         assert dbengine(table)=="MyISAM" and dbengine(options_table)=="InnoDB"
-        guard=invoke("guard","snapshot_myisam")
-        idle=invoke("snapshot","snapshot_myisam_idle")
-        assert fixtures["snapshot_myisam_idle"]["entry"] in idle["new"]
-        gate,p=pause("snapshot","snapshot_myisam","QF01","snapshot-myisam")
+        guard=invoke("guard","snapshot_myisam",expected="error")
+        idle=invoke("snapshot","snapshot_myisam_idle",expected="error")
         mutation=invoke("status_mutate","snapshot_myisam")
-        unexpected=release(gate,p,"either")
-        report["qf01"]["myisam"]={"guard":guard,"idle":idle,"concurrent":unexpected,
+        concurrent=invoke("snapshot","snapshot_myisam",expected="error")
+        report["qf01"]["myisam"]={"guard":guard,"idle":idle,"concurrent":concurrent,
             "mutation":mutation,"options_engine":dbengine(options_table),
             "entry_engine":dbengine(table)}
-        print("QF01_MYISAM_NEGATIVE",json.dumps(report["qf01"]["myisam"]),flush=True)
+        for rejection in (guard,idle,concurrent):
+            assert "transactional Gravity Forms" in rejection["rejection"],rejection
+        print("QF01_MYISAM_REJECTED_BEFORE_NEW_OPERATION",
+              json.dumps(report["qf01"]["myisam"]),flush=True)
     finally:
         dbquery("ALTER TABLE "+table+" ENGINE=InnoDB")
         assert dbengine(table)=="InnoDB" and dbengine(options_table)=="InnoDB", "DB engine restoration failed"
