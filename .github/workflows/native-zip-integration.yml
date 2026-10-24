@@ -411,6 +411,23 @@ jobs:
           python3 -m py_compile tests/selection-qualification/method-test.py
           python3 tests/selection-qualification/method-test.py "$BRC_LAB_DIR"
 
+      - name: Falsify NEW storage-engine and ACK metadata race controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only the disposable installed PHP is momentarily instrumented;
+          # the authentic canonical release ZIP remains unchanged.
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)(tests/qualification|qf-runtime|qf-meta)'; then
+            echo 'Qualification fixture leaked into release ZIP' >&2
+            exit 1
+          fi
+          php -l tests/qualification/qf-runtime-worker.php
+          php -l tests/qualification/qf-meta-probe.php
+          python3 -m py_compile tests/qualification/qf-runtime.py tests/qualification/qf-meta-lock.py
+          python3 tests/qualification/qf-runtime.py
+          python3 tests/qualification/qf-meta-lock.py
+          echo 'PASS_NEW_EXACT_GFP_META_LOCK_AND_SNAPSHOT_CONTRACT'
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
@@ -460,7 +477,11 @@ jobs:
           name: native-script-fidelity-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           retention-days: 14
-          path: /tmp/brc-lab/reports/native-script-fidelity.json
+          path: |
+            /tmp/brc-lab/reports/native-script-fidelity.json
+            /tmp/brc-lab/reports/qf-runtime-results.json
+            /tmp/brc-lab/reports/qf-meta-lock-results.json
+            /tmp/brc-lab/reports/package-identities.txt
 
       - name: Summarize qualification evidence
         if: always()
