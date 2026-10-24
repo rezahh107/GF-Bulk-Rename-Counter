@@ -42,7 +42,15 @@ const {chromium} = require('playwright-core');
       const response=page.waitForResponse(r=>r.url().includes('admin-ajax.php') &&
         r.request().postData()?.includes('action=gfbrc_new_prepare'),{timeout:30000});
       await page.locator('#gfbrc-new-prepare').click();
-      const answer=await (await response).json();
+      const result=await response;
+      const raw=await result.text();
+      let answer;
+      try { answer=JSON.parse(raw); }
+      catch(e) {
+        throw Error('NEW prepare returned HTTP '+result.status()+
+          ' type='+result.headers()['content-type']+
+          ' unexpected='+raw.slice(0,900).replace(/\\s+/g,' '));
+      }
       if(!answer.success)throw Error('Prepare rejected: '+JSON.stringify(answer));
       const data=answer.data;
       if(data.entries!==expectEntries||data.files!==expectFiles)throw Error(
