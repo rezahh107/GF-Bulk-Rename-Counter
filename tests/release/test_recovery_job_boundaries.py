@@ -172,7 +172,7 @@ echo checksum >> "$MOCK_EFFECTS"
         self.install_mock("bash", r"""#!/bin/bash
 set -euo pipefail
 if [[ "$1" == scripts/release/consumer-smoke.sh ]]; then
-  test -z "$GH_TOKEN" && test -z "$GITHUB_TOKEN" || exit 73
+  test -z "${GH_TOKEN:-}" && test -z "${GITHUB_TOKEN:-}" || exit 73
   cmp "$2" "$MOCK_PUBLIC/gf-bulk-rename-counter-2.1.1.zip"
   test "$3" = 2.1.1
   echo consumer-smoke >> "$MOCK_EFFECTS"
