@@ -162,7 +162,10 @@ jobs:
         run: |
           set -euo pipefail
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/create-http-auth.php
-          php "$BRC_WP_CLI" server --path="$BRC_WP_PATH" --host=127.0.0.1 --port=8080 >"$BRC_LAB_DIR/http-server.log" 2>&1 &
+          # Serve the installed site from its actual document root. The
+          # WP-CLI server router returned HTML for /brc-wordpress/ script
+          # URLs while / was the configured WordPress site URL.
+          php -S 127.0.0.1:8080 -t "$BRC_WP_PATH" >"$BRC_LAB_DIR/http-server.log" 2>&1 &
           for i in $(seq 1 30); do
             if curl -fsS "$BRC_BASE_URL/wp-login.php" -o /dev/null; then break; fi
             sleep 1
