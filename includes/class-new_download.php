@@ -35,6 +35,108 @@ final class New_Download {
         return self::OP_PREFIX . $form;
     }
 
+
+    /** Nonautoloaded single authoritative pending row; old transients expire. */
+    private static function seed_pending(int $form): string {
+        $idle = wp_json_encode(['v' => 2, 'id' => '', 'status' => 'idle', 'expires' => 0]);
+        add_option(self::pending_key($form), $idle, '', false);
+        return self::pending_raw($form);
+    }
+
+    private static function pending_raw(int $form, bool $lock = false): string {
+        global $wpdb;
+        $value = $wpdb->get_var($wpdb->prepare(
+            "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s" .
+            ($lock ? " FOR UPDATE" : ""), self::pending_key($form)
+        ));
+        if (!is_string($value) || $value === '') {
+            throw new RuntimeException('Authoritative pending NEW row unavailable');
+        }
+        return $value;
+    }
+
+    private static function pending_decode(string $raw): array {
+        if (strlen($raw) > self::MAX_STATE_BYTES) {
+            throw new RuntimeException('Pending NEW operation too large');
+        }
+        $op = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($op) || ($op['v'] ?? null) !== 2 ||
+            !is_string($op['id'] ?? null) ||
+            !is_string($op['status'] ?? null) ||
+            !is_int($op['expires'] ?? null)) {
+            throw new RuntimeException('Invalid pending-operation schema');
+        }
+        return $op;
+    }
+
+    private static function begin_operation_transaction(): void {
+        global $wpdb;
+        $engine = $wpdb->get_var($wpdb->prepare(
+            'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s',
+            $wpdb->options
+        ));
+        if ($engine !== 'InnoDB' || $wpdb->query('START TRANSACTION') === false) {
+            throw new RuntimeException('Atomic pending-operation database unavailable');
+        }
+    }
+
+    private static function locked_coverage(int $form): string {
+        global $wpdb;
+        $value = $wpdb->get_var($wpdb->prepare(
+            "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s FOR UPDATE",
+            self::key($form)
+        ));
+        if (!is_string($value) || $value === '') {
+            throw new RuntimeException('Locked NEW coverage record unavailable');
+        }
+        return $value;
+    }
+
+    private static function update_pending(int $form, array $op): void {
+        global $wpdb;
+        $json = wp_json_encode($op);
+        if (!is_string($json) || strlen($json) > self::MAX_STATE_BYTES) {
+            throw new RuntimeException('Pending NEW operation exceeds bounded storage');
+        }
+        $changed = $wpdb->query($wpdb->prepare(
+            "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s",
+            $json, self::pending_key($form)
+        ));
+        if ($changed !== 1) {
+            throw new RuntimeException('Pending-operation generation transition did not persist');
+        }
+    }
+
+    private static function clear_pending_cache(int $form): void {
+        wp_cache_delete(self::pending_key($form), 'options');
+        wp_cache_delete('notoptions', 'options');
+        wp_cache_delete('alloptions', 'options');
+    }
+
+    /** Atomically replace only the generation observed before slow preparation. */
+    private static function publish_prepared(int $form, string $coverage,
+        string $observed_pending, array $candidate): void {
+        global $wpdb;
+        self::begin_operation_transaction();
+        $committed = false;
+        try {
+            $current_coverage = self::locked_coverage($form);
+            $pending = self::pending_raw($form, true);
+            if (!hash_equals($coverage, $current_coverage) ||
+                !hash_equals($observed_pending, $pending)) {
+                throw new RuntimeException('NEW operation or coverage changed; reload and retry');
+            }
+            self::update_pending($form, $candidate);
+            if ($wpdb->query('COMMIT') === false) {
+                throw new RuntimeException('Pending-operation COMMIT failed');
+            }
+            $committed = true;
+        } finally {
+            if (!$committed) { $wpdb->query('ROLLBACK'); }
+            self::clear_pending_cache($form);
+        }
+    }
+
     private static function check(): int {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' ||
             !\GFCommon::current_user_can_any('gravityforms_view_entries')) {
