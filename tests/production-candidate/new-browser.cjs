@@ -81,6 +81,7 @@ const {chromium} = require('playwright-core');
           ancestors:[el.parentElement,el.parentElement?.parentElement].map(info)};
       });
       console.log('NEW_BROWSER_DOWNLOAD_HITTEST',JSON.stringify(hit));
+      if(!hit.selfHit)throw Error('NEW download is obscured by native GF content: '+JSON.stringify(hit));
       const response=page.waitForResponse(r=>r.url().includes('admin-ajax.php') &&
         r.request().postData()?.includes('action=gfbrc_new_download'),{timeout:45000});
       const [download]=await Promise.all([
