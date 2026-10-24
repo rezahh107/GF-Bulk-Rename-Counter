@@ -59,7 +59,12 @@ if ($act==='inspect') {
 if ($act==='lock') {
     $assert($wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ')!==false,'RR cannot be set');
     $assert($wpdb->query('START TRANSACTION')!==false,'DB transaction cannot start');
-    $row=$wpdb->get_results($wpdb->prepare("SELECT id FROM {$table} WHERE entry_id=%d FOR UPDATE",$id),ARRAY_A);
+    // Invoke the ACTUAL production metadata locking method, not an
+    // approximation of its SQL. This proves the selected enforcement seam
+    // blocks the independent real GFAPI UPDATE and absent-field INSERT.
+    (new ReflectionMethod(\GFBulkRename\New_Download::class, 'lock_entry_metadata'))
+        ->invoke(null, [$id]);
+    $row=$wpdb->get_results($wpdb->prepare("SELECT id FROM {$table} WHERE entry_id=%d",$id),ARRAY_A);
     $assert(file_put_contents($gate.'.locked',wp_json_encode(['pid'=>getmypid(),'rows'=>count($row)]))!==false,'lock marker write');
     $until=microtime(true)+35;
     while(!is_file($gate.'.go')){
