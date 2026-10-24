@@ -3,13 +3,39 @@
 if (!defined('ABSPATH') || !class_exists('GFAPI')) { throw new RuntimeException('Real GF API required'); }
 $lab = getenv('BRC_LAB_DIR');
 $cases = json_decode(file_get_contents($lab . '/independent.json'), true, 512, JSON_THROW_ON_ERROR)['cases'];
-$form = (int)$cases['global154']['form_id'];
+$action = (string)getenv('BRC_NEW_ACTION');
+$fixture_path = $lab . '/new-independent-form.json';
+$form = $action === 'setup' ? 0 : (int)(json_decode(file_get_contents($fixture_path), true)['form'] ?? 0);
 $old_key = $lab . '/new-preexisting-inactive-id';
 $source = GFAPI::get_entry((int)$cases['one']['entry_ids'][0]);
 $url = (string)$source['1'];
-$action = (string)getenv('BRC_NEW_ACTION');
 $report = ['form' => $form, 'action' => $action];
-if ($action === 'mark_old_inactive') {
+if ($action === 'setup') {
+    $form = GFAPI::add_form([
+        'title' => 'GFBRC NEW isolated browser 154',
+        'fields' => [
+            ['id' => 1, 'type' => 'fileupload', 'label' => 'Single'],
+            ['id' => 2, 'type' => 'fileupload', 'label' => 'Multiple', 'multipleFiles' => true],
+            ['id' => 5, 'type' => 'text', 'label' => 'Group'],
+        ],
+        'button' => ['type' => 'text', 'text' => 'Submit'],
+    ]);
+    if (is_wp_error($form) || (int)$form < 1) {
+        throw new RuntimeException('Isolated NEW form creation failed');
+    }
+    $form = (int)$form;
+    for ($i = 0; $i < 154; $i++) {
+        $row = ['form_id' => $form, '5' => $i < 77 ? 'group-a' : 'group-b'];
+        if ($i > 0) { $row['1'] = $url; }
+        if ($i === 1) { $row['2'] = wp_json_encode([$url, $url]); }
+        $id = GFAPI::add_entry($row);
+        if (is_wp_error($id)) { throw new RuntimeException('Isolated NEW fixture creation failed'); }
+    }
+    file_put_contents($fixture_path, wp_json_encode(['form' => $form]));
+    $report['form'] = $form;
+    $report['entries'] = 154;
+    $report['files'] = 155;
+} elseif ($action === 'mark_old_inactive') {
     $id = GFAPI::add_entry(['form_id' => $form, '5' => 'historical-inactive']);
     if (is_wp_error($id)) { throw new RuntimeException('Could not create inactive historical Entry'); }
     $ok = GFAPI::update_entry_property((int)$id, 'status', 'spam');
