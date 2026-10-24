@@ -114,11 +114,18 @@ const {chromium} = require('playwright-core');
     console.log('PASS_NEW_BROWSER_DUPLICATE_OPERATION_ACK_IDEMPOTENT');
 
     await open();
-    await pending(0,0);
-    if(!await page.locator('#gfbrc-new-ack').isVisible()) {
-      throw Error('Zero-file review control not visible');
+    const noNew = await pending(0,0);
+    if (noNew.op || await page.locator('#gfbrc-new-ack').isVisible()) {
+      throw Error('Empty NEW batch demanded unnecessary reapproval');
     }
-    // This no-new review is not a ZIP; no browser download should happen.
+    if(mutate('read_coverage').state.rev!==2)throw Error('Empty check changed coverage');
+    mutate('add_zero');
+    await open();
+    await pending(1,0);
+    if(!await page.locator('#gfbrc-new-ack').isVisible()) {
+      throw Error('File-free review control not visible');
+    }
+    // A file-free Entry is explicitly reviewed, NEVER a fictitious empty ZIP.
     await confirm();
     if(mutate('read_coverage').state.rev!==3)throw Error('File-free confirmation not persisted');
     console.log('PASS_NEW_BROWSER_ZERO_FILE_EXPLICIT_REVIEW_NO_FAKE_ZIP');
