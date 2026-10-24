@@ -330,6 +330,14 @@ jobs:
           node --check tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/browser.cjs
+          # Whole-form ALL: 503 active Entries, real native filter, browser ZIP,
+          # repeated receipt, exact hashes, NEW ACK independence and fail-closed POST.
+          php -l tests/production-candidate/all-fixture.php
+          node --check tests/production-candidate/all-browser.cjs
+          python3 -m py_compile tests/production-candidate/all-assert.py
+          BRC_CHROME="$chrome" node tests/production-candidate/all-browser.cjs
+          php -l tests/production-candidate/all-resource-check.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/all-resource-check.php
           # Required GF/WordPress scripts must execute, not just appear in DOM.
           node --check tests/production-candidate/script-fidelity.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/script-fidelity.cjs
@@ -345,6 +353,26 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-sources.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Native Bulk Download unchanged; independent production implementation loaded from installable GFBRC ZIP.'
+
+      - name: Falsify ALL existing Entry file-state consistency with genuine GF mutations
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Qualifier branch differs only in test/CI files. These exact code
+          # blobs are from immutable PR #28 Head 13cbdd7483025793544f2a6c9d1a3f86ffcb18e3.
+          test "$(git hash-object includes/class-all_download.php)" = "3a8b20a98a609cde21f2ce56248881ecd1b95db7"
+          test "$(git hash-object includes/class-flat_zip_download.php)" = "c95a93e8dfbf1c5b4e17702644c87926e80eb460"
+          php -l tests/qualification/all-entry-file-race.php
+          python3 -m py_compile tests/qualification/all-race-instrument.py tests/qualification/all-entry-file-race-assert.py
+          node --check tests/qualification/all-entry-file-race-browser.cjs
+          python3 tests/qualification/all-race-instrument.py apply
+          trap 'python3 tests/qualification/all-race-instrument.py restore' EXIT
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          BRC_CHROME="$chrome" node tests/qualification/all-entry-file-race-browser.cjs
+          echo 'PASS_PR28_DISPOSABLE_POST_VALIDATION_PRE_WRITER_RACE_QUALIFICATION'
+          # Trap restores the installed PHP prior to all subsequent native
+          # plugin/version/settings tests. Canonical package never changed.
 
       - name: Qualify EXT-001 per-form settings and final browser ZIP downloads
         shell: bash
