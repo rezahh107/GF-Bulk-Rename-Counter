@@ -637,6 +637,24 @@ final class New_Download {
             // database locks are held. GFAPI's UPDATE and absent-field INSERT
             // now wait on the same Entry Meta index ranges until COMMIT.
             self::lock_entry_metadata($op['ids']);
+            // GFAPI::update_entry_property() updates the Entry identity row,
+            // not Entry Meta. Lock those real rows before the final status
+            // check; hold the locks through coverage/pending COMMIT or ROLLBACK.
+            $entry_table = \GFFormsModel::get_entry_table_name();
+            if (!is_string($entry_table) || !preg_match('/^[A-Za-z0-9_]+$/', $entry_table)) {
+                throw new RuntimeException('GF Entry identity storage unavailable');
+            }
+            $entry_ids = $op['ids'];
+            sort($entry_ids, SORT_NUMERIC);
+            foreach ($entry_ids as $entry_id) {
+                $locked_id = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM {$entry_table} WHERE id = %d FOR UPDATE",
+                    $entry_id
+                ));
+                if ((int)$locked_id !== $entry_id || $wpdb->last_error !== '') {
+                    throw new RuntimeException('Unable to lock selected GF Entry status');
+                }
+            }
             foreach ($op['ids'] as $entry_id) {
                 $entry = \GFAPI::get_entry($entry_id);
                 if (!is_array($entry) || ($entry['status'] ?? '') !== 'active') {
