@@ -688,6 +688,9 @@ final class New_Download {
         echo '<script id="gfbrc-new-config" type="application/json">' .
             wp_json_encode(json_decode($config, true), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>';
         ?>
+<style id="gfbrc-new-visibility">
+#gfbrc-new-panel [hidden] { display: none !important; }
+</style>
 <script id="gfbrc-new-workflow">
 (function () {
   'use strict';
