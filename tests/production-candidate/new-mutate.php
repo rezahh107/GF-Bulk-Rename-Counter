@@ -35,7 +35,17 @@ if ($action === 'mark_old_inactive') {
     $id = GFAPI::add_entry($row);
     if (is_wp_error($id)) { throw new RuntimeException($id->get_error_message()); }
     $report['id'] = (int)$id;
+    if ($action === 'add_zero') {
+        file_put_contents($lab . '/new-latest-zero-id', (string)(int)$id);
+    }
     $report['backdated'] = $action === 'add_backdated' && (GFAPI::get_entry((int)$id)['date_created'] ?? '') === $row['date_created'];
+} elseif ($action === 'attach_latest_zero') {
+    $id = (int)file_get_contents($lab . '/new-latest-zero-id');
+    $ok = GFAPI::update_entry_field($id, 1, $url);
+    if (is_wp_error($ok) || $ok === false) {
+        throw new RuntimeException('Could not mutate file-free Entry before confirmation');
+    }
+    $report['id'] = $id;
 } elseif ($action === 'read_coverage') {
     global $wpdb;
     $raw = $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'gfbrc_new_coverage_' . $form));
