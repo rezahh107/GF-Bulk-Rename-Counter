@@ -1,6 +1,6 @@
 # Independent Flat ZIP — selection across Gravity Forms pages
 
-This correction applies only to the independent **Download Flat ZIP with Rename** bulk action. Gravity Forms, native Bulk Download, existing Legacy rename hooks, stored Entries/uploads, options, and the public v2.1.0 release remain independent.
+This correction applies only to the independent **Download Flat ZIP with Rename** bulk action. Gravity Forms, native Bulk Download, existing Legacy rename hooks, stored Entries/uploads, options, and the public v2.1.1 release remain independent.
 
 ## Operator flow
 
@@ -21,7 +21,7 @@ The server enumerates GF Entry IDs in a MariaDB/InnoDB repeatable-read consisten
 
 The pinned CI host rendered a different Entry List checkbox column class (`.column-column_selector`) from the class its built-in all-results-banner handler listens to (`.column-cb`). This caused the *native banner* not to appear in that lab despite GF's server-side `all_entries` support. The small independent, explicitly labeled all-matching toggle ensures the required product workflow remains usable without patching Gravity Forms. The native route remains supported when available.
 
-The merged `main` implementation **does not** implement incremental NEW, persistent acknowledgment, or arbitrary context-dependent callback compatibility. Supported native query shapes are bounded to same-form, criteria-expressible documented filters with intact native sorting/paging; callbacks that cannot be replayed equivalently fail visibly. No guarantee is made for arbitrarily many Entries or very large bytes: the limit is 500 selected Entries per request, with additional practical PHP memory, execution-time, disk and transport limits.
+This independent all-matching path does not itself maintain incremental coverage or acknowledgment. A separate NEW action and explicit receipt acknowledgment entered `main` in PR #24 **after** the public v2.1.1 release; arbitrary context-dependent callback compatibility remains unsupported. Supported native query shapes are bounded to same-form, criteria-expressible documented filters with intact native sorting/paging; callbacks that cannot be replayed equivalently fail visibly. No guarantee is made for arbitrarily many Entries or very large bytes: the limit is 500 selected Entries per request, with additional practical PHP memory, execution-time, disk and transport limits.
 
 ## Verification boundary
 
@@ -31,4 +31,4 @@ CI proves only the versions, fixtures, requests and byte sizes it actually execu
 
 ## Release boundary
 
-PR #19 has merged into `main`, but no public tag, release artifact or Owner-site deployment has been changed or verified by this merge. The public v2.1.0 ZIP remains page-scoped. A new release/deployment requires a separate explicit Owner decision and verified release process. NEW/acknowledged-coverage remains a separate later batch; experimental PR #18 is not a production base.
+PR #19's all-matching selection is in the public **v2.1.1** ZIP, which was published and consumer-verified via the dedicated recovery workflow on 2026-10-24. PR #24's NEW/acknowledgment is merged only in source `main`; it has authentic test evidence but **no NEW-inclusive public release or Owner-site deployment**. Dedicated ALL and the general publisher post-tag repair remain outstanding. Experimental PR #18 remains a historical, unmerged qualification—not a production base.
