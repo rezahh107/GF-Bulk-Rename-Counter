@@ -4,16 +4,20 @@ if (!defined('ABSPATH') || !class_exists('GFAPI')) { throw new RuntimeException(
 $lab = getenv('BRC_LAB_DIR');
 $cases = json_decode(file_get_contents($lab . '/independent.json'), true, 512, JSON_THROW_ON_ERROR)['cases'];
 $form = (int)$cases['global154']['form_id'];
-$old = (int)$cases['global154']['entry_ids'][0];
+$old_key = $lab . '/new-preexisting-inactive-id';
 $source = GFAPI::get_entry((int)$cases['one']['entry_ids'][0]);
 $url = (string)$source['1'];
 $action = (string)getenv('BRC_NEW_ACTION');
 $report = ['form' => $form, 'action' => $action];
 if ($action === 'mark_old_inactive') {
-    $ok = GFAPI::update_entry_property($old, 'status', 'spam');
+    $id = GFAPI::add_entry(['form_id' => $form, '5' => 'historical-inactive']);
+    if (is_wp_error($id)) { throw new RuntimeException('Could not create inactive historical Entry'); }
+    $ok = GFAPI::update_entry_property((int)$id, 'status', 'spam');
     if (is_wp_error($ok) || $ok === false) { throw new RuntimeException('Could not make old Entry inactive'); }
-    $report['id'] = $old;
+    file_put_contents($old_key, (string)(int)$id);
+    $report['id'] = (int)$id;
 } elseif ($action === 'restore_old_with_upload') {
+    $old = (int)file_get_contents($old_key);
     $entry = GFAPI::get_entry($old);
     $entry['status'] = 'active';
     $entry['1'] = $url;
