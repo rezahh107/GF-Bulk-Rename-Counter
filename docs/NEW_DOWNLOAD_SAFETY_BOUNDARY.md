@@ -1,36 +1,30 @@
-# NEW download — bounded safety findings and owner decisions
+# NEW — operator workflow candidate (unmerged)
 
-This is **not an operator-facing NEW feature**. Source: latest `main` after public v2.1.1 recovery; PR #18 is an unmerged non-production experiment.
+This document describes the implementation **in Draft PR #24**, not the public v2.1.1 release. This candidate must not be merged or published until its exact-head WordPress/Chromium and source verification pass.
 
-## Proven and rejected
+## Operator instructions
 
-* A commit-delayed GF Entry may appear below a previously visible maximum Entry ID. `id > max_acknowledged_id` can permanently omit it. A creation timestamp or fixed lookback also lacks a universal lossless guarantee. See PR #18's actual delayed-commit evidence.
-* A consistent GFAPI/InnoDB snapshot can preserve enumerated membership in the pinned lab, but does not know which lower IDs may commit **later**.
-* The simplest known lossless candidate for this environment is one per-form, non-autoloaded exact acknowledged-identity set represented by disjoint integer ranges and updated by SQL compare-and-swap. That is a **candidate**, not an admitted product state schema.
-* A user clicking Download, an HTTP 200, and server-side ZIP verification never prove the user has saved the ZIP. Require a separate, explicit operation-bound acknowledgement after the operator has checked their saved file.
+1. Open **Forms → Entries** for the intended Gravity Form. The separate **NEW — newly created Entries** panel appears alongside native Apply. It does not use checked rows, page number, or current search filters: NEW is always whole-form, active Entries. Legacy, manually selected Flat ZIP, native Bulk Download and independent all-matching remain untouched.
+2. Click **Check NEW**. The server takes a single consistent GF Entry snapshot, enumerating *all existing identities including inactive Entries* and independently cross-checking active identity selection with GFAPI. It displays the actual new eligible **Entry count** and distinct eligible **file count**. It checks each planned source with the existing Flat ZIP planner.
+3. For a nonzero file count, click **Download verified ZIP**. A short-lived, user/form-bound operation revalidates the same frozen Entries, archive names and source hashes. The existing ZIP writer produces a flat archive and verifies its members and hashes before sending. The browser receives the bytes and verifies SHA-256, then prompts for manual verification. **A browser hash match does not prove the ZIP was actually retained on disk.**
+4. Inspect your locally saved ZIP. Only then check the separate confirmation checkbox and click **Confirm receipt and advance NEW**. No selection, preparation, HTTP 200 or browser download automatically advances coverage.
+5. If the operation contains **new eligible Entries but zero files**, no fake empty ZIP is sent: explicitly review the no-file outcome, check the box and confirm. If there are *zero NEW Entries after initialization*, the check is read-only and needs no repeated acknowledgment.
+6. If the browser/download is interrupted, files changed or confirmation is absent, run **Check NEW** again. There is no permanent advancement without a valid, operation-bound acknowledgment.
 
-## What the focused test can and cannot prove
+## Exact identity contract
 
-`tests/experimental-new/coverage-stress.php` is a **disposable manual native-lab test** for the WordPress option store. It tests revision CAS rejection/retry, hole preservation, per-form isolation, non-autoload option behavior, corrupted history rejection, and worst-case fragmented synthetic identity sets with 1,000/5,000/20,000 disjoint intervals. It reports bytes, elapsed time and peak PHP memory; it cleans its two disposable option keys.
+The non-autoloaded, per-form `gfbrc_new_coverage_{form}` option uses lossless sorted integer ranges. It distinguishes `known` (identity existed in the last confirmed pre-download snapshot, regardless of active/spam/trash status) from `covered` (eligible Entry identity actually included in the acknowledged operation). Entries that were previously known but become eligible or acquire uploads later do **not** reappear as NEW. Entries newly visible since the previous confirmed snapshot, including backdated GFAPI inserts and delayed lower-ID commits, remain discoverable without timestamp or maximum-ID shortcuts.
 
-The existing native WordPress CI calls this test from its normal synthetic fixture setup. It can also be run **only** in a disposable WordPress/GF/MariaDB lab after dependency activation:
+One 15-minute `gfbrc_new_pending_{form}` WordPress transient holds the immutable operation identity, user/form, old-state SHA, frozen exact IDs, source manifest fingerprint and verified ZIP hash after preparation. It contains **no stored ZIP bytes**. A second tab preparing NEW replaces the pending operation; an old tab's confirmation fails explicitly. The persistent option update uses a single `BINARY option_value` conditional SQL update (compare-and-swap) and WordPress option-cache invalidation/readback. No multi-user ledger is used.
 
-```sh
-php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-new/coverage-stress.php
-```
+The **first run** proposes all currently eligible existing Entries as an unacknowledged initial batch. The initial empty persisted option stores *no acknowledged coverage*; identities are recorded only after explicit confirmation. Selected and current all-matching are independent and never move NEW coverage, even when the operator downloads their ZIP. No new dedicated ALL mode is introduced by this PR.
 
-This test does **not** prove authentic file receipt, browser interaction, GF creation/import semantics, real concurrent OS-process races (previous PR #18 did those), external persistent object caches, or production-site operation. Its 1 MiB encoded history ceiling is test-local, not a promised capacity or cleanup policy. Do **not** run on the Owner site.
+## Resource envelope and limits
 
-## Owner decisions required before enabling NEW
+The candidate deliberately fails closed above 500 NEW eligible Entries per operation, 50,000 currently stored historical Entry identities, 1 MiB canonical coverage JSON, or 128 MiB verified ZIP. It does **not** silently divide or cover unexported portions, and does not promise availability for extremely large forms. It requires the installed GF Entry table, InnoDB consistent snapshot and local upload files. Remote/offloaded files, external persistent object cache, direct SQL import/restore identity rewriting, storage engines other than the pinned MariaDB/InnoDB or other host versions remain **NOT_PROVEN**. A WordPress transient expires automatically; without any download there is no temporary ZIP artifact to leak.
 
-1. **First run:** recommend offering the **current eligible existing Entries as the initial NEW batch**, with zero automatic checkpoint movement before explicit confirmation. Alternative: explicitly mark existing records as baseline without downloading. Neither is silently selected.
-2. **Older Entry becoming eligible:** recommend **do not reclassify an Entry as newly created solely because an upload was added later**. This requires history of observed pre-existing Entries, not just an acknowledged-eligible identity set. Define what to do with status changes, restored/deleted Entries, and imports with backdated dates/IDs. This decision materially changes storage/query cost.
-3. **Selected/ALL effects:** recommend **no implicit advancement of NEW from Selected downloads**; for dedicated ALL, offer an explicit *also mark these exact Entries as covered* option only when the complete archive and acknowledgment correspond to an operation-bound server snapshot. Default should not silently consume NEW coverage.
-4. **Zero-file Entries:** recommend showing their Entry count separately and requiring explicit operator acknowledgment of a complete operation (not pretending a ZIP contains a file). Define whether a pure zero-file batch constitutes an acknowledged download.
-5. **Resource/retention:** when exact history approaches a measurable storage or CPU ceiling, fail closed with an actionable notice; never truncate ranges or expire unresolved ID gaps. A justified ceiling needs measured real lab behavior and realistic form sizes.
+## Verification boundary
 
-## Smallest remaining implementation/verification path
+The existing pinned CI installs the source-built target ZIP into WordPress 6.8.3, Gravity Forms 3.1.1.1, Bulk Download 4.2.0, PHP 8.2, MariaDB 11.4.8 and authentic Chromium. `tests/production-candidate/new-browser.cjs` extends that exact journey for newly added Entry IDs, browser ZIP save, explicit acknowledgment and durable next selection. `new-assert.py` independently compares saved ZIP members and SHA-256 to source-fixture hashes. The previous PR #18 delayed-commit and concurrent CAS findings remain separate evidence; a new test in this PR must not be claimed PASS before its exact-head CI log is examined. `tests/experimental-new/coverage-stress.php` tests real storage fragmentation but is not proof of user download.
 
-After the above product decisions, integrate a separate operation-bound NEW request into the **existing** `Flat_Zip_Download::plan()` / `write_verified_zip()` route, freeze exact Entry IDs for each operation, verify ZIP source bytes/member names/hashes, and persist a short-lived server-bound operation record before delivery. Only a separate authorized nonce-protected confirmation may CAS-union its exact IDs into per-form history; duplicate, stale, missing and corrupted operations must not advance coverage. Authenticated real Chromium interaction and negative tests belong in the existing pinned native CI.
-
-**Publication boundary:** no tag/release/merge/deployment is implied. Before a future publication, separately repair the original publisher's post-tag verification failure (v2.1.1 was recovered by the reviewed one-time consumer workflow, not by proving the original publisher universally correct).
+The original publisher's post-tag verification defect remains a **separate future publication repair**. No PR merge, GitHub Release, tag, public asset change, or Owner-site deployment is authorized here.
