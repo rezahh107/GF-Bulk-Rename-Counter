@@ -92,6 +92,13 @@ def checked(p, expected="worker", detail=""):
                 except ValueError: pass
         assert p.returncode == 0 and len(records)==1, (detail, p.returncode, out[-900:], err[-500:])
         return records[0]
+    if expected == "either":
+        if p.returncode == 42 and "QF_WORKER_ERROR " in err:
+            return {"rejected": True, "message": err.split("QF_WORKER_ERROR ",1)[1].strip()}
+        assert p.returncode == 0, (detail,p.returncode,out[-600:],err[-600:])
+        lines=[line for line in out.splitlines() if line.startswith("QF_WORKER_RESULT ")]
+        assert len(lines)==1,(detail,out[-600:],err[-600:])
+        return {"rejected": False, "result":json.loads(lines[0][len("QF_WORKER_RESULT "):])}
     assert p.returncode == 42 and "QF_WORKER_ERROR " in err, (
         detail, p.returncode, out[-600:], err[-900:])
     return {"rejection": err.split("QF_WORKER_ERROR ",1)[1].strip()}
@@ -118,9 +125,12 @@ def release(gate,p,expected):
     return checked(p,expected,"released " + str(gate))
 
 def dbengine(target):
-    sql="SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '"+target+"'"
-    return subprocess.check_output(["php",cli,"--path="+str(wp),"db","query",sql,
-         "--skip-column-names"],text=True).strip()
+    assert re.fullmatch("[A-Za-z0-9_]+",target),target
+    expression=('global $wpdb; echo $wpdb->get_var($wpdb->prepare('
+        + '"SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",'
+        + '"' + target + '"));')
+    return subprocess.check_output(["php",cli,"--path="+str(wp),"eval",expression],
+        text=True).strip()
 
 def entry_table():
     out=subprocess.check_output(["php",cli,"--path="+str(wp),"eval",
@@ -130,7 +140,9 @@ def entry_table():
     return name
 
 def dbquery(sql):
-    subprocess.run(["php",cli,"--path="+str(wp),"db","query",sql],
+    assert re.fullmatch(r"ALTER TABLE [A-Za-z0-9_]+ ENGINE=(?:MyISAM|InnoDB)",sql),sql
+    expression='global $wpdb; if ($wpdb->query("'+sql+'") === false) { exit(41); }'
+    subprocess.run(["php",cli,"--path="+str(wp),"eval",expression],
                    check=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
 
 def record(case, phase, extra=None):
@@ -185,7 +197,6 @@ try:
     # QF01: run last because changing GF table engine affects all GF forms.
     table=entry_table()
     assert dbengine(table)=="InnoDB","Expected actual GF Entry storage InnoDB"
-    assert dbengine(wp.name.replace("whatever",""))!="ignore" if False else True
     gate,p=pause("snapshot","snapshot_innodb","QF01","snapshot-innodb")
     mutation=invoke("status_mutate","snapshot_innodb")
     valid=release(gate,p,"worker")
@@ -204,7 +215,7 @@ try:
         assert fixtures["snapshot_myisam_idle"]["entry"] in idle["new"]
         gate,p=pause("snapshot","snapshot_myisam","QF01","snapshot-myisam")
         mutation=invoke("status_mutate","snapshot_myisam")
-        unexpected=release(gate,p,"error" if True else "worker")
+        unexpected=release(gate,p,"either")
         report["qf01"]["myisam"]={"guard":guard,"idle":idle,"concurrent":unexpected,
             "mutation":mutation,"options_engine":dbengine(options_table),
             "entry_engine":dbengine(table)}
