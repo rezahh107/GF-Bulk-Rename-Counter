@@ -239,15 +239,19 @@ final class New_Download {
             // A second check with no NEW Entries is read-only.
             if (!$new && $state['rev'] > 0) {
                 wp_send_json_success(['op' => null, 'entries' => 0, 'files' => 0,
-                    'zero' => true, 'first' => false, 'expires' => 0]);
+                    'zero_entries' => 0, 'zero' => true, 'first' => false, 'expires' => 0]);
             }
             $plan = self::plan($form, $new);
+            $with_files = [];
+            foreach ($plan as $item) { $with_files[(int)$item['entry_id']] = true; }
+            $zero_entries = count($new) - count($with_files);
             $op = [
                 'v' => 1, 'id' => bin2hex(random_bytes(16)),
                 'user' => get_current_user_id(), 'form' => $form,
                 'expires' => time() + self::TTL, 'base' => hash('sha256', $old),
                 'all' => $all, 'ids' => $new,
-                'files' => count($plan), 'fingerprint' => self::fingerprint($plan),
+                'files' => count($plan), 'zero_entries' => $zero_entries,
+                'fingerprint' => self::fingerprint($plan),
                 'zip_sha' => '', 'zero' => count($plan) === 0,
                 'status' => 'prepared',
             ];
@@ -256,7 +260,8 @@ final class New_Download {
             }
             wp_send_json_success([
                 'op' => $op['id'], 'entries' => count($new),
-                'files' => $op['files'], 'zero' => $op['zero'],
+                'files' => $op['files'], 'zero_entries' => $zero_entries,
+                'zero' => $op['zero'],
                 'first' => $state['rev'] === 0,
                 'expires' => self::TTL,
             ]);
@@ -448,9 +453,10 @@ final class New_Download {
       reviewWrap = panel.querySelector('#gfbrc-new-review-wrap'),
       review = panel.querySelector('#gfbrc-new-review');
   var operation = null, checksum = '', zero = false, downloaded = false, busy = false;
+  var zeroEntries = 0;
   function status(s) { message.textContent = s; }
   function reset() {
-    operation = null; checksum = ''; zero = false; downloaded = false;
+    operation = null; checksum = ''; zero = false; zeroEntries = 0; downloaded = false;
     download.hidden = true; ack.hidden = true; reviewWrap.hidden = true; review.checked = false;
   }
   async function api(action, extra, binary) {
@@ -479,10 +485,11 @@ final class New_Download {
     guarded(async function () {
       reset(); status('Checking exact Entries and files…');
       var data = await api('prepare');
-      operation = data.op; zero = data.zero;
-      status(data.entries+' Entries / '+data.files+' eligible files. '+
+      operation = data.op; zero = data.zero; zeroEntries = data.zero_entries;
+      status(data.entries+' Entries / '+data.files+' eligible files / '+
+        data.zero_entries+' Entries with no files. '+
         (data.first?'Initial batch; no automatic coverage update. ':'')+
-        (zero?'No ZIP exists for this batch; review the file-free Entries.':''));
+        (zero?'No ZIP exists for this batch; explicitly review the file-free Entries.':''));
       if (!data.op) {
         status('0 newly created eligible Entries / 0 files. Nothing to acknowledge.');
       } else if (!zero) download.hidden = false;
@@ -508,7 +515,9 @@ final class New_Download {
       document.body.appendChild(anchor); anchor.click(); anchor.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
       downloaded = true; reviewWrap.hidden = false; ack.hidden = false;
-      status('ZIP received and SHA-256 matched. Check the saved file, then explicitly confirm.');
+      status('ZIP received and SHA-256 matched. Check your locally saved ZIP'+
+        (zeroEntries>0?' and review '+zeroEntries+' Entries with no files':'')+
+        ', then explicitly confirm.');
     });
   });
   ack.addEventListener('click', function () {
