@@ -107,7 +107,7 @@ final class All_Download {
                     ['key' => 'id', 'direction' => 'ASC', 'is_numeric' => true],
                     ['offset' => $offset, 'page_size' => self::BATCH], $part_total);
                 if (!is_array($part) || !is_numeric($part_total) ||
-                    (int)$part_total < 0 || (int)$part_total !== (float)$part_total ||
+                    (int)$part_total < 0 || (float)(int)$part_total != (float)$part_total ||
                     ($total !== null && $total !== (int)$part_total)) {
                     throw new RuntimeException('ALL Entry enumeration count changed or failed');
                 }
