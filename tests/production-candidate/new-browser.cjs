@@ -113,7 +113,8 @@ const {chromium} = require('playwright-core');
     // Duplicate confirmation is genuinely HTTP-bound to the previously
     // acknowledged operation; it must not alter the revision.
     const cfg=await config(), nonce=cfg.nonce;
-    const dupe=await page.request.post(cfg.url,{
+    const adminAjax=new URL('admin-ajax.php',page.url()).href;
+    const dupe=await page.request.post(adminAjax,{
       form:{action:'gfbrc_new_ack',form_id:String(form),_wpnonce:nonce,
         operation:inc.op,confirmed:'yes',sha256:incZip.sha,zero_reviewed:'no'}});
     const duplicate=await dupe.json();
