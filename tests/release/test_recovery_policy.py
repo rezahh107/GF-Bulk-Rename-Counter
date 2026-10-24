@@ -91,11 +91,11 @@ class ExecutedTagIdentityGates(unittest.TestCase):
         }))
         z = "gf-bulk-rename-counter-2.1.1.zip"
         (self.root / "mock-release.json").write_text(json.dumps({
-            "tag_name": "v2.1.1", "draft": False, "prerelease": False,
+            "id": 422268666, "tag_name": "v2.1.1", "draft": False, "prerelease": False,
             "assets": [
-                {"name": z, "digest": "sha256:a57b5bf3c9be6bbe6bd13af7dc415f98dba62c14e57bc0349cdf48820ff7ab39"},
-                {"name": z + ".sha256"},
-                {"name": z + ".manifest.json"},
+                {"id": 670273670, "name": z, "size": 23961, "digest": "sha256:a57b5bf3c9be6bbe6bd13af7dc415f98dba62c14e57bc0349cdf48820ff7ab39"},
+                {"id": 670273668, "name": z + ".sha256", "size": 99, "digest": "sha256:83c7a5dd13495359de4e7306fe6546bf44b0b26367f6265cb959d7d2919c7955"},
+                {"id": 670273669, "name": z + ".manifest.json", "size": 1499, "digest": "sha256:ae54f0bd8acf78c2f4bf6836133112de23ca47361a780b18dbf5439a10bc87bc"},
             ],
         }))
         # These mocks never contact GitHub and never perform real Git writes.
