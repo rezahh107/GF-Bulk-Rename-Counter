@@ -40,7 +40,7 @@ const {chromium} = require('playwright-core');
       await page.locator('#gfbrc-new-prepare').waitFor({timeout:15000});
     }
     const config=async()=>page.locator('#gfbrc-new-config').evaluate(el=>JSON.parse(el.textContent));
-    async function pending(expectEntries,expectFiles) {
+    async function pending(expectEntries,expectFiles,expectZeroEntries) {
       const response=page.waitForResponse(r=>r.url().includes('admin-ajax.php') &&
         r.request().postData()?.includes('action=gfbrc_new_prepare'),{timeout:30000});
       await page.locator('#gfbrc-new-prepare').click();
@@ -55,8 +55,10 @@ const {chromium} = require('playwright-core');
       }
       if(!answer.success)throw Error('Prepare rejected: '+JSON.stringify(answer));
       const data=answer.data;
-      if(data.entries!==expectEntries||data.files!==expectFiles)throw Error(
-        'Wrong NEW count '+JSON.stringify(data)+' expected '+expectEntries+'/'+expectFiles);
+      if(data.entries!==expectEntries||data.files!==expectFiles||
+         (Number.isInteger(expectZeroEntries) && data.zero_entries!==expectZeroEntries))
+        throw Error('Wrong NEW counts '+JSON.stringify(data)+' expected '+
+          expectEntries+'/'+expectFiles+'/'+expectZeroEntries);
       await page.locator('#gfbrc-new-result').filter({
         hasText:data.op ? String(expectEntries)+' Entries / '+expectFiles+' eligible files'
           : 'Nothing to acknowledge'
@@ -93,7 +95,7 @@ const {chromium} = require('playwright-core');
     }
     const old=mutate('mark_old_inactive');
     await open();
-    const initial=await pending(154,155);
+    const initial=await pending(154,155,1);
     if(!initial.first)throw Error('First-use baseline advanced automatically');
     const baseline=mutate('read_coverage').state;
     if(!baseline||baseline.rev!==0||baseline.known.length!==0)
@@ -108,7 +110,7 @@ const {chromium} = require('playwright-core');
     const fresh=mutate('add_backdated'), zero=mutate('add_zero');
     if(!fresh.backdated||fresh.id<=old.id||zero.id<=fresh.id)throw Error('GF chronology fixture invalid');
     await open();
-    const inc=await pending(2,1);
+    const inc=await pending(2,1,1);
     const incZip=await receive('incremental');
     await confirm();
     if(mutate('read_coverage').state.rev!==2)throw Error('Second acknowledgment missing');
@@ -128,14 +130,14 @@ const {chromium} = require('playwright-core');
     console.log('PASS_NEW_BROWSER_DUPLICATE_OPERATION_ACK_IDEMPOTENT');
 
     await open();
-    const noNew = await pending(0,0);
+    const noNew = await pending(0,0,0);
     if (noNew.op || await page.locator('#gfbrc-new-ack').isVisible()) {
       throw Error('Empty NEW batch demanded unnecessary reapproval');
     }
     if(mutate('read_coverage').state.rev!==2)throw Error('Empty check changed coverage');
     mutate('add_zero');
     await open();
-    await pending(1,0);
+    await pending(1,0,1);
     if(!await page.locator('#gfbrc-new-ack').isVisible()) {
       throw Error('File-free review control not visible');
     }
@@ -230,7 +232,7 @@ const {chromium} = require('playwright-core');
     // An explicit zero-file acknowledgment must not permanently skip a newly
     // attached file that existed before the operator actually confirmed.
     mutate('add_zero');
-    await open(); await pending(1,0);
+    await open(); await pending(1,0,1);
     const preUploadRev=mutate('read_coverage').state.rev;
     mutate('attach_latest_zero');
     await page.locator('#gfbrc-new-review').check();
