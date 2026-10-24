@@ -478,7 +478,8 @@ final class New_Download {
     public static function ack(): void {
         try {
             $form = self::check();
-            $op = self::operation($form);
+            $id = self::operation_id();
+            $op = self::operation($form, $id);
             if ($op['status'] === 'acknowledged') {
                 wp_send_json_success(['result' => 'duplicate', 'covered' => count($op['ids'])]);
             }
@@ -497,8 +498,9 @@ final class New_Download {
             } elseif (($_POST['zero_reviewed'] ?? '') !== 'yes') {
                 throw new RuntimeException('File-free Entries require a separate explicit review');
             }
-            // Mutation between verified download and explicit confirmation
-            // invalidates coverage; this also protects file-free Entries.
+            // Revalidate genuine source bytes and status before the short
+            // DB transaction; database generation authority is enforced again
+            // under FOR UPDATE when coverage is actually committed.
             foreach ($op['ids'] as $entry_id) {
                 $entry = \GFAPI::get_entry($entry_id);
                 if (!is_array($entry) || ($entry['status'] ?? '') !== 'active') {
@@ -510,15 +512,37 @@ final class New_Download {
                 !hash_equals($op['fingerprint'], self::fingerprint($now_plan))) {
                 throw new RuntimeException('Entry uploads changed before acknowledgment; retry NEW');
             }
-            global $wpdb;
-            $old = self::raw($form);
+            $result = self::commit_ack($form, $id, $op);
+            wp_send_json_success(['result' => $result, 'covered' => count($op['ids'])]);
+        } catch (Throwable $e) { self::fail($e); }
+    }
+
+    /**
+     * The exact active generation AND durable coverage are validated/committed
+     * within one InnoDB transaction, locked in coverage → pending order.
+     */
+    private static function commit_ack(int $form, string $id, array $validated): string {
+        global $wpdb;
+        self::begin_operation_transaction();
+        $committed = false;
+        try {
+            $old = self::locked_coverage($form);
+            $op = self::operation($form, $id, true);
+            if ($op['status'] === 'acknowledged') {
+                if ($wpdb->query('COMMIT') === false) {
+                    throw new RuntimeException('Duplicate acknowledgment COMMIT failed');
+                }
+                $committed = true;
+                return 'duplicate';
+            }
+            if ($op['status'] !== ($op['zero'] ? 'prepared' : 'ready') ||
+                !hash_equals(wp_json_encode($validated), wp_json_encode($op))) {
+                throw new RuntimeException('NEW operation changed before atomic confirmation');
+            }
             if (!hash_equals($op['base'], hash('sha256', $old))) {
                 throw new RuntimeException('NEW coverage changed in another tab; prepare again');
             }
             $state = self::state($old);
-            // Record ALL pre-existing identities only as creation-history
-            // classification, not as "files received". Confirmed coverage
-            // contains ONLY the exact eligible IDs of this operation.
             $next = [
                 'schema' => 1, 'rev' => $state['rev'] + 1,
                 'known' => self::union($state['known'], $op['all']),
@@ -533,17 +557,21 @@ final class New_Download {
                  WHERE option_name = %s AND BINARY option_value = BINARY %s",
                 $json, self::key($form), $old
             ));
-            self::clear_cache($form);
             if ($affected !== 1) {
-                throw new RuntimeException('Concurrent NEW confirmation rejected; refresh before retry');
-            }
-            if (self::raw($form) !== $json || get_option(self::key($form)) !== $json) {
-                throw new RuntimeException('NEW coverage persistence readback failed; inspect before retry');
+                throw new RuntimeException('Concurrent NEW coverage confirmation rejected');
             }
             $op['status'] = 'acknowledged';
-            set_transient(self::pending_key($form), $op, max(1, $op['expires'] - time()));
-            wp_send_json_success(['result' => 'acknowledged', 'covered' => count($op['ids'])]);
-        } catch (Throwable $e) { self::fail($e); }
+            self::update_pending($form, $op);
+            if ($wpdb->query('COMMIT') === false) {
+                throw new RuntimeException('Atomic NEW acknowledgment COMMIT failed');
+            }
+            $committed = true;
+            return 'acknowledged';
+        } finally {
+            if (!$committed) { $wpdb->query('ROLLBACK'); }
+            self::clear_cache($form);
+            self::clear_pending_cache($form);
+        }
     }
 
     public static function footer(): void {
