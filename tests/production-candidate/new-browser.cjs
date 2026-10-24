@@ -264,5 +264,9 @@ const {chromium} = require('playwright-core');
     },null,2));
     cp.execFileSync('python3',[path.join(__dirname,'new-assert.py'),lab],
       {stdio:'inherit',timeout:30000});
+    // Independent WP-CLI/PHP processes on the SAME authentic MariaDB exercise
+    // precise stale-ACK, stale-ZIP, stale-prepare and overlapping ACK barriers.
+    cp.execFileSync('python3',[path.join(__dirname,'new-generation-race.py')],
+      {stdio:'inherit',env:process.env,timeout:240000});
   } finally { await browser.close(); }
 })().catch(e=>{console.error('NEW_BROWSER_FAILURE',e.stack||String(e));process.exit(1);});
