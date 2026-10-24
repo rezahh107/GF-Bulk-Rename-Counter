@@ -603,7 +603,7 @@ final class Flat_Zip_Download {
      * iteration. Failing here leaves the verified ZIP temporary file under
      * download()'s existing pre-header exception cleanup.
      */
-    public static function clear_output_buffers(): void {
+    private static function clear_output_buffers(): void {
         while (($level = ob_get_level()) > 0) {
             $status = ob_get_status();
             if (!is_array($status) || !isset($status['flags']) ||
@@ -614,6 +614,11 @@ final class Flat_Zip_Download {
                 throw new RuntimeException('Output buffer cleanup failed to make progress');
             }
         }
+    }
+
+    /** Share the verified pre-header guard with the separate NEW response. */
+    public static function prepare_output_buffers_for_new(): void {
+        self::clear_output_buffers();
     }
 
     private static function sign_scope(int $form_id, string $scope_json): string {
