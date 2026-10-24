@@ -336,6 +336,8 @@ final class New_Download {
         try {
             $form = self::check();
             $old = self::seed($form);
+            $observed_pending = self::seed_pending($form);
+            self::pending_decode($observed_pending);
             $state = self::state($old);
             [$all, $new] = self::snapshot($form, $state);
             // A second check with no NEW Entries is read-only.
@@ -348,7 +350,7 @@ final class New_Download {
             foreach ($plan as $item) { $with_files[(int)$item['entry_id']] = true; }
             $zero_entries = count($new) - count($with_files);
             $op = [
-                'v' => 1, 'id' => bin2hex(random_bytes(16)),
+                'v' => 2, 'id' => bin2hex(random_bytes(16)),
                 'user' => get_current_user_id(), 'form' => $form,
                 'expires' => time() + self::TTL, 'base' => hash('sha256', $old),
                 'all' => $all, 'ids' => $new,
@@ -357,9 +359,7 @@ final class New_Download {
                 'zip_sha' => '', 'zero' => count($plan) === 0,
                 'status' => 'prepared',
             ];
-            if (!set_transient(self::pending_key($form), $op, self::TTL)) {
-                throw new RuntimeException('Unable to save pending NEW operation');
-            }
+            self::publish_prepared($form, $old, $observed_pending, $op);
             wp_send_json_success([
                 'op' => $op['id'], 'entries' => count($new),
                 'files' => $op['files'], 'zero_entries' => $zero_entries,
@@ -370,25 +370,55 @@ final class New_Download {
         } catch (Throwable $e) { self::fail($e); }
     }
 
-    private static function operation(int $form): array {
-        $op = get_transient(self::pending_key($form));
+
+    private static function operation_id(): string {
         $id = $_POST['operation'] ?? null;
-        if (!is_array($op) || !is_string($id) || !preg_match('/^[a-f0-9]{32}$/', $id) ||
-            !hash_equals((string)($op['id'] ?? ''), $id) ||
-            ($op['v'] ?? null) !== 1 ||
+        if (!is_string($id) || !preg_match('/^[a-f0-9]{32}$/', $id)) {
+            throw new RuntimeException('Invalid NEW operation identity');
+        }
+        return $id;
+    }
+
+    private static function operation(int $form, string $id, bool $lock = false): array {
+        $op = self::pending_decode(self::pending_raw($form, $lock));
+        if (!hash_equals($op['id'], $id) ||
             ($op['user'] ?? null) !== get_current_user_id() ||
             ($op['form'] ?? null) !== $form ||
-            !is_int($op['expires'] ?? null) || $op['expires'] < time()) {
-            throw new RuntimeException('NEW operation expired or replaced by a newer tab');
+            $op['expires'] < time()) {
+            throw new RuntimeException('NEW operation expired or superseded by a newer generation');
         }
         return $op;
+    }
+
+    /** A superseded download cannot restore its prior ready record. */
+    private static function mark_ready(int $form, string $id, string $sha): void {
+        global $wpdb;
+        self::begin_operation_transaction();
+        $committed = false;
+        try {
+            $op = self::operation($form, $id, true);
+            if ($op['zero'] || !in_array($op['status'], ['prepared', 'ready'], true)) {
+                throw new RuntimeException('NEW download generation is no longer active');
+            }
+            $op['zip_sha'] = $sha;
+            $op['status'] = 'ready';
+            self::update_pending($form, $op);
+            if ($wpdb->query('COMMIT') === false) {
+                throw new RuntimeException('NEW download generation COMMIT failed');
+            }
+            $committed = true;
+        } finally {
+            if (!$committed) { $wpdb->query('ROLLBACK'); }
+            self::clear_pending_cache($form);
+        }
     }
 
     public static function download(): void {
         $tmp = null;
         try {
             $form = self::check();
-            $op = self::operation($form);
+            $id = self::operation_id();
+            $op = self::operation($form, $id);
             if ($op['zero'] || !$op['ids']) {
                 throw new RuntimeException('This operation has no files; confirm the zero-file review explicitly');
             }
@@ -409,11 +439,11 @@ final class New_Download {
             }
             $handle = fopen($tmp, 'rb');
             if (!$handle) { throw new RuntimeException('NEW ZIP cannot be opened'); }
-            $op['zip_sha'] = $sha;
-            $op['status'] = 'ready';
-            if (!set_transient(self::pending_key($form), $op, max(1, $op['expires'] - time()))) {
+            try {
+                self::mark_ready($form, $id, $sha);
+            } catch (Throwable $e) {
                 fclose($handle);
-                throw new RuntimeException('Unable to bind verified ZIP to pending NEW operation');
+                throw $e;
             }
             Flat_Zip_Download::prepare_output_buffers_for_new();
             if (headers_sent()) { fclose($handle); throw new RuntimeException('NEW ZIP headers unavailable'); }
