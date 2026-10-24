@@ -330,6 +330,12 @@ jobs:
           node --check tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/browser.cjs
+          # Whole-form ALL: 503 active Entries, real native filter, browser ZIP,
+          # repeated receipt, exact hashes, NEW ACK independence and fail-closed POST.
+          php -l tests/production-candidate/all-fixture.php
+          node --check tests/production-candidate/all-browser.cjs
+          python3 -m py_compile tests/production-candidate/all-assert.py
+          BRC_CHROME="$chrome" node tests/production-candidate/all-browser.cjs
           # Required GF/WordPress scripts must execute, not just appear in DOM.
           node --check tests/production-candidate/script-fidelity.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/script-fidelity.cjs
