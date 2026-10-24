@@ -55,7 +55,10 @@ const {chromium} = require('playwright-core');
       const data=answer.data;
       if(data.entries!==expectEntries||data.files!==expectFiles)throw Error(
         'Wrong NEW count '+JSON.stringify(data)+' expected '+expectEntries+'/'+expectFiles);
-      await page.locator('#gfbrc-new-result').filter({hasText:String(expectEntries)+' Entries / '+expectFiles+' eligible files'}).waitFor();
+      await page.locator('#gfbrc-new-result').filter({
+        hasText:data.op ? String(expectEntries)+' Entries / '+expectFiles+' eligible files'
+          : 'Nothing to acknowledge'
+      }).waitFor();
       return data;
     }
     async function receive(label) {
