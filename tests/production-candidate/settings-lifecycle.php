@@ -14,14 +14,21 @@ $per_form = 'gf_bulk_rename_per_form_rules';
 $other = 'gfbrc_ci_other_plugin_option'; // Test-only surrogate owned by another plugin.
 $fixture = json_decode(file_get_contents(getenv('BRC_LAB_DIR') . '/manifest.json'), true, 512, JSON_THROW_ON_ERROR);
 $form_id = (int)$fixture['scenarios']['single']['form_id'];
+$new_fixture = getenv('BRC_LAB_DIR') . '/new-independent-form.json';
+$new_form_id = is_file($new_fixture)
+    ? (int)(json_decode(file_get_contents($new_fixture), true)['form'] ?? 0) : 0;
+$new_key = $new_form_id ? 'gfbrc_new_coverage_' . $new_form_id : '';
 
-$assert_retained = static function () use ($legacy, $per_form, $other, $form_id): void {
+$assert_retained = static function () use ($legacy, $per_form, $other, $form_id, $new_key): void {
     if (get_option($legacy) !== ['form_id' => 0, 'counter_field_id' => 5]) {
         throw new RuntimeException('Legacy settings were lost or changed');
     }
     $rules = get_option($per_form);
     if (!is_array($rules) || ($rules[(string)$form_id] ?? null) !== ['method' => 'legacy']) {
         throw new RuntimeException('Per-form settings were lost or changed');
+    }
+    if ($new_key !== '' && !is_string(get_option($new_key))) {
+        throw new RuntimeException('Acknowledged NEW coverage was lost during lifecycle');
     }
     if (get_option($other) !== ['keep' => 'other-plugin-data']) {
         throw new RuntimeException('Unrelated plugin option was modified');
@@ -56,7 +63,7 @@ if ($phase === 'seed') {
     require_once ABSPATH . 'wp-admin/includes/plugin.php';
     uninstall_plugin($plugin); // Actual WordPress uninstall path, NOT a direct include.
     global $wpdb;
-    foreach ([$legacy, $per_form] as $name) {
+    foreach (array_filter([$legacy, $per_form, $new_key]) as $name) {
         $count = (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name = %s", $name
         ));
@@ -68,7 +75,7 @@ if ($phase === 'seed') {
         throw new RuntimeException('Uninstall touched another plugin option');
     }
     delete_option($other);
-    echo 'PASS_WP_EXPLICIT_UNINSTALL_REMOVES_ONLY_TWO_GFBRC_OPTIONS' . PHP_EOL;
+    echo 'PASS_WP_EXPLICIT_UNINSTALL_REMOVES_ONLY_GFBRC_OWNED_OPTIONS' . PHP_EOL;
 } else {
     throw new RuntimeException('Unknown lifecycle phase');
 }
