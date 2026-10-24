@@ -13,7 +13,7 @@ This is **not an operator-facing NEW feature**. Source: latest `main` after publ
 
 `tests/experimental-new/coverage-stress.php` is a **disposable manual native-lab test** for the WordPress option store. It tests revision CAS rejection/retry, hole preservation, per-form isolation, non-autoload option behavior, corrupted history rejection, and worst-case fragmented synthetic identity sets with 1,000/5,000/20,000 disjoint intervals. It reports bytes, elapsed time and peak PHP memory; it cleans its two disposable option keys.
 
-Run **only** in the existing disposable WordPress/GF/MariaDB lab after dependency activation:
+The existing native WordPress CI calls this test from its normal synthetic fixture setup. It can also be run **only** in a disposable WordPress/GF/MariaDB lab after dependency activation:
 
 ```sh
 php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/experimental-new/coverage-stress.php
