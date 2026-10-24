@@ -323,6 +323,9 @@ jobs:
           node --check tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/selection-qualification/discover.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/browser.cjs
+          # Required GF/WordPress scripts must execute, not just appear in DOM.
+          node --check tests/production-candidate/script-fidelity.cjs
+          BRC_CHROME="$chrome" node tests/production-candidate/script-fidelity.cjs
           php -l tests/production-candidate/verify-browser.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-browser.php
           test ! -e "$BRC_LAB_DIR/ifz-native-page-size"
@@ -449,6 +452,15 @@ jobs:
           lifecycle uninstall
           rm -rf "$temp"
           echo "PASS_WP_AUTHENTIC_UPDATE_ROLLBACK_AND_UNINSTALL_SCOPE"
+
+      - name: Preserve browser source-response fidelity diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-script-fidelity-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: /tmp/brc-lab/reports/native-script-fidelity.json
 
       - name: Summarize qualification evidence
         if: always()
