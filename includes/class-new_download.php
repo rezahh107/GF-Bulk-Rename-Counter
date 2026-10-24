@@ -101,12 +101,65 @@ final class New_Download {
     private static function begin_operation_transaction(): void {
         global $wpdb;
         self::require_transactional_gf_storage();
+        if ($wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false) {
+            throw new RuntimeException('NEW metadata range-lock isolation unavailable');
+        }
         $engine = $wpdb->get_var($wpdb->prepare(
             'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s',
             $wpdb->options
         ));
         if ($engine !== 'InnoDB' || $wpdb->query('START TRANSACTION') === false) {
             throw new RuntimeException('Atomic pending-operation database unavailable');
+        }
+    }
+
+    /**
+     * Serialize the exact GFAPI upload mutation path, not merely an unrelated
+     * Entry identity row. The pinned GFAPI::update_entry_field writes UPDATE or
+     * INSERT into the InnoDB Entry Meta table. Under REPEATABLE READ, an
+     * entry_id-indexed locking range read protects BOTH existing rows and the
+     * insertion gap for an initially absent upload field.
+     *
+     * Do not continue without a leading entry_id index: an unindexed locking
+     * table scan is neither bounded nor an acceptable concurrency contract.
+     */
+    private static function lock_entry_metadata(array $ids): void {
+        global $wpdb;
+        $table = \GFFormsModel::get_entry_meta_table_name();
+        if (!is_string($table) || !preg_match('/^[A-Za-z0-9_]+$/', $table)) {
+            throw new RuntimeException('GF upload metadata table unavailable');
+        }
+        $indexes = $wpdb->get_results("SHOW INDEX FROM {$table}", ARRAY_A);
+        if (!is_array($indexes)) {
+            throw new RuntimeException('GF upload metadata index inventory unavailable');
+        }
+        $index = null;
+        foreach ($indexes as $row) {
+            if (($row['Column_name'] ?? null) === 'entry_id' &&
+                (int)($row['Seq_in_index'] ?? 0) === 1 &&
+                is_string($row['Key_name'] ?? null) &&
+                preg_match('/^[A-Za-z0-9_]+$/', $row['Key_name'])) {
+                $index = $row['Key_name'];
+                break;
+            }
+        }
+        if ($index === null) {
+            throw new RuntimeException('GF upload metadata requires a leading Entry identity index');
+        }
+        $ids = array_values(array_unique($ids));
+        sort($ids, SORT_NUMERIC);
+        foreach ($ids as $entry_id) {
+            if (!is_int($entry_id) || $entry_id < 1) {
+                throw new RuntimeException('Invalid GF Entry identity for upload lock');
+            }
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT id FROM {$table} FORCE INDEX (\`{$index}\`)
+                 WHERE entry_id = %d FOR UPDATE",
+                $entry_id
+            ), ARRAY_A);
+            if (!is_array($rows)) {
+                throw new RuntimeException('Unable to lock GF upload rows and insertion gap');
+            }
         }
     }
 
@@ -576,6 +629,21 @@ final class New_Download {
             }
             if (!hash_equals($op['base'], hash('sha256', $old))) {
                 throw new RuntimeException('NEW coverage changed in another tab; prepare again');
+            }
+            // Recheck genuine GF Entry status and upload bytes after the
+            // database locks are held. GFAPI's UPDATE and absent-field INSERT
+            // now wait on the same Entry Meta index ranges until COMMIT.
+            self::lock_entry_metadata($op['ids']);
+            foreach ($op['ids'] as $entry_id) {
+                $entry = \GFAPI::get_entry($entry_id);
+                if (!is_array($entry) || ($entry['status'] ?? '') !== 'active') {
+                    throw new RuntimeException('Selected Entry status changed before atomic acknowledgment');
+                }
+            }
+            $locked_plan = self::plan($form, $op['ids']);
+            if (count($locked_plan) !== $op['files'] ||
+                !hash_equals($op['fingerprint'], self::fingerprint($locked_plan))) {
+                throw new RuntimeException('Entry uploads changed before atomic acknowledgment');
             }
             $state = self::state($old);
             $next = [
