@@ -46,11 +46,19 @@ for filename, expected in [
         # hashes alone would not detect replacing one Entry with another.
         fixture = json.loads((lab / "all-independent-form.json").read_text())
         assert len(fixture["ids"]) == 503
-        natural = "single-a.jpg"
-        assert natural in names, f"{filename}: missing natural source name"
-        assert "single-a-" + str(fixture["ids"][1]) + "-1.jpg" in names, f"{filename}: lost multi-file occurrence"
-        for entry_id in fixture["ids"][1:]:
-            expected_name = "single-a-" + str(entry_id) + ".jpg"
+        # Lab Legacy global counter field 5 produces two natural group names.
+        # The first eligible Entry in each group retains its natural basename;
+        # every subsequent Entry must receive an identity-bearing suffix.
+        assert "dgroup-a.jpg" in names and "dgroup-b.jpg" in names, (
+            f"{filename}: missing one of the two eligible groups")
+        first_id = fixture["ids"][1]
+        assert "dgroup-a-" + str(first_id) + ".jpg" in names
+        assert "dgroup-a-" + str(first_id) + "-1.jpg" in names
+        for index, entry_id in enumerate(fixture["ids"][1:], start=1):
+            if index in (1, 250):
+                continue
+            stem = "dgroup-a" if index < 250 else "dgroup-b"
+            expected_name = f"{stem}-{entry_id}.jpg"
             assert expected_name in names, f"{filename}: omitted Entry {entry_id}"
         assert all(str(fixture["inactive"]) not in item for item in names), f"{filename}: ineligible spam Entry included"
     print(f"PASS_ALL_SAVED_ZIP_MATCHES_SOURCE_SHA256 {filename} entries={expected} source_bytes={source_size}")
