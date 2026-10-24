@@ -83,6 +83,9 @@ jobs:
           php "$BRC_WP_CLI" config create --path="$BRC_WP_PATH" --dbname=wordpress --dbuser=root --dbpass=brc-lab-root --dbhost=127.0.0.1:3306 --skip-check
           php "$BRC_WP_CLI" core install --path="$BRC_WP_PATH" --url="$BRC_BASE_URL" --title="Synthetic BRC Lab" --admin_user=bootstrap_admin --admin_password="brc-ci-only-2026" --admin_email="bootstrap@example.invalid" --skip-email
           test "$(php "$BRC_WP_CLI" core version --path="$BRC_WP_PATH")" = "6.8.3"
+          echo "QF03_INSTALLED_SITEURL=$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option get siteurl)"
+          echo "QF03_INSTALLED_HOME=$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option get home)"
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" eval 'echo "QF03_CLI_URLS ", wp_json_encode(["site_url"=>site_url(),"home_url"=>home_url(),"content_url"=>content_url(),"admin_url"=>admin_url(),"wp_content_url"=>defined("WP_CONTENT_URL")?WP_CONTENT_URL:null]), PHP_EOL;'
 
       - name: Acquire authentic plugin distributions and assert identities
         shell: bash
