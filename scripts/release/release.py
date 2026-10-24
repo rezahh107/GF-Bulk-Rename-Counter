@@ -18,6 +18,7 @@ FILES = (
     "includes/class-rename_handler.php",
     "includes/class-settings_page.php",
     "includes/class-flat_zip_download.php",
+    "includes/class-new_download.php",
     "includes/class-form_naming_rules.php",
     "includes/class-naming_strategy.php",
     "languages/gf-bulk-rename-counter.pot",
