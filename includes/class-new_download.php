@@ -236,6 +236,11 @@ final class New_Download {
             $old = self::seed($form);
             $state = self::state($old);
             [$all, $new] = self::snapshot($form, $state);
+            // A second check with no NEW Entries is read-only.
+            if (!$new && $state['rev'] > 0) {
+                wp_send_json_success(['op' => null, 'entries' => 0, 'files' => 0,
+                    'zero' => true, 'first' => false, 'expires' => 0]);
+            }
             $plan = self::plan($form, $new);
             $op = [
                 'v' => 1, 'id' => bin2hex(random_bytes(16)),
@@ -355,6 +360,19 @@ final class New_Download {
             } elseif (($_POST['zero_reviewed'] ?? '') !== 'yes') {
                 throw new RuntimeException('File-free Entries require a separate explicit review');
             }
+            // Mutation between verified download and explicit confirmation
+            // invalidates coverage; this also protects file-free Entries.
+            foreach ($op['ids'] as $entry_id) {
+                $entry = \GFAPI::get_entry($entry_id);
+                if (!is_array($entry) || ($entry['status'] ?? '') !== 'active') {
+                    throw new RuntimeException('Selected Entry status changed; retry NEW');
+                }
+            }
+            $now_plan = self::plan($form, $op['ids']);
+            if (count($now_plan) !== $op['files'] ||
+                !hash_equals($op['fingerprint'], self::fingerprint($now_plan))) {
+                throw new RuntimeException('Entry uploads changed before acknowledgment; retry NEW');
+            }
             global $wpdb;
             $old = self::raw($form);
             if (!hash_equals($op['base'], hash('sha256', $old))) {
@@ -463,7 +481,9 @@ final class New_Download {
       status(data.entries+' Entries / '+data.files+' eligible files. '+
         (data.first?'Initial batch; no automatic coverage update. ':'')+
         (zero?'No ZIP exists for this batch; review the file-free Entries.':''));
-      if (!zero) download.hidden = false;
+      if (!data.op) {
+        status('0 newly created eligible Entries / 0 files. Nothing to acknowledge.');
+      } else if (!zero) download.hidden = false;
       else {downloaded = true; reviewWrap.hidden = false; ack.hidden = false;}
     });
   });
