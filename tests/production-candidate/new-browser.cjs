@@ -10,7 +10,7 @@ const {chromium} = require('playwright-core');
   const lab = process.env.BRC_LAB_DIR, base = process.env.BRC_BASE_URL;
   const wpcli = process.env.BRC_WP_CLI, wp = process.env.BRC_WP_PATH;
   const meta = JSON.parse(fs.readFileSync(path.join(lab,'independent.json'),'utf8'));
-  const form = meta.cases.global154.form_id;
+  let form = 0;
   const cookies = fs.readFileSync(path.join(lab,'auth.cookies'),'utf8').split(/\r?\n/)
     .filter(s=>s && !s.startsWith('#')).map(line=>{
       const t=line.split(/\s+/);
@@ -25,6 +25,8 @@ const {chromium} = require('playwright-core');
     if(!marker)throw Error('Missing GF mutation: '+res.slice(-400));
     return JSON.parse(marker.replace('GFBRC_NEW_MUTATION ',''));
   }
+  form=mutate('setup').form;
+  if(!Number.isInteger(form)||form<=0)throw Error('Invalid isolated NEW form');
   const browser=await chromium.launch({executablePath:process.env.BRC_CHROME,headless:true,
     args:['--no-sandbox','--disable-dev-shm-usage']});
   try {
