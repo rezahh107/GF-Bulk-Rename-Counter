@@ -405,6 +405,27 @@ jobs:
           python3 -m py_compile tests/selection-qualification/method-test.py
           python3 tests/selection-qualification/method-test.py "$BRC_LAB_DIR"
 
+      - name: Qualify QF-01 QF-02 QF-03 in disposable authenticated runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Exact qualification HEAD: $(git rev-parse HEAD)"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -s "$BRC_TARGET_ZIP"
+          # Never ship a test-only worker or runtime barrier in the deliverable.
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)(tests/qualification|qf-runtime|qf-browser)'; then
+            echo 'FAIL: qualification fixture leaked into production package' >&2
+            exit 1
+          fi
+          php -l tests/qualification/qf-runtime-worker.php
+          python3 -m py_compile tests/qualification/qf-runtime.py
+          node --check tests/qualification/qf-browser.cjs
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          test -n "$chrome"
+          BRC_CHROME="$chrome" node tests/qualification/qf-browser.cjs
+          python3 tests/qualification/qf-runtime.py
+          echo 'QF qualification evidence recorded; installed production PHP restored.'
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
@@ -446,6 +467,18 @@ jobs:
           lifecycle uninstall
           rm -rf "$temp"
           echo "PASS_WP_AUTHENTIC_UPDATE_ROLLBACK_AND_UNINSTALL_SCOPE"
+
+      - name: Retain isolated QF runtime and Chromium diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qf01-qf02-qf03-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            /tmp/brc-lab/reports/qf-runtime-results.json
+            /tmp/brc-lab/reports/qf-browser-network.json
+            /tmp/brc-lab/reports/package-identities.txt
 
       - name: Summarize qualification evidence
         if: always()
