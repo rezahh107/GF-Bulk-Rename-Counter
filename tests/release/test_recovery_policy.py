@@ -162,7 +162,7 @@ esac
         for name in ("summary", "effects"):
             (self.root / name).write_text("")
         return subprocess.run(
-            ["bash", "-c", self.gate_script(gate)],
+            ["bash", "-x", "-c", self.gate_script(gate)],
             cwd=self.root, env=env, capture_output=True, text=True, check=False,
             timeout=15,
         )
