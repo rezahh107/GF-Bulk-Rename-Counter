@@ -23,6 +23,7 @@ final class Flat_Zip_Download {
         add_action('admin_init', [__CLASS__, 'register_capture'], 1);
         add_action('admin_footer', [__CLASS__, 'footer']);
         add_action('admin_post_' . self::ENDPOINT, [__CLASS__, 'download']);
+        New_Download::register();
     }
 
 
@@ -602,7 +603,7 @@ final class Flat_Zip_Download {
      * iteration. Failing here leaves the verified ZIP temporary file under
      * download()'s existing pre-header exception cleanup.
      */
-    private static function clear_output_buffers(): void {
+    public static function clear_output_buffers(): void {
         while (($level = ob_get_level()) > 0) {
             $status = ob_get_status();
             if (!is_array($status) || !isset($status['flags']) ||
