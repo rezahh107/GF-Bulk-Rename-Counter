@@ -224,6 +224,21 @@ const {chromium} = require('playwright-core');
       console.log('PASS_NEW_BROWSER_TWO_TABS_STALE_REJECTED_FRESH_CONFIRMED');
     } finally {await secondTab.close();}
 
+    // File-free eligibility may change between preview and confirmation.
+    // An explicit zero-file acknowledgment must not permanently skip a newly
+    // attached file that existed before the operator actually confirmed.
+    mutate('add_zero');
+    await open(); await pending(1,0);
+    const preUploadRev=mutate('read_coverage').state.rev;
+    mutate('attach_latest_zero');
+    await page.locator('#gfbrc-new-review').check();
+    await page.locator('#gfbrc-new-ack').click();
+    await page.locator('#gfbrc-new-result').filter({hasText:'uploads changed before acknowledgment'}).waitFor();
+    if(mutate('read_coverage').state.rev!==preUploadRev)throw Error('Mutated zero-file ACK skipped new upload');
+    await open(); await pending(1,1);
+    await receive('former-zero-with-file'); await confirm();
+    console.log('PASS_NEW_BROWSER_ZERO_FILE_CHANGED_BEFORE_ACK_REJECTED_AND_RECOVERED');
+
     // Missing upload must fail visibly before ZIP and before any checkpoint.
     mutate('add_missing');
     await open();
