@@ -47,6 +47,12 @@ add_filter('pre_option_' . Settings::OPTION_NAME, $invalid = static fn() =>
     ['form_id' => 0, 'counter_field_id' => 99999]);
 if (UX::status($a)[0] !== 'warning') { throw new RuntimeException('Stale field not flagged'); }
 remove_filter('pre_option_' . Settings::OPTION_NAME, $invalid);
+add_filter('pre_option_' . \GFBulkRename\Form_Naming_Rules::OPTION_NAME, $stale_rule = static fn() =>
+    [(string)$b['id'] => ['method' => 'single', 'field_id' => 99999]]);
+if (UX::status($b)[0] !== 'warning') {
+    throw new RuntimeException('Stale per-form naming rule not flagged');
+}
+remove_filter('pre_option_' . \GFBulkRename\Form_Naming_Rules::OPTION_NAME, $stale_rule);
 if (get_option(Settings::OPTION_NAME) !== $baseline) {
     throw new RuntimeException('Read-only states mutated real settings');
 }
