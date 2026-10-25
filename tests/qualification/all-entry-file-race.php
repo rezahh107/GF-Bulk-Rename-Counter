@@ -43,7 +43,31 @@ if ($action === 'setup') {
         }
         $cases[$kind] = ['form' => (int)$form, 'entry' => (int)$id];
     }
-    $stored = ['cases' => $cases, 'a' => $a, 'b' => $b];
+    // Real 8 MiB physical source: timer measures the extra authoritative
+    // planner/hash pass; this fixture is not a GB-scale capacity claim.
+    $bench_bytes = random_bytes(8 * 1048576);
+    $bench_upload = wp_upload_bits('gfbrc-all-8m-benchmark.bin', null, $bench_bytes);
+    if (!empty($bench_upload['error']) || !is_file($bench_upload['file'])) {
+        throw new RuntimeException('Benchmark upload unavailable');
+    }
+    $bench_hash = hash('sha256', $bench_bytes);
+    unset($bench_bytes);
+    $bench_form = GFAPI::add_form([
+        'title' => 'GFBRC ALL 8 MiB hash performance fixture',
+        'fields' => [
+            ['id' => 1, 'type' => 'fileupload', 'label' => 'Source'],
+            ['id' => 5, 'type' => 'text', 'label' => 'Counter'],
+        ],
+        'button' => ['type' => 'text', 'text' => 'Submit'],
+    ]);
+    if (is_wp_error($bench_form)) { throw new RuntimeException('Benchmark form creation failed'); }
+    $bench_entry = GFAPI::add_entry(['form_id' => (int)$bench_form,
+        '1' => $bench_upload['url'], '5' => 'BENCH']);
+    if (is_wp_error($bench_entry)) { throw new RuntimeException('Benchmark Entry creation failed'); }
+    $cases['benchmark'] = ['form' => (int)$bench_form, 'entry' => (int)$bench_entry];
+    $stored = ['cases' => $cases, 'a' => $a, 'b' => $b,
+        'benchmark' => ['sha256' => $bench_hash, 'size' => 8 * 1048576,
+            'url' => $bench_upload['url'], 'path' => $bench_upload['file']]];
     file_put_contents($fixture_file, wp_json_encode($stored, JSON_PRETTY_PRINT));
     $output['fixture'] = $stored;
 } else {
