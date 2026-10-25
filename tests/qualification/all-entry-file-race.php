@@ -20,7 +20,7 @@ $output = ['action' => $action];
 if ($action === 'setup') {
     if ($stored !== null) { throw new RuntimeException('Race fixture already initialized'); }
     $cases = [];
-    foreach (['reference', 'deletion', 'repeated'] as $kind) {
+    foreach (['reference', 'reference_late', 'deletion', 'repeated', 'ordering', 'alias'] as $kind) {
         $form = GFAPI::add_form([
             'title' => 'GFBRC ALL mutation race ' . $kind,
             'fields' => [
@@ -37,6 +37,7 @@ if ($action === 'setup') {
         $row = ['form_id' => (int)$form, '1' => $a['url'], '5' => 'RACE'];
         if ($kind === 'deletion') { $row['2'] = wp_json_encode([$b['url']]); }
         if ($kind === 'repeated') { $row['2'] = wp_json_encode([$a['url'], $a['url'], $b['url']]); }
+        if ($kind === 'ordering') { $row['2'] = wp_json_encode([$a['url'], $b['url']]); }
         $id = GFAPI::add_entry($row);
         if (is_wp_error($id) || (int)$id < 1) {
             throw new RuntimeException('Cannot create ' . $kind . ' Entry');
@@ -77,13 +78,27 @@ if ($action === 'setup') {
     $case = $stored['cases'][$kind];
     $id = $case['entry'];
     if ($action === 'mutate') {
-        if ($kind === 'reference' || $kind === 'repeated') {
+        if (in_array($kind, ['reference', 'reference_late', 'repeated'], true)) {
             $changed = GFAPI::update_entry_field($id, 1, $b['url']);
             if (is_wp_error($changed) || $changed === false) {
                 throw new RuntimeException('GFAPI file field update failed');
             }
             if (GFAPI::get_entry($id)['1'] !== $b['url']) {
                 throw new RuntimeException('GFAPI failed to persist B reference');
+            }
+        } elseif ($kind === 'ordering') {
+            $changed = GFAPI::update_entry_field($id, 2, wp_json_encode([$b['url'], $a['url']]));
+            if (is_wp_error($changed) || $changed === false) {
+                throw new RuntimeException('Ordering mutation failed');
+            }
+        } elseif ($kind === 'alias') {
+            $alias = str_replace('single-a.jpg', 'single-%61.jpg', $a['url']);
+            if ($alias === $a['url'] || rawurldecode($alias) !== $a['url']) {
+                throw new RuntimeException('Valid same-file encoded URL alias unavailable');
+            }
+            $changed = GFAPI::update_entry_field($id, 1, $alias);
+            if (is_wp_error($changed) || $changed === false) {
+                throw new RuntimeException('Encoded URL mutation failed');
             }
         } else {
             gform_update_meta($id, 'bdfgf_deleted_file_urls', [$a['url']]);
@@ -104,6 +119,8 @@ if ($action === 'setup') {
     $output += [
         'kind' => $kind, 'form' => $case['form'], 'entry' => $id,
         'field_1' => GFAPI::get_entry($id)['1'],
+        'field_2' => GFAPI::get_entry($id)['2'] ?? '',
+        'plan_urls' => array_column($plan, 'url'),
         'files' => count($plan),
         'plan_sha256' => array_column($plan, 'sha256'),
         'plan_names' => array_column($plan, 'name'),
