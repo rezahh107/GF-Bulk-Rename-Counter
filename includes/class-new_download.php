@@ -705,12 +705,37 @@ final class New_Download {
         if (!$form) { return; }
         $config = wp_json_encode([
             'form' => $form, 'nonce' => wp_create_nonce('gfbrc_new_' . $form),
+            'text' => [
+                'title' => __('NEW — newly created Entries', 'gf-bulk-rename-counter'),
+                'check' => __('Check NEW', 'gf-bulk-rename-counter'),
+                'download' => __('Download verified ZIP', 'gf-bulk-rename-counter'),
+                'ack' => __('Confirm receipt and advance NEW', 'gf-bulk-rename-counter'),
+                'review' => __('I saved and checked the ZIP (or reviewed the zero-file Entries)', 'gf-bulk-rename-counter'),
+                'guide' => __('NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action.', 'gf-bulk-rename-counter'),
+                'invalid' => __('NEW request did not return a valid response', 'gf-bulk-rename-counter'),
+                'rejected' => __('NEW request rejected', 'gf-bulk-rename-counter'),
+                'failure' => __('NEW failed: %s — coverage is unchanged unless receipt confirmation already succeeded.', 'gf-bulk-rename-counter'),
+                'checking' => __('Checking exact Entries and files…', 'gf-bulk-rename-counter'),
+                'summary' => __('%1$d Entries / %2$d eligible files / %3$d Entries with no files. ', 'gf-bulk-rename-counter'),
+                'first' => __('Initial batch; no automatic coverage update. ', 'gf-bulk-rename-counter'),
+                'nozip' => __('No ZIP exists for this batch; explicitly review the file-free Entries.', 'gf-bulk-rename-counter'),
+                'empty' => __('0 newly created eligible Entries / 0 files. Nothing to acknowledge.', 'gf-bulk-rename-counter'),
+                'receiving' => __('Receiving and verifying the ZIP in this browser…', 'gf-bulk-rename-counter'),
+                'sha' => __('Downloaded ZIP SHA-256 mismatch', 'gf-bulk-rename-counter'),
+                'zip_ok' => __('ZIP received and SHA-256 matched in this browser. Check your locally saved ZIP%1$s, then explicitly confirm receipt.', 'gf-bulk-rename-counter'),
+                'zero_review' => __(' and review %d Entries with no files', 'gf-bulk-rename-counter'),
+                'ack_needed' => __('Check your saved ZIP or explicitly review the zero-file Entries first.', 'gf-bulk-rename-counter'),
+                'ack_success' => __('NEW %1$s: %2$d Entries confirmed. Check NEW again for later Entries.', 'gf-bulk-rename-counter'),
+            ],
         ]);
         echo '<script id="gfbrc-new-config" type="application/json">' .
             wp_json_encode(json_decode($config, true), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>';
         ?>
 <style id="gfbrc-new-visibility">
 #gfbrc-new-panel [hidden] { display: none !important; }
+#gfbrc-new-panel .button {margin:4px;max-width:100%;white-space:normal}
+#gfbrc-new-panel .description {margin:8px 0}
+#gfbrc-new-panel > div {display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 </style>
 <script id="gfbrc-new-workflow">
 (function () {
@@ -725,13 +750,26 @@ final class New_Download {
   var panel = document.createElement('section');
   panel.id = 'gfbrc-new-panel';
   panel.style.cssText = 'display:block;box-sizing:border-box;margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
-  panel.innerHTML = '<strong>NEW — newly created Entries</strong> ' +
-    '<button type="button" class="button" id="gfbrc-new-prepare">Check NEW</button> ' +
-    '<span id="gfbrc-new-result" role="status" aria-live="polite"></span>' +
-    '<div><button type="button" class="button button-primary" id="gfbrc-new-download" hidden>Download verified ZIP</button> ' +
+  panel.innerHTML = '<strong id="gfbrc-new-title"></strong> ' +
+    '<button type="button" class="button" id="gfbrc-new-prepare"></button> ' +
+    '<p class="description" id="gfbrc-new-guide"></p>' +
+    '<div><span id="gfbrc-new-result" role="status" aria-live="polite"></span></div>' +
+    '<div><button type="button" class="button button-primary" id="gfbrc-new-download" hidden></button> ' +
     '<label id="gfbrc-new-review-wrap" hidden><input type="checkbox" id="gfbrc-new-review"> ' +
-    'I saved and checked the ZIP (or reviewed the zero-file Entries)</label> ' +
-    '<button type="button" class="button" id="gfbrc-new-ack" hidden>Confirm receipt and advance NEW</button></div>';
+    '<span id="gfbrc-new-review-text"></span></label> ' +
+    '<button type="button" class="button" id="gfbrc-new-ack" hidden></button></div>';
+  panel.querySelector('#gfbrc-new-title').textContent = cfg.text.title;
+  panel.querySelector('#gfbrc-new-prepare').textContent = cfg.text.check;
+  panel.querySelector('#gfbrc-new-guide').textContent = cfg.text.guide;
+  panel.querySelector('#gfbrc-new-download').textContent = cfg.text.download;
+  panel.querySelector('#gfbrc-new-review-text').textContent = cfg.text.review;
+  panel.querySelector('#gfbrc-new-ack').textContent = cfg.text.ack;
+  function tr(key) {
+    var args = Array.prototype.slice.call(arguments, 1), next = 0;
+    return cfg.text[key].replace(/%(?:(\d+)\$)?[ds]/g, function (_, index) {
+      return String(args[index ? Number(index) - 1 : next++]);
+    });
+  }
   // The real GF Entry List JavaScript positions the native table on top
   // of content that protrudes beyond its fixed-height bulk-action toolbar.
   // Keep NEW in normal document flow AFTER the complete toolbar so neither
@@ -761,29 +799,27 @@ final class New_Download {
       return {response:response, bytes:await response.arrayBuffer()};
     }
     var payload;
-    try { payload = await response.json(); } catch (_) {throw Error('NEW request did not return a valid response');}
+    try { payload = await response.json(); } catch (_) {throw Error(cfg.text.invalid);}
     if (!response.ok || !payload.success) {
-      throw Error((payload.data && payload.data.message) || 'NEW request rejected');
+      throw Error((payload.data && payload.data.message) || cfg.text.rejected);
     }
     return payload.data;
   }
   async function guarded(fn) {
     if (busy) return;
     busy = true; prepare.disabled = true; download.disabled = true; ack.disabled = true;
-    try { await fn(); } catch (e) {status('NEW failed: '+e.message+' — coverage unchanged unless confirmation succeeded.');}
+    try { await fn(); } catch (e) {status(tr('failure', e.message));}
     finally {busy = false; prepare.disabled = false; download.disabled = false; ack.disabled = false;}
   }
   prepare.addEventListener('click', function () {
     guarded(async function () {
-      reset(); status('Checking exact Entries and files…');
+      reset(); status(cfg.text.checking);
       var data = await api('prepare');
       operation = data.op; zero = data.zero; zeroEntries = data.zero_entries;
-      status(data.entries+' Entries / '+data.files+' eligible files / '+
-        data.zero_entries+' Entries with no files. '+
-        (data.first?'Initial batch; no automatic coverage update. ':'')+
-        (zero?'No ZIP exists for this batch; explicitly review the file-free Entries.':''));
+      status(tr('summary', data.entries, data.files, data.zero_entries)+
+        (data.first?cfg.text.first:'')+(zero?cfg.text.nozip:''));
       if (!data.op) {
-        status('0 newly created eligible Entries / 0 files. Nothing to acknowledge.');
+        status(cfg.text.empty);
       } else if (!zero) download.hidden = false;
       else {downloaded = true; reviewWrap.hidden = false; ack.hidden = false;}
     });
@@ -791,12 +827,12 @@ final class New_Download {
   download.addEventListener('click', function () {
     guarded(async function () {
       if (!operation || zero) return;
-      status('Receiving and verifying the ZIP in this browser…');
+      status(cfg.text.receiving);
       var delivered = await api('download', {operation:operation}, true);
       var expected = delivered.response.headers.get('X-GFBRC-ZIP-SHA256');
       var digest = await crypto.subtle.digest('SHA-256', delivered.bytes);
       var actual = Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,'0')).join('');
-      if (!expected || expected !== actual) throw Error('Downloaded ZIP SHA-256 mismatch');
+      if (!expected || expected !== actual) throw Error(cfg.text.sha);
       checksum = actual;
       var name = (delivered.response.headers.get('content-disposition') || '')
         .match(/filename="([^"]+\.zip)"/i);
@@ -807,20 +843,18 @@ final class New_Download {
       document.body.appendChild(anchor); anchor.click(); anchor.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
       downloaded = true; reviewWrap.hidden = false; ack.hidden = false;
-      status('ZIP received and SHA-256 matched. Check your locally saved ZIP'+
-        (zeroEntries>0?' and review '+zeroEntries+' Entries with no files':'')+
-        ', then explicitly confirm.');
+      status(tr('zip_ok', zeroEntries>0 ? tr('zero_review', zeroEntries) : ''));
     });
   });
   ack.addEventListener('click', function () {
     guarded(async function () {
       if (!operation || !downloaded || !review.checked) {
-        status('Please check the saved ZIP or explicitly review the zero-file Entries first.'); return;
+        status(cfg.text.ack_needed); return;
       }
       var result = await api('ack', {
         operation:operation, confirmed:'yes', zero_reviewed:zero?'yes':'no', sha256:checksum
       });
-      status('NEW '+result.result+': '+result.covered+' Entries confirmed. Check NEW again for later Entries.');
+      status(tr('ack_success', result.result, result.covered));
       reset();
     });
   });
