@@ -354,6 +354,41 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Native Bulk Download unchanged; independent production implementation loaded from installable GFBRC ZIP.'
 
+      - name: Falsify F-01 repaired ALL manifest against real GF file metadata and races
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Canonical shipped ZIP and repository source remain uninstrumented.
+          test "$(git hash-object includes/class-all_download.php)" = "16d669f70e9cf79ada6677bd1b6f936e29302f67"
+          test "$(git hash-object includes/class-flat_zip_download.php)" = "396f89f91dcc2022906f61ef9b0f5d3c4df448e8"
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
+            echo 'Qualification harness was included in installable ZIP' >&2
+            exit 1
+          fi
+          php -l tests/qualification/all-entry-file-race.php
+          python3 -m py_compile tests/qualification/all-race-instrument.py tests/qualification/all-race-repair-assert.py
+          node --check tests/qualification/all-race-repair-browser.cjs
+          python3 tests/qualification/all-race-instrument.py apply
+          trap 'python3 tests/qualification/all-race-instrument.py restore' EXIT
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          BRC_CHROME="$chrome" node tests/qualification/all-race-repair-browser.cjs
+          test -s "$BRC_LAB_DIR/all-final-manifest-seconds.log"
+          python3 - <<'PY'
+          import pathlib, statistics
+          p=pathlib.Path('/tmp/brc-lab/all-final-manifest-seconds.log')
+          values=[float(s) for s in p.read_text().splitlines()]
+          assert len(values)>=5 and all(x>=0 for x in values), values
+          print('PASS_ACTUAL_PREHEADER_REVALIDATION_TIMING',
+                'calls=',len(values),
+                'min_seconds=',min(values),
+                'max_seconds=',max(values),
+                'median_seconds=',statistics.median(values),
+                'representative_source_bytes=',8*1048576)
+          PY
+          echo 'PASS_F01_GENUINE_WORDPRESS_GFBRC_ALL_POSTWRITE_PREHEADER_FALSIFICATION'
+          # Trap restores runtime bytes before remaining native host/NEW checks.
+
       - name: Qualify EXT-001 per-form settings and final browser ZIP downloads
         shell: bash
         run: |
