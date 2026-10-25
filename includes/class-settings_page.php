@@ -101,8 +101,10 @@ class Settings_Page {
         <input type="number" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[counter_field_id]" id="gf_bulk_rename_counter_field_id" value="<?php echo esc_attr( $current ); ?>" class="small-text" />
         <p class="description"><?php esc_html_e( 'Global Legacy Counter Field ID. 0 keeps original names. Set the target form above (or All forms); independent Single Field/Composite overrides are configured separately below.', 'gf-bulk-rename-counter' ); ?></p>
         <?php
-        if ( ! empty( $options['form_id'] ) && class_exists( 'GFAPI' ) ) {
-            $selected_form = \GFAPI::get_form( absint( $options['form_id'] ) );
+        $preview_form_id = ! empty( $options['form_id'] ) ? absint( $options['form_id'] ) :
+            ( isset( $_GET['gfbrc_form'] ) && is_scalar( $_GET['gfbrc_form'] ) ? absint( $_GET['gfbrc_form'] ) : 0 );
+        if ( $preview_form_id && class_exists( 'GFAPI' ) ) {
+            $selected_form = \GFAPI::get_form( $preview_form_id );
             if ( is_array( $selected_form ) ) {
                 echo '<details><summary>' . esc_html__( 'Show field labels and IDs for this form', 'gf-bulk-rename-counter' ) . '</summary><ul>';
                 foreach ( $selected_form['fields'] ?? [] as $field ) {
