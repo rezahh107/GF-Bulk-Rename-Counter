@@ -249,6 +249,22 @@ final class All_Download {
      * A mutation after this check is outside the bounded guarantee.
      */
     public static function assert_manifest(int $form, array $expected_ids, array $expected_plan): void {
+        // GF gform_get_meta() keeps an in-request $_gform_lead_meta cache.
+        // A separate request can update deletion metadata while this download
+        // writes its ZIP. Evict ONLY the two host deletion keys for this form's
+        // accepted Entries before reusing the exact same authoritative planner.
+        // Do not flush unrelated GF caches or change NEW/Selected behavior.
+        global $_gform_lead_meta;
+        if (!is_array($_gform_lead_meta)) {
+            throw new RuntimeException('Gravity Forms deletion metadata cache unavailable');
+        }
+        $prefix = get_current_blog_id() . '_';
+        foreach ($expected_ids as $entry_id) {
+            unset(
+                $_gform_lead_meta[$prefix . $entry_id . '_bdfgf_deleted_file_urls'],
+                $_gform_lead_meta[$prefix . $entry_id . '_bdfgf_files_deleted']
+            );
+        }
         $actual = self::manifest($form);
         if ($actual['ids'] !== $expected_ids || $actual['plan'] !== $expected_plan) {
             throw new RuntimeException('ALL Entries or eligible source files changed before ZIP delivery; check ALL again');
