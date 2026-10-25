@@ -72,6 +72,11 @@ const {chromium}=require('playwright-core');
     fs.rmSync(snap().probePath,{force:true});
     const oldPreview=await preview(200);
     const old=await download(oldPreview.data);
+    console.log('F02_DIAGNOSTIC_BASELINE_REAL_RUNTIME', 'HTTP',old.status,
+      'tmpfs_state',disk('status'),'php_source_baseline_installed',
+      fs.readFileSync(path.join(process.env.BRC_WP_PATH,
+        'wp-content/plugins/gf-bulk-rename-counter/includes/class-all_download.php'),'utf8')
+          .includes('$actual = self::manifest($form);'));
     assertNoZip(old,'pre-F02 baseline','Insufficient temporary disk space for complete ALL ZIP');
     const oldProbe=verifyBuild('pre-F02 baseline');
     if(fs.existsSync(oldProbe.path))throw Error('Baseline temporary ZIP leaked after HTTP 422');
