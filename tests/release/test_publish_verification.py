@@ -236,6 +236,53 @@ fi
         self.assertTrue(marker.exists(), "Consumer step must not delete candidate")
         self.assertNotIn("git rm release/candidate.json", command)
 
+    def test_actual_retirement_step_aborts_before_git_rm_on_remote_mismatch(self):
+        # Run the real retirement shell step, but against isolated read-only
+        # GitHub/Git shims. No remote mutation or real publication.
+        import shutil
+        import textwrap
+
+        self.capture()
+        shutil.copyfile(self.state, self.root / "brc-published-identity.json")
+        release_dir = self.root / "release"
+        release_dir.mkdir()
+        marker = release_dir / "candidate.json"
+        marker.write_text('{"version":"2.1.1"}')
+        for item in self.names:
+            shutil.copyfile(self.artifacts / item, release_dir / item)
+
+        scripts = self.root / "scripts/release"
+        scripts.mkdir(parents=True)
+        shutil.copyfile(SCRIPT, scripts / SCRIPT.name)
+        git = self.root / "bin/git"
+        git.write_text("""#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1 $2 $3" == "ls-remote origin refs/heads/main" ]]; then
+    printf '%s\\trefs/heads/main\n' "$GITHUB_SHA"
+else
+    echo "$*" >> "$RUNNER_TEMP/unexpected-git-operation"
+    exit 95
+fi
+""")
+        git.chmod(0o755)
+        workflow = WORKFLOW.read_text()
+        retire = workflow.split(
+            "      - name: Retire candidate marker only after successful last-mile check", 1
+        )[1].split("      - name: Report partial failure without rewriting a tag or asset", 1)[0]
+        command = textwrap.dedent(retire.split("        run: |\n", 1)[1])
+        env = {**self.env, "GITHUB_REPOSITORY": REPO, "BRC_TAG": TAG,
+               "BRC_VERSION": TAG[1:], "GITHUB_SHA": COMMIT,
+               "BRC_TAG_OBJECT_SHA": TAG_SHA, "RUNNER_TEMP": str(self.root)}
+        self.release["assets"][0]["id"] += 1
+        self.write_api()
+        run = subprocess.run(["/bin/bash", "-c", command], cwd=self.root,
+                             env=env, capture_output=True, text=True,
+                             check=False, timeout=20)
+        self.assertNotEqual(run.returncode, 0)
+        self.assertIn("Published Release or asset IDs changed", run.stderr)
+        self.assertTrue(marker.exists())
+        self.assertFalse((self.root / "unexpected-git-operation").exists())
+
     def test_existing_owner_safety_controls_and_no_peeled_remote_check(self):
         workflow = WORKFLOW.read_text()
         for condition in (
