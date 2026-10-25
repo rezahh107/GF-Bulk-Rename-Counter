@@ -179,6 +179,60 @@ print((directory / (kind + ".json")).read_text())
                         retirement.index("git rm release/candidate.json"))
         self.assertIn("if: failure()", workflow)
 
+    def test_simulated_consumer_activation_failure_preserves_marker(self):
+        # Execute the actual workflow consumer step using an isolated GitHub mock.
+        # The final WordPress activation is intentionally stubbed to fail.
+        import shutil
+        import textwrap
+
+        self.capture()
+        marker = self.root / "release/candidate.json"
+        marker.parent.mkdir()
+        marker.write_text('{"version":"2.1.1"}')
+
+        scripts = self.root / "scripts/release"
+        scripts.mkdir(parents=True)
+        shutil.copyfile(SCRIPT, scripts / SCRIPT.name)
+        (scripts / "release.py").write_text(
+            "import sys\\nassert sys.argv[1] == 'validate'\\n")
+        (scripts / "consumer-smoke.sh").write_text(
+            "#!/bin/bash\\necho SMOKE_CALLED > \\"$RUNNER_TEMP/smoke-called\\"\\nexit 75\\n")
+
+        gh = self.root / "bin/gh"
+        original = self.root / "bin/gh-api"
+        gh.rename(original)
+        gh.write_text("""#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$1" == api ]]; then exec "$MOCK_GH_API" "$@"; fi
+if [[ "$1 $2" == "release view" ]]; then
+    if [[ "$*" == *".tagName"* ]]; then echo v2.1.1; else echo false; fi
+elif [[ "$1 $2" == "release download" ]]; then
+    while [[ "$1" != --dir ]]; do shift; done
+    shift
+    mkdir -p "$1"
+    cp "$MOCK_ASSETS/"* "$1/"
+else
+    exit 92
+fi
+""")
+        gh.chmod(0o755)
+        workflow = WORKFLOW.read_text()
+        consumer = workflow.split(
+            "      - name: Verify downloaded consumer artifact and activate in fresh real WordPress", 1
+        )[1].split("      - name: Retire candidate marker only after successful last-mile check", 1)[0]
+        command = textwrap.dedent(consumer.split("        run: |\\n", 1)[1])
+        env = {**self.env, "GITHUB_REPOSITORY": REPO, "BRC_TAG": TAG,
+               "BRC_VERSION": TAG[1:], "GITHUB_SHA": COMMIT,
+               "BRC_TAG_OBJECT_SHA": TAG_SHA, "RUNNER_TEMP": str(self.root),
+               "MOCK_GH_API": str(original), "MOCK_ASSETS": str(self.artifacts)}
+        result = subprocess.run(["/bin/bash", "-c", command], cwd=self.root,
+                                env=env, capture_output=True, text=True,
+                                check=False, timeout=20)
+        self.assertEqual(result.returncode, 75, result.stderr)
+        self.assertTrue((self.root / "smoke-called").exists())
+        self.assertTrue(marker.exists(), "Consumer step must not delete candidate")
+        self.assertNotIn("git rm release/candidate.json", command)
+
     def test_existing_owner_safety_controls_and_no_peeled_remote_check(self):
         workflow = WORKFLOW.read_text()
         for condition in (
