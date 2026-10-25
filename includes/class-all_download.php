@@ -150,7 +150,7 @@ final class All_Download {
         }
     }
 
-    private static function manifest(int $form): array {
+    private static function manifest(int $form, bool $admit_zip_disk = true): array {
         $start = microtime(true);
         $ids = self::ids($form, $start);
         self::budget(count($ids), 0, $start);
@@ -168,7 +168,10 @@ final class All_Download {
                 (string)$item['url'], (string)$item['name'],
                 (int)$item['size'], (string)$item['sha256']];
         }
-        self::budget(count($ids), $bytes, $start);
+        // A final consistency check does not create another ZIP. Recheck
+        // memory/time without requiring space for a second archive while
+        // the first verified ZIP is still held in temporary storage.
+        self::budget(count($ids), $admit_zip_disk ? $bytes : 0, $start);
         // Re-evaluate active membership after the potentially slow source plan.
         if (self::ids($form, $start) !== $ids) {
             throw new RuntimeException('ALL form membership changed during preparation');
@@ -265,7 +268,7 @@ final class All_Download {
                 $_gform_lead_meta[$prefix . $entry_id . '_bdfgf_files_deleted']
             );
         }
-        $actual = self::manifest($form);
+        $actual = self::manifest($form, false);
         if ($actual['ids'] !== $expected_ids || $actual['plan'] !== $expected_plan) {
             throw new RuntimeException('ALL Entries or eligible source files changed before ZIP delivery; check ALL again');
         }
