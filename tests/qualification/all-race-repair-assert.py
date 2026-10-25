@@ -24,7 +24,7 @@ for label,item in result['cases'].items():
     else:
         assert item['status']==200
         filename='race-positive-'+kind+'.zip'
-        wanted=Counter([b])
+        wanted=expected[kind]
     with zipfile.ZipFile(lab/filename) as z:
         names=z.namelist()
         assert all('/' not in n and '\\' not in n for n in names),names
