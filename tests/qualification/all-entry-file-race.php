@@ -47,9 +47,9 @@ if ($action === 'setup') {
     // Real 8 MiB physical source: timer measures the extra authoritative
     // planner/hash pass; this fixture is not a GB-scale capacity claim.
     $bench_bytes = random_bytes(8 * 1048576);
-    $bench_upload = wp_upload_bits('gfbrc-all-8m-benchmark.bin', null, $bench_bytes);
+    $bench_upload = wp_upload_bits('gfbrc-all-8m-benchmark.jpg', null, $bench_bytes);
     if (!empty($bench_upload['error']) || !is_file($bench_upload['file'])) {
-        throw new RuntimeException('Benchmark upload unavailable');
+        throw new RuntimeException('Benchmark upload unavailable: ' . ($bench_upload['error'] ?? 'file missing'));
     }
     $bench_hash = hash('sha256', $bench_bytes);
     unset($bench_bytes);
