@@ -359,7 +359,7 @@ jobs:
         run: |
           set -euo pipefail
           # Canonical shipped ZIP and repository source remain uninstrumented.
-          test "$(git hash-object includes/class-all_download.php)" = "2cfa3b30addca33a3337cd1af1c3e19a14f7bc00"
+          test "$(git hash-object includes/class-all_download.php)" = "c4bc27a7bd5195db3b9dbce7c587e92065f8398d"
           test "$(git hash-object includes/class-flat_zip_download.php)" = "396f89f91dcc2022906f61ef9b0f5d3c4df448e8"
           if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
             echo 'Qualification harness was included in installable ZIP' >&2
