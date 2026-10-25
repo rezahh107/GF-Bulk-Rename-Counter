@@ -35,7 +35,8 @@ def blob(path):
 
 def directory():
     d = json.loads(DIR_INFO.read_text())["path"]
-    if not d.startswith("/dev/shm/gfbrc-f02-capacity-"):
+    if not (d.startswith("/dev/shm/gfbrc-f02-capacity-") or
+            d.startswith("/tmp/gfbrc-f02-private-tmpfs/gfbrc-f02-capacity-")):
         raise RuntimeError("Unexpected capacity fixture path")
     return Path(d)
 
@@ -48,13 +49,34 @@ def setup():
         raise RuntimeError("Capacity fixture already present")
     if blob(ALL_PHP) != CURRENT_ALL_BLOB or blob(ZIP_PHP) != CURRENT_ZIP_BLOB:
         raise RuntimeError("Installed plugin differs from exact repair source")
-    if not Path("/dev/shm").is_dir():
-        raise RuntimeError("REAL_HTTP_CAPACITY_NOT_FEASIBLE: tmpfs unavailable")
-    sh = Path("/dev/shm")
+    # Never fill a machine-wide multi-GB /dev/shm. Prefer a dedicated 64 MiB
+    # tmpfs with bounded maximum storage consumption on the disposable runner.
+    private_mount = Path("/tmp/gfbrc-f02-private-tmpfs")
+    private_mount.mkdir(mode=0o755, exist_ok=True)
+    mounted = False
+    command = ["sudo", "-n", "mount", "-t", "tmpfs", "-o",
+               "size=64m,mode=1777", "tmpfs", str(private_mount)]
+    try:
+        subprocess.run(command, check=True, capture_output=True, text=True, timeout=10)
+        sh = private_mount
+        mounted = True
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        private_mount.rmdir()
+        sh = Path("/dev/shm")
+        if not sh.is_dir():
+            raise RuntimeError("REAL_HTTP_CAPACITY_NOT_FEASIBLE: tmpfs unavailable")
+        fallback_total = os.statvfs(sh).f_blocks * os.statvfs(sh).f_frsize
+        if fallback_total > 96 * MB:
+            raise RuntimeError(
+                "REAL_HTTP_CAPACITY_NOT_FEASIBLE: cannot mount private tmpfs; "
+                "refusing to fill shared multi-GB /dev/shm")
     stat = os.statvfs(sh)
     total = stat.f_blocks * stat.f_frsize
     free = free_bytes(sh)
-    if total < 48 * MB or free < 39 * MB:
+    if total < 48 * MB or free < 39 * MB or total > 96 * MB:
+        if mounted:
+            subprocess.run(["sudo", "-n", "umount", str(private_mount)], check=True)
+            private_mount.rmdir()
         raise RuntimeError(f"REAL_HTTP_CAPACITY_NOT_FEASIBLE: tmpfs total={total} free={free}")
     d = sh / ("gfbrc-f02-capacity-" + str(os.getpid()))
     d.mkdir(mode=0o700)
@@ -83,7 +105,8 @@ def setup():
     BACKUP_ZIP.write_bytes(source)
     BACKUP_ALL.write_bytes(ALL_PHP.read_bytes())
     DIR_INFO.write_text(json.dumps({"path": str(d), "capacity": total,
-                                    "available_before": free}))
+                                    "available_before": free,
+                                    "private_mount": mounted}))
     CONFIG.write_bytes(config[:match.start()] +
         f"define('WP_TEMP_DIR', '{d.as_posix()}/');\n".encode() + config[match.start():])
     ZIP_PHP.write_bytes(source.replace(anchor, anchor + b"\n" + probe))
@@ -151,8 +174,13 @@ def cleanup():
         BACKUP_CONFIG.unlink()
     if DIR_INFO.exists():
         d = directory()
+        info = json.loads(DIR_INFO.read_text())
         shutil.rmtree(d)
         DIR_INFO.unlink()
+        if info.get("private_mount"):
+            mp = Path("/tmp/gfbrc-f02-private-tmpfs")
+            subprocess.run(["sudo", "-n", "umount", str(mp)], check=True)
+            mp.rmdir()
     print("PASS_F02_ALL_DISPOSABLE_FILES_AND_CONFIG_RESTORED")
 
 if __name__=="__main__":
