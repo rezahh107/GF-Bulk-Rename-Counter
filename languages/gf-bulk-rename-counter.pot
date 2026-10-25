@@ -30,6 +30,10 @@ msgstr ""
 msgid "Cannot prepare flat ZIP: %s"
 msgstr ""
 
+#, php-format
+msgid "Cannot resolve ALL: %s"
+msgstr ""
+
 msgid "Cannot resolve all matching Entries: %s"
 msgstr ""
 

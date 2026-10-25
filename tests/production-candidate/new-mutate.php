@@ -72,6 +72,10 @@ if ($action === 'setup') {
         throw new RuntimeException('Could not mutate file-free Entry before confirmation');
     }
     $report['id'] = $id;
+} elseif ($action === 'read_pending') {
+    global $wpdb;
+    $raw = $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'gfbrc_new_pending_' . $form));
+    $report['state'] = is_string($raw) ? json_decode($raw, true, 512, JSON_THROW_ON_ERROR) : null;
 } elseif ($action === 'read_coverage') {
     global $wpdb;
     $raw = $wpdb->get_var($wpdb->prepare("SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", 'gfbrc_new_coverage_' . $form));

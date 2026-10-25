@@ -24,6 +24,7 @@ final class Flat_Zip_Download {
         add_action('admin_footer', [__CLASS__, 'footer']);
         add_action('admin_post_' . self::ENDPOINT, [__CLASS__, 'download']);
         New_Download::register();
+        All_Download::register();
     }
 
 
@@ -706,10 +707,19 @@ final class Flat_Zip_Download {
             self::fail(__('Invalid download request', 'gf-bulk-rename-counter'), 403);
         }
         $mode = $_POST['selection_mode'] ?? 'explicit';
-        if (!is_string($mode) || !in_array($mode, ['explicit', 'all_matching'], true)) {
+        if (!is_string($mode) || !in_array($mode, ['explicit', 'all_matching', 'all_form'], true)) {
             self::fail(__('Invalid selection mode', 'gf-bulk-rename-counter'), 400);
         }
-        if ($mode === 'all_matching') {
+        $all_plan = null;
+        $all_zero = null;
+        if ($mode === 'all_form') {
+            try {
+                [$ids, $all_plan, $all_zero] = All_Download::validated_download($form_id);
+            } catch (Throwable $e) {
+                self::fail(sprintf(__('Cannot resolve ALL: %s', 'gf-bulk-rename-counter'),
+                    $e->getMessage()), 422);
+            }
+        } elseif ($mode === 'all_matching') {
             if (isset($_POST['entry_ids'])) {
                 self::fail(__('Ambiguous Entry selection', 'gf-bulk-rename-counter'), 400);
             }
@@ -741,8 +751,11 @@ final class Flat_Zip_Download {
         }
         $temp = null;
         try {
-            $plan = self::plan($form_id, $ids);
+            $plan = $all_plan ?? self::plan($form_id, $ids);
             $temp = self::write_verified_zip($plan);
+            if ($mode === 'all_form') {
+                All_Download::assert_manifest($form_id, $ids, $plan);
+            }
             $size = filesize($temp);
             if ($size === false || $size <= 0 || headers_sent()) {
                 throw new RuntimeException('Validated ZIP response unavailable');
@@ -762,7 +775,12 @@ final class Flat_Zip_Download {
             header('Content-Type: application/zip');
             header('X-GFBRC-Selected-Entries: ' . count($ids));
             header('X-GFBRC-ZIP-Files: ' . count($plan));
-            header('Content-Disposition: attachment; filename="gfbrc-flat-' . $form_id .
+            if ($mode === 'all_form') {
+                header('X-GFBRC-ALL: 1');
+                header('X-GFBRC-Entries-Without-Files: ' . $all_zero);
+            }
+            $prefix = $mode === 'all_form' ? 'gfbrc-all-' : 'gfbrc-flat-';
+            header('Content-Disposition: attachment; filename="' . $prefix . $form_id .
                 '-' . count($ids) . '-entries-' . count($plan) . '-files.zip"');
             header('Content-Length: ' . $size);
             while (!feof($f)) {
