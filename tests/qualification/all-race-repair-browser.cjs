@@ -58,7 +58,8 @@ const {chromium}=require('playwright-core');
     }
     async function runCase(kind,stage,mutate=true){
       const cfg=fixture.cases[kind],before=worker('inspect',kind),
-        oldCount=(kind==='reference'||kind==='benchmark')?1:kind==='deletion'?2:4,
+        oldCount=['reference','reference_late','alias','benchmark'].includes(kind)?1:
+          kind==='deletion'?2:kind==='ordering'?3:4,
         newCount=kind==='deletion'?1:oldCount;
       if(before.files!==oldCount||before.entry!==cfg.entry)
         throw Error('Invalid initial GF file state '+JSON.stringify(before));
@@ -77,7 +78,12 @@ const {chromium}=require('playwright-core');
         const after=mutate?worker('mutate',kind):worker('inspect',kind);
         if(after.files!==newCount||after.entry!==cfg.entry||
           !after.a_readable||!after.b_readable||
-          (mutate&&after.plan_sha256[0]!==fixture.b.sha256))
+          (mutate&&['reference','reference_late','repeated'].includes(kind)&&
+            after.plan_sha256[0]!==fixture.b.sha256)||
+          (mutate&&kind==='alias'&&(after.field_1===before.field_1||
+            after.plan_sha256[0]!==fixture.a.sha256))||
+          (mutate&&kind==='ordering'&&(after.field_2===before.field_2||
+            after.files!==before.files)))
           throw Error('Mutation/control invalid '+JSON.stringify(after));
         fs.writeFileSync(gate+'.release','go');
         const res=await pending,body=await res.body();
@@ -134,11 +140,14 @@ const {chromium}=require('playwright-core');
     // GF forms: the original A->B mutation is not reversible without explicit
     // GFAPI write-back. Use independent setup cases from the fixture.
     for(const [kind,stage] of [['reference','prewrite'],
+                               ['reference_late','postwrite'],
                                ['deletion','postwrite'],
-                               ['repeated','postwrite']]){
+                               ['repeated','postwrite'],
+                               ['ordering','postwrite'],
+                               ['alias','postwrite']]){
       await runCase(kind,stage,true);
     }
-    // Positive control on a separately initialized unchanged form state:
+    // Positive control on an already-current, independently verified form state:
     await runCase('reference','postwrite',false);
     await runCase('benchmark','postwrite',false);
     fs.writeFileSync(path.join(lab,'all-race-repair-results.json'),
