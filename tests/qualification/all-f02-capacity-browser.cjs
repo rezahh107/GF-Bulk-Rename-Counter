@@ -69,9 +69,16 @@ const {chromium}=require('playwright-core');
     }
     disk('fill','28');
     disk('baseline');
+    // The persistent PHP test server may cache compiled PHP between requests.
+    // Allow its timestamp revalidation window to elapse, then require an
+    // actual marker from the old final-admission call before claiming a repro.
+    await new Promise(resolve=>setTimeout(resolve,3100));
+    fs.rmSync(path.join(lab,'f02-old-final-path-ran'),{force:true});
     fs.rmSync(snap().probePath,{force:true});
     const oldPreview=await preview(200);
     const old=await download(oldPreview.data);
+    if(!fs.existsSync(path.join(lab,'f02-old-final-path-ran')))
+      throw Error('Pre-F02 HTTP request never executed the old final-admission branch');
     console.log('F02_DIAGNOSTIC_BASELINE_REAL_RUNTIME', 'HTTP',old.status,
       'tmpfs_state',disk('status'),'php_source_baseline_installed',
       fs.readFileSync(path.join(process.env.BRC_WP_PATH,
@@ -86,6 +93,7 @@ const {chromium}=require('playwright-core');
       'zip_bytes',oldProbe.size,'free_after_zip',oldProbe.free);
 
     disk('candidate');
+    await new Promise(resolve=>setTimeout(resolve,3100));
     disk('fill','28'); // exact same real admission region
     fs.rmSync(snap().probePath,{force:true});
     const currentPreview=await preview(200);
