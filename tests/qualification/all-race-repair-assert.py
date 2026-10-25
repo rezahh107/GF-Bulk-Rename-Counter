@@ -9,8 +9,9 @@ import hashlib
 lab=Path(sys.argv[1]); result=json.loads((lab/'all-race-repair-results.json').read_text())
 a=result['fixture']['a']['sha256']; b=result['fixture']['b']['sha256']
 assert a != b
-expected={'reference':Counter([b]),'deletion':Counter([b]),
-          'repeated':Counter([b,a,a,b]),
+expected={'reference':Counter([b]),'reference_late':Counter([b]),
+          'deletion':Counter([b]), 'repeated':Counter([b,a,a,b]),
+          'ordering':Counter([a,b,a]), 'alias':Counter([a]),
           'benchmark':Counter([result['fixture']['benchmark']['sha256']])}
 for label,item in result['cases'].items():
     kind=label.split('-')[0]
