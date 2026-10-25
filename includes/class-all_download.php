@@ -242,9 +242,16 @@ final class All_Download {
         return [$actual['ids'], $actual['plan'], $actual['zero_entries']];
     }
 
-    public static function assert_membership(int $form, array $expected): void {
-        if (self::ids($form, microtime(true)) !== $expected) {
-            throw new RuntimeException('ALL membership changed before ZIP delivery');
+    /**
+     * Last pre-header consistency cutoff: recompute the authoritative eligible
+     * occurrence plan, not just active Entry IDs. This intentionally reuses the
+     * same GFAPI/deletion-metadata planner and source hashing as Check ALL.
+     * A mutation after this check is outside the bounded guarantee.
+     */
+    public static function assert_manifest(int $form, array $expected_ids, array $expected_plan): void {
+        $actual = self::manifest($form);
+        if ($actual['ids'] !== $expected_ids || $actual['plan'] !== $expected_plan) {
+            throw new RuntimeException('ALL Entries or eligible source files changed before ZIP delivery; check ALL again');
         }
     }
 
