@@ -186,6 +186,7 @@ print((directory / (kind + ".json")).read_text())
         import textwrap
 
         self.capture()
+        shutil.copyfile(self.state, self.root / "brc-published-identity.json")
         marker = self.root / "release/candidate.json"
         marker.parent.mkdir()
         marker.write_text('{"version":"2.1.1"}')
