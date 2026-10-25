@@ -17,6 +17,7 @@ FILES = (
     "gf-bulk-rename-counter.php",
     "includes/class-rename_handler.php",
     "includes/class-settings_page.php",
+    "includes/class-admin_experience.php",
     "includes/class-flat_zip_download.php",
     "includes/class-all_download.php",
     "includes/class-new_download.php",
