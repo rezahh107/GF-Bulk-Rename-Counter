@@ -143,7 +143,11 @@ def switch_baseline():
     src = BACKUP_ALL.read_bytes()
     if src.count(OLD_FINAL.encode()) != 1:
         raise RuntimeError("Missing unique F02 repair call to reproduce old behavior")
-    ALL_PHP.write_bytes(src.replace(OLD_FINAL.encode(), BASE_FINAL.encode()))
+    # Distinct test-only marker proves the HTTP request executed this exact
+    # pre-F02 branch, rather than a previously cached opcode representation.
+    marker = b"""        file_put_contents(getenv('BRC_LAB_DIR') . '/f02-old-final-path-ran', '1');
+""" + BASE_FINAL.encode()
+    ALL_PHP.write_bytes(src.replace(OLD_FINAL.encode(), marker))
     print("F02_BASELINE_FINAL_REPEATS_ZIP_DISK_ADMISSION",blob(ALL_PHP))
 
 def switch_candidate():
