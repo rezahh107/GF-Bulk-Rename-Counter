@@ -282,11 +282,25 @@ final class All_Download {
         $config = wp_json_encode([
             'form' => $form, 'nonce' => wp_create_nonce('gfbrc_independent_flat_zip_' . $form),
             'action' => Flat_Zip_Download::ENDPOINT,
+            'text' => [
+                'title' => __('ALL — Download all eligible files', 'gf-bulk-rename-counter'),
+                'check' => __('Check ALL', 'gf-bulk-rename-counter'),
+                'download' => __('Download ALL ZIP', 'gf-bulk-rename-counter'),
+                'guide' => __('ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage.', 'gf-bulk-rename-counter'),
+                'checking' => __('Counting all active Entries and verifying source files…', 'gf-bulk-rename-counter'),
+                'failed_check' => __('ALL check failed', 'gf-bulk-rename-counter'),
+                'summary' => __('%1$d active Entries / %2$d eligible files / %3$d Entries without files. Entire form; filters, pages, selection and NEW history are ignored.', 'gf-bulk-rename-counter'),
+                'empty' => __('No ZIP exists for this scope.', 'gf-bulk-rename-counter'),
+                'failed' => __('ALL failed: %s — no partial ZIP delivered.', 'gf-bulk-rename-counter'),
+                'confirm' => __('Download ALL %1$d active Entries / %2$d eligible files / %3$d Entries without files? Filters and NEW history are ignored; NEW acknowledgment does not change.', 'gf-bulk-rename-counter'),
+            ],
         ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         echo '<script id="gfbrc-all-config" type="application/json">' . $config . '</script>';
         ?>
 <style id="gfbrc-all-visibility">
 #gfbrc-all-panel [hidden] { display: none !important; }
+#gfbrc-all-panel .button {margin:4px;max-width:100%;white-space:normal}
+#gfbrc-all-panel .description {margin:8px 0}
 </style>
 <script id="gfbrc-all-workflow">
 (function () {
@@ -298,10 +312,21 @@ final class All_Download {
   var panel = document.createElement('section');
   panel.id = 'gfbrc-all-panel';
   panel.style.cssText = 'display:block;box-sizing:border-box;margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
-  panel.innerHTML = '<strong>ALL — Download all eligible files</strong> ' +
-    '<button type="button" class="button" id="gfbrc-all-prepare">Check ALL</button> ' +
-    '<span id="gfbrc-all-result" role="status" aria-live="polite"></span>' +
-    '<div><button type="button" class="button button-primary" id="gfbrc-all-download" hidden>Download ALL ZIP</button></div>';
+  panel.innerHTML = '<strong id="gfbrc-all-title"></strong> ' +
+    '<button type="button" class="button" id="gfbrc-all-prepare"></button> ' +
+    '<p class="description" id="gfbrc-all-guide"></p>' +
+    '<div><span id="gfbrc-all-result" role="status" aria-live="polite"></span></div>' +
+    '<div><button type="button" class="button button-primary" id="gfbrc-all-download" hidden></button></div>';
+  panel.querySelector('#gfbrc-all-title').textContent = cfg.text.title;
+  panel.querySelector('#gfbrc-all-prepare').textContent = cfg.text.check;
+  panel.querySelector('#gfbrc-all-guide').textContent = cfg.text.guide;
+  panel.querySelector('#gfbrc-all-download').textContent = cfg.text.download;
+  function tr(key) {
+    var args = Array.prototype.slice.call(arguments, 1), next = 0;
+    return cfg.text[key].replace(/%(?:(\d+)\$)?[ds]/g, function (_, index) {
+      return String(args[index ? Number(index) - 1 : next++]);
+    });
+  }
   (apply.closest('.tablenav') || apply).insertAdjacentElement('afterend', panel);
   var prepare = panel.querySelector('#gfbrc-all-prepare');
   var download = panel.querySelector('#gfbrc-all-download');
@@ -311,7 +336,7 @@ final class All_Download {
   prepare.addEventListener('click', async function () {
     if (busy) return;
     busy = true; prepare.disabled = true; download.hidden = true; current = null;
-    message('Counting all active Entries and verifying source files…');
+    message(cfg.text.checking);
     try {
       var body = new URLSearchParams({action:'gfbrc_all_prepare',
         form_id:String(cfg.form), _wpnonce:cfg.nonce});
@@ -319,21 +344,18 @@ final class All_Download {
         method:'POST', credentials:'same-origin', body:body, headers:{'Cache-Control':'no-store'}});
       var result = await response.json();
       if (!response.ok || !result.success) {
-        throw Error((result.data && result.data.message) || 'ALL check failed');
+        throw Error((result.data && result.data.message) || cfg.text.failed_check);
       }
       var data = result.data;
-      message(data.entries+' active Entries / '+data.files+' eligible files / '+
-        data.zero_entries+' Entries without files. Entire form, ignoring search, pages, selections and NEW history.');
+      message(tr('summary', data.entries, data.files, data.zero_entries));
       if (data.files > 0) {current = data; download.hidden = false;}
-      else message(status.textContent+' No ZIP exists for this scope.');
-    } catch (e) {message('ALL failed: '+e.message+' — no partial ZIP delivered.');}
+      else message(status.textContent+' '+cfg.text.empty);
+    } catch (e) {message(tr('failed', e.message));}
     finally {busy = false; prepare.disabled = false;}
   });
   download.addEventListener('click', function () {
     if (!current || busy) return;
-    if (!window.confirm('Download ALL '+current.entries+' active Entries / '+
-        current.files+' eligible files / '+current.zero_entries+
-        ' Entries without files? Ignore current filters and NEW history.')) return;
+    if (!window.confirm(tr('confirm', current.entries, current.files, current.zero_entries))) return;
     // Browser-submitted IDs, filters, counts cannot establish ALL membership.
     // The signed preview only detects changes; the server re-enumerates it.
     var form = document.createElement('form');
