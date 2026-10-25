@@ -107,9 +107,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$BRC_TAG" -m "Reviewed $BRC_TAG" "$GITHUB_SHA"
+          tag_object="$(git rev-parse "refs/tags/$BRC_TAG")"
+          echo "BRC_TAG_OBJECT_SHA=$tag_object" >> "$GITHUB_ENV"
+          # A failed push can have an uncertain remote outcome; never blindly republish.
+          touch "$RUNNER_TEMP/brc-publish-attempted"
           git push origin "refs/tags/$BRC_TAG"
           gh release create "$BRC_TAG" --verify-tag --draft --title "$BRC_TAG" --notes "Qualified and reviewed source: $GITHUB_SHA" "$z" "$z.sha256" "$z.manifest.json"
           gh release edit "$BRC_TAG" --draft=false
+          python3 scripts/release/verify-published-publication.py capture \
+            --repo "$GITHUB_REPOSITORY" --tag "$BRC_TAG" \
+            --tag-object "$tag_object" --commit "$GITHUB_SHA" \
+            --artifacts "$RUNNER_TEMP/release" \
+            --state "$RUNNER_TEMP/brc-published-identity.json"
       - name: Verify downloaded consumer artifact and activate in fresh real WordPress
         shell: bash
         run: |
@@ -124,16 +133,29 @@ jobs:
           cmp "$RUNNER_TEMP/release/$zname.sha256" "$dest/$zname.sha256"
           cmp "$RUNNER_TEMP/release/$zname.manifest.json" "$dest/$zname.manifest.json"
           python3 scripts/release/release.py validate --zip "$dest/$zname" --checksum "$dest/$zname.sha256" --manifest "$dest/$zname.manifest.json" --expected-head "$GITHUB_SHA"
-          test "$(git ls-remote --tags origin "refs/tags/$BRC_TAG^{}" | cut -f1)" = "$GITHUB_SHA"
+          # Verify the exact locally created annotated tag object plus the
+          # published Release and three uploaded asset identities using GitHub API.
+          python3 scripts/release/verify-published-publication.py verify \
+            --repo "$GITHUB_REPOSITORY" --tag "$BRC_TAG" \
+            --tag-object "$BRC_TAG_OBJECT_SHA" --commit "$GITHUB_SHA" \
+            --artifacts "$RUNNER_TEMP/release" \
+            --state "$RUNNER_TEMP/brc-published-identity.json"
           bash scripts/release/consumer-smoke.sh "$dest/$zname" "$BRC_VERSION"
       - name: Retire candidate marker only after successful last-mile check
         run: |
           set -euo pipefail
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          # Recheck all mutable remote identities immediately before retirement.
+          python3 scripts/release/verify-published-publication.py verify \
+            --repo "$GITHUB_REPOSITORY" --tag "$BRC_TAG" \
+            --tag-object "$BRC_TAG_OBJECT_SHA" --commit "$GITHUB_SHA" \
+            --artifacts "$RUNNER_TEMP/release" \
+            --state "$RUNNER_TEMP/brc-published-identity.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm release/candidate.json
           git commit -m "chore(release): retire consumed $BRC_TAG candidate marker"
+          touch "$RUNNER_TEMP/brc-marker-push-attempted"
           git push origin HEAD:main
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)"
           test "$(gh release view "$BRC_TAG" --json tagName --jq '.tagName')" = "$BRC_TAG"
@@ -141,4 +163,13 @@ jobs:
           echo "PUBLISHED_AND_CONSUMER_VERIFIED: $BRC_TAG" >> "$GITHUB_STEP_SUMMARY"
       - name: Report partial failure without rewriting a tag or asset
         if: failure()
-        run: echo "Inspect GitHub tag/Release, including drafts, before any retry. Never overwrite or automatically roll back published history. Owner decision required for partial publication." >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
+        run: |
+          if test -f "$RUNNER_TEMP/brc-marker-push-attempted"; then
+            echo "MARKER_PUSH_OUTCOME_UNKNOWN_OR_READBACK_FAILED: inspect main before retry." >> "$GITHUB_STEP_SUMMARY"
+          elif test -f "$RUNNER_TEMP/brc-publish-attempted"; then
+            echo "PUBLISH_OUTCOME_UNKNOWN_OR_PARTIAL: inspect tag, Release, assets, and candidate marker before any action." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "NO_PUBLICATION_ATTEMPTED: pre-publication checks failed; inspect state before any future PUBLISH." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "Never overwrite, delete, recreate, or automatically roll back a public tag or Release." >> "$GITHUB_STEP_SUMMARY"
