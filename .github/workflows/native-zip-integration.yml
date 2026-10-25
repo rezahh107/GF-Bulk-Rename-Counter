@@ -422,9 +422,15 @@ jobs:
           php -l tests/production-candidate/verify-per-form-browser.php
           node --check tests/production-candidate/per-form-browser.cjs
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/per-form-qualify.php
+          php -l tests/production-candidate/admin-guidance-qualify.php
+          node --check tests/production-candidate/admin-guidance-browser.cjs
+          BRC_UI_PHASE=initial php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/admin-guidance-qualify.php
           chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$chrome"
+          BRC_UI_PHASE=initial BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
           BRC_CHROME="$chrome" node tests/production-candidate/per-form-browser.cjs
+          BRC_UI_PHASE=configured php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/admin-guidance-qualify.php
+          BRC_UI_PHASE=configured BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-per-form-browser.php
           php -l tests/production-candidate/windows-names-qualify.php
           php -l tests/production-candidate/windows-names-verify.php
