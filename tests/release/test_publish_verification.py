@@ -194,9 +194,9 @@ print((directory / (kind + ".json")).read_text())
         scripts.mkdir(parents=True)
         shutil.copyfile(SCRIPT, scripts / SCRIPT.name)
         (scripts / "release.py").write_text(
-            "import sys\\nassert sys.argv[1] == 'validate'\\n")
+            "import sys\nassert sys.argv[1] == 'validate'\n")
         (scripts / "consumer-smoke.sh").write_text(
-            "#!/bin/bash\\necho SMOKE_CALLED > \\"$RUNNER_TEMP/smoke-called\\"\\nexit 75\\n")
+            "#!/bin/bash\necho SMOKE_CALLED > \"$RUNNER_TEMP/smoke-called\"\nexit 75\n")
 
         gh = self.root / "bin/gh"
         original = self.root / "bin/gh-api"
@@ -220,7 +220,7 @@ fi
         consumer = workflow.split(
             "      - name: Verify downloaded consumer artifact and activate in fresh real WordPress", 1
         )[1].split("      - name: Retire candidate marker only after successful last-mile check", 1)[0]
-        command = textwrap.dedent(consumer.split("        run: |\\n", 1)[1])
+        command = textwrap.dedent(consumer.split("        run: |\n", 1)[1])
         env = {**self.env, "GITHUB_REPOSITORY": REPO, "BRC_TAG": TAG,
                "BRC_VERSION": TAG[1:], "GITHUB_SHA": COMMIT,
                "BRC_TAG_OBJECT_SHA": TAG_SHA, "RUNNER_TEMP": str(self.root),
