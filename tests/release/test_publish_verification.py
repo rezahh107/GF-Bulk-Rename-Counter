@@ -189,6 +189,8 @@ print((directory / (kind + ".json")).read_text())
         marker = self.root / "release/candidate.json"
         marker.parent.mkdir()
         marker.write_text('{"version":"2.1.1"}')
+        for item in self.names:
+            shutil.copyfile(self.artifacts / item, marker.parent / item)
 
         scripts = self.root / "scripts/release"
         scripts.mkdir(parents=True)
