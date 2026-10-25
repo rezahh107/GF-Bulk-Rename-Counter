@@ -754,7 +754,7 @@ final class Flat_Zip_Download {
             $plan = $all_plan ?? self::plan($form_id, $ids);
             $temp = self::write_verified_zip($plan);
             if ($mode === 'all_form') {
-                All_Download::assert_membership($form_id, $ids);
+                All_Download::assert_manifest($form_id, $ids, $plan);
             }
             $size = filesize($temp);
             if ($size === false || $size <= 0 || headers_sent()) {
