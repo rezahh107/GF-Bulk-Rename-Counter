@@ -359,12 +359,15 @@ jobs:
         run: |
           set -euo pipefail
           # Canonical shipped ZIP and repository source remain uninstrumented.
-          test "$(git hash-object includes/class-all_download.php)" = "16d669f70e9cf79ada6677bd1b6f936e29302f67"
+          test "$(git hash-object includes/class-all_download.php)" = "2cfa3b30addca33a3337cd1af1c3e19a14f7bc00"
           test "$(git hash-object includes/class-flat_zip_download.php)" = "396f89f91dcc2022906f61ef9b0f5d3c4df448e8"
           if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
             echo 'Qualification harness was included in installable ZIP' >&2
             exit 1
           fi
+          # Verify the installed GF host supplies the in-request metadata cache
+          # being invalidated; the real postwrite deletion race is the behavior gate.
+          grep -Fq '$_gform_lead_meta' "$BRC_WP_PATH/wp-content/plugins/gravityforms/forms_model.php"
           php -l tests/qualification/all-entry-file-race.php
           python3 -m py_compile tests/qualification/all-race-instrument.py tests/qualification/all-race-repair-assert.py
           node --check tests/qualification/all-race-repair-browser.cjs
