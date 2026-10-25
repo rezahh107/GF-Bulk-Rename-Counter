@@ -359,7 +359,7 @@ jobs:
         run: |
           set -euo pipefail
           # Canonical shipped ZIP and repository source remain uninstrumented.
-          test "$(git hash-object includes/class-all_download.php)" = "2cfa3b30addca33a3337cd1af1c3e19a14f7bc00"
+          test "$(git hash-object includes/class-all_download.php)" = "c4bc27a7bd5195db3b9dbce7c587e92065f8398d"
           test "$(git hash-object includes/class-flat_zip_download.php)" = "396f89f91dcc2022906f61ef9b0f5d3c4df448e8"
           if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
             echo 'Qualification harness was included in installable ZIP' >&2
@@ -391,6 +391,28 @@ jobs:
           PY
           echo 'PASS_F01_GENUINE_WORDPRESS_GFBRC_ALL_POSTWRITE_PREHEADER_FALSIFICATION'
           # Trap restores runtime bytes before remaining native host/NEW checks.
+
+      - name: Reproduce F-02 with genuine constrained temporary disk and HTTP ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object includes/class-all_download.php)" = "c4bc27a7bd5195db3b9dbce7c587e92065f8398d"
+          test "$(git hash-object includes/class-flat_zip_download.php)" = "396f89f91dcc2022906f61ef9b0f5d3c4df448e8"
+          if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
+            echo 'Test-only F-02 capacity harness leaked into canonical package' >&2
+            exit 1
+          fi
+          python3 -m py_compile tests/qualification/all-f02-real-disk.py tests/qualification/all-f02-capacity-assert.py
+          node --check tests/qualification/all-f02-capacity-browser.cjs
+          # /dev/shm is a bounded genuine tmpfs on the pinned Ubuntu runner.
+          # This step changes ONLY the disposable WP config/installed plugin,
+          # and returns both byte-for-byte even if a test fails.
+          trap 'python3 tests/qualification/all-f02-real-disk.py cleanup' EXIT
+          python3 tests/qualification/all-f02-real-disk.py setup
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          BRC_CHROME="$chrome" node tests/qualification/all-f02-capacity-browser.cjs
+          echo 'PASS_F02_REAL_TMPFS_HTTP_CAPACITY_REPRO_AND_RECOVERY'
 
       - name: Qualify EXT-001 per-form settings and final browser ZIP downloads
         shell: bash
