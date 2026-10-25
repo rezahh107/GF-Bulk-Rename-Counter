@@ -58,7 +58,7 @@ const {chromium}=require('playwright-core');
     }
     async function runCase(kind,stage,mutate=true){
       const cfg=fixture.cases[kind],before=worker('inspect',kind),
-        oldCount=kind==='reference'?1:kind==='deletion'?2:4,
+        oldCount=(kind==='reference'||kind==='benchmark')?1:kind==='deletion'?2:4,
         newCount=kind==='deletion'?1:oldCount;
       if(before.files!==oldCount||before.entry!==cfg.entry)
         throw Error('Invalid initial GF file state '+JSON.stringify(before));
@@ -97,7 +97,7 @@ const {chromium}=require('playwright-core');
              !(res.headers()['content-type']||'').includes('application/zip')||
              res.headers()['x-gfbrc-all']!=='1')
             throw Error('Unmodified ALL unexpectedly failed '+res.status());
-          fs.writeFileSync(path.join(lab,'race-positive.zip'),body);
+          fs.writeFileSync(path.join(lab,'race-positive-'+kind+'.zip'),body);
           if(zipPath&&fs.existsSync(zipPath))
             throw Error('Temporary ZIP not cleaned after normal delivery');
         }
@@ -140,6 +140,7 @@ const {chromium}=require('playwright-core');
     }
     // Positive control on a separately initialized unchanged form state:
     await runCase('reference','postwrite',false);
+    await runCase('benchmark','postwrite',false);
     fs.writeFileSync(path.join(lab,'all-race-repair-results.json'),
       JSON.stringify(result,null,2));
     cp.execFileSync('python3',
