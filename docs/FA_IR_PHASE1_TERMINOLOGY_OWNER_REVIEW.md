@@ -1,26 +1,30 @@
-# GFBRC — fa_IR Phase 1 terminology for Owner review
+# GFBRC — fa_IR Phase 1 Owner terminology decision
 
-**Status: TRANSLATION CANDIDATE; NOT OWNER-APPROVED.** Review wording without changing the existing WordPress-native settings, naming rules, or download safety contracts.
+**Owner-approved terminology — 2026-10-26.** The Owner explicitly accepted the five terminology recommendations and the proposed NEW/ACK button and warning. This is **wording approval only**, not Phase 2/3 acceptance, permission to merge, or permission to publish/deploy.
 
-| Concept | Current Persian | Owner decision point |
+| Concept | Approved Persian label | Operational boundary |
 | --- | --- | --- |
-| Entry | ورودی | Prefer «ورودی» versus «رکورد» or a business-specific «ثبت‌نام»? One Entry is not one file. |
-| Legacy | Legacy (روش موجود/قدیمی) | Keep the English technical identifier? Original Bulk Download action only. |
-| Selected | Selected (ردیف‌های انتخاب‌شده) | Current page's checked rows only. |
-| All matching | همهٔ موارد مطابق فیلتر | Current search/filter across pages, not the whole form; maximum 500 Entries. |
-| NEW | NEW (ورودی‌های تازه‌ساخته‌شده) | Based on creation and unacknowledged coverage, not modified files on older Entries. |
-| ACK | تأیید دریافت و پیش‌برد پوشش NEW | Explicit, distinct from browser ZIP check; advancing coverage is irreversible. **Review this label first.** |
-| Coverage | پوشش NEW | Server-recorded coverage, not proof of a locally saved ZIP. |
-| Initial batch | بستهٔ اولیه | The first check can include existing Entries; it does not auto-acknowledge. |
-| Zero-file Entries | ورودی‌های بدون فایل | Explicit review is required, and no synthetic empty ZIP is made. |
-| ALL | ALL (کل فرم) | All active Entries regardless of filters, pages, row selection or NEW history; no NEW ACK. |
-| Single Field / Composite | تک‌فیلدی / ترکیبی with English term | Independent ZIP naming methods, not global Legacy settings. |
-| Flat ZIP | ZIP تخت | No per-Entry folders; filenames can reveal personal data. |
-| Verified ZIP / SHA-256 | ZIP راستی‌آزمایی‌شده / SHA-256 | Browser hash verification does not prove local file retention. |
-| Counter Field ID | شناسهٔ فیلد شمارنده | 0 deliberately keeps original names for the Legacy path. |
+| Entry | ورودی | One Gravity Forms submission; not one uploaded file |
+| Legacy / NEW / ALL | Keep the English identifiers, explain each in Persian | Legacy is the original Bulk Download; NEW is creation-based and requires receipt acknowledgment; ALL is independent whole-form selection |
+| Coverage | سابقهٔ پوشش NEW | Server-recorded eligible Entry coverage; *not* proof that a ZIP was saved locally |
+| Flat ZIP | ZIP بدون پوشه‌بندی | Eligible files in the ZIP root, not grouped into Entry subfolders |
+| NEW / ACK button | تأیید دریافت و ثبت در سابقهٔ NEW | Explicit and irreversible; not the same event as Download or browser hash verification |
 
-**Owner terminology choices remain OPEN:** «ورودی» vs «رکورد»; whether to retain English \`Legacy\`, \`NEW\`, \`ALL\`; whether «پوشش» is understood; whether «ZIP تخت» should be «ZIP بدون پوشه‌بندی»; the full ACK confirmation text.
+## Owner-approved acknowledgment warning
 
-Technical tokens retained: \`NEW\`, \`ALL\`, \`ZIP\`, \`Legacy\`, \`SHA-256\`, \`GFAPI\`, \`InnoDB\`, \`POST\`, \`COMMIT\`, \`ID\`, \`d[COUNTER].extension\`; PHP format placeholders retain their ordering/type.
+> با تأیید این عملیات، ورودی‌های این نوبت در دانلودهای بعدی NEW دوباره نمایش داده نمی‌شوند. این اقدام برگشت‌ناپذیر است. فقط پس از اطمینان از ذخیره‌شدن ZIP روی دستگاه خود، دریافت را تأیید کنید.
 
-Scope is Phase 1 only. The working PO/MO is not a human-reviewed translation approval. Browser/operator comprehension, screen-reader acceptance, the Owner host, and Phase 2/3 remain NOT_PROVEN.
+**Necessary zero-file safety clarification added by the executor:** when the batch has no ZIP, the user must explicitly review the Entries without files rather than being told to save a nonexistent ZIP. This clarification preserves the existing acceptance contract; the Owner approved the core warning above, not this additional sentence verbatim.
+
+The existing `NEW` explanatory gettext message displays this warning in the read-only NEW guide **before** the receipt-confirmation button; the ZIP verification message also reminds users to check their saved copy. No change to actual acknowledgment/coverage logic or persistence is authorized by this wording approval.
+
+## Other existing instructions and safeguards remain in force
+
+- Selected: checked rows on the current Entries page only.
+- All matching: current search/filter across pages, maximum 500 Entries; it is not ALL.
+- NEW: creation-based, initially includes already-existing eligible Entries; checking or downloading alone does not advance acknowledgment. Entries without files still need explicit review.
+- ALL: all active Entries, independent of the Entry List search/filter/selection and NEW acknowledgment history; it **does not** advance the NEW coverage record.
+- Legacy/Single Field/Composite and effective form settings remain WordPress-native and unchanged.
+- Preserve tokens `NEW`, `ALL`, `Legacy`, `ZIP`, `SHA-256`, `GFAPI`, `InnoDB`, `POST`, `COMMIT`, `ID`, `d[COUNTER].extension` and all PHP formatting placeholders.
+
+**Not authorized or NOT_PROVEN:** Owner-site use and comprehension, complete screen-reader acceptance, independent Phase 2 regression verification, Phase 3 Engineering Compass review, historical ALL race stability, Merge, Release, Tag or deployment. PO/MO and existing locale assertions must pass exact-head checks before review.

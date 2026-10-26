@@ -50,15 +50,37 @@ class PersianCatalog(unittest.TestCase):
     def test_safety_meanings_and_identifiers(self):
         translated = pairs(PO)
         checks = {
-            "Confirm receipt and advance NEW": ("تأیید دریافت", "پوشش NEW"),
-            "NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action.": ("برگشت‌ناپذیر", "نسخهٔ ذخیره‌شدهٔ محلی"),
-            "ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage.": ("پوشش NEW", "همهٔ ورودی‌های فعال"),
+            "Confirm receipt and advance NEW": ("تأیید دریافت", "ثبت در سابقهٔ NEW"),
+            "NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action.": ("برگشت‌ناپذیر", "ذخیره‌شدن ZIP روی دستگاه خود", "ورودی‌های بدون فایل"),
+            "ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage.": ("سابقهٔ پوشش NEW را تغییر نمی‌دهد", "همهٔ ورودی‌های فعال"),
             "Legacy uses %1$s (field %2$d) and generates d[COUNTER].extension. Entries with an empty or zero counter retain their original filename.": ("d[COUNTER].extension", "%1$s", "%2$d"),
             "Downloaded ZIP SHA-256 mismatch": ("SHA-256", "ZIP"),
         }
         for english, pieces in checks.items():
             for piece in pieces:
                 self.assertIn(piece, translated[english])
+
+    def test_owner_approved_terms_and_critical_pre_ack_warning(self):
+        translated = pairs(PO)
+        self.assertEqual(translated["Confirm receipt and advance NEW"],
+                         "تأیید دریافت و ثبت در سابقهٔ NEW")
+        warning = translated[
+            "NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action."]
+        for sentence in (
+            "با تأیید این عملیات، ورودی‌های این نوبت در دانلودهای بعدی NEW دوباره نمایش داده نمی‌شوند.",
+            "این اقدام برگشت‌ناپذیر است.",
+            "فقط پس از اطمینان از ذخیره‌شدن ZIP روی دستگاه خود، دریافت را تأیید کنید.",
+            "اگر این نوبت فایل واجد شرایطی ندارد",
+            "ورودی‌های بدون فایل را صریحاً بازبینی کنید.",
+        ):
+            self.assertIn(sentence, warning)
+        self.assertIn("سابقهٔ پوشش NEW را تغییر نمی‌دهد",
+            translated["ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage."])
+        self.assertEqual(translated["Download Flat ZIP with Rename"],
+                         "دانلود ZIP بدون پوشه‌بندی با تغییر نام")
+        for english, localized in translated.items():
+            with self.subTest(english=english):
+                self.assertNotIn("ZIP تخت", localized)
 
 
 if __name__ == "__main__":

@@ -181,17 +181,29 @@ const {chromium}=require('playwright-core');
         throw Error('Persian Entries guide and ALL scope missing');
       const newText=JSON.parse(await page.locator('#gfbrc-new-config').textContent()).text;
       const allText=JSON.parse(await page.locator('#gfbrc-all-config').textContent()).text;
-      if(newText.ack!=='تأیید دریافت و پیش‌برد پوشش NEW'||
-         !newText.guide.includes('برگشت‌ناپذیر')||
-         !newText.guide.includes('نسخهٔ ذخیره‌شدهٔ محلی')||
+      if(newText.ack!=='تأیید دریافت و ثبت در سابقهٔ NEW'||
+         !newText.guide.includes('ورودی‌های این نوبت در دانلودهای بعدی NEW دوباره نمایش داده نمی‌شوند')||
+         !newText.guide.includes('این اقدام برگشت‌ناپذیر است')||
+         !newText.guide.includes('ذخیره‌شدن ZIP روی دستگاه خود')||
+         !newText.guide.includes('ورودی‌های بدون فایل را صریحاً بازبینی کنید')||
          !newText.zip_ok.includes('ZIP ذخیره‌شده'))
         throw Error('Persian NEW receipt acknowledgment semantics missing: '+JSON.stringify(newText));
-      if(allText.check!=='بررسی ALL'||!allText.guide.includes('پوشش NEW')||
+      if(allText.check!=='بررسی ALL'||!allText.guide.includes('سابقهٔ پوشش NEW را تغییر نمی‌دهد')||
          !allText.confirm.includes('تأیید دریافت NEW تغییر نمی‌کند'))
         throw Error('Persian ALL independence semantics missing: '+JSON.stringify(allText));
-      if(!(await page.locator('#gfbrc-new-ack').textContent()).includes('تأیید دریافت')||
+      const renderedAck=await page.locator('#gfbrc-new-ack').textContent();
+      const renderedWarning=await page.locator('#gfbrc-new-guide').innerText();
+      if(renderedAck!=='تأیید دریافت و ثبت در سابقهٔ NEW'||
+         !renderedWarning.includes('با تأیید این عملیات')||
+         !renderedWarning.includes('این اقدام برگشت‌ناپذیر است')||
          !(await page.locator('#gfbrc-new-review-wrap').textContent()).includes('من ZIP را ذخیره'))
-        throw Error('Visible NEW controls not localized');
+        throw Error('Rendered fa_IR ACK button, warning or receipt attestation missing');
+      const warningPrecedesAck=await page.locator('#gfbrc-new-guide').evaluate(el=>
+        !!(el.compareDocumentPosition(document.getElementById('gfbrc-new-ack'))&
+           Node.DOCUMENT_POSITION_FOLLOWING));
+      if(!warningPrecedesAck) throw Error('NEW receipt warning is not before ACK control');
+      if(!guideText.includes('ZIP بدون پوشه‌بندی'))
+        throw Error('Owner-approved flat ZIP terminology missing from Entries guide');
       await open(settings(data.a.form_id));
       if(!(await page.locator('.wrap h1').innerText()).includes('تنظیمات Gravity Forms Bulk Rename')||
          !(await page.locator('.wrap').innerText()).includes('شناسهٔ فیلد شمارنده')||

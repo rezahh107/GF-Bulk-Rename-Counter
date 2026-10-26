@@ -57,7 +57,7 @@ msgid "ALL has no eligible files; no empty ZIP was sent"
 msgstr "ALL فایل واجد شرایطی ندارد؛ ZIP خالی ارسال نشد"
 
 msgid "ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage."
-msgstr "ALL فایل‌های بارگذاری‌شدهٔ واجد شرایط همهٔ ورودی‌های فعال این فرم را، مستقل از فیلترها، ردیف‌های انتخاب‌شده و سابقهٔ تأیید دریافت NEW، شامل می‌شود. پیش از دانلود بررسی کنید؛ این کار پوشش NEW را جلو نمی‌برد."
+msgstr "ALL فایل‌های بارگذاری‌شدهٔ واجد شرایط همهٔ ورودی‌های فعال این فرم را، مستقل از فیلترها، ردیف‌های انتخاب‌شده و سابقهٔ تأیید دریافت NEW، شامل می‌شود. پیش از دانلود بررسی کنید؛ این کار سابقهٔ پوشش NEW را تغییر نمی‌دهد."
 
 msgid "ALL preview cannot be encoded"
 msgstr "امکان رمزگذاری پیش‌نمایش ALL نیست"
@@ -93,7 +93,7 @@ msgid "ALL: independently check and download eligible files from every active En
 msgstr "ALL: فایل‌های واجد شرایط همهٔ ورودی‌های فعال فرم را، بدون توجه به جستجو، انتخاب ردیف‌ها و سابقهٔ NEW بررسی و دانلود می‌کند. ALL دریافت NEW را تأیید نمی‌کند."
 
 msgid "All matching Entries (Flat ZIP only; maximum 500)"
-msgstr "همهٔ ورودی‌های مطابق فیلتر (فقط ZIP تخت؛ حداکثر ۵۰۰ ورودی)"
+msgstr "همهٔ ورودی‌های مطابق فیلتر (فقط ZIP بدون پوشه‌بندی؛ حداکثر ۵۰۰ ورودی)"
 
 msgid "All matching: choose the all-matching checkbox with the independent Bulk Action. It includes the current search and filters across pages (maximum 500 Entries), not just checked rows."
 msgstr "همهٔ موارد مطابق فیلتر: در «عملیات گروهی» مستقل، گزینهٔ همهٔ موارد مطابق را انتخاب کنید. جستجو و فیلتر فعلی در تمام صفحات لحاظ می‌شود (حداکثر ۵۰۰ ورودی)، نه فقط ردیف‌های تیک‌خورده."
@@ -129,7 +129,7 @@ msgid "Cannot open ZIP for delivery"
 msgstr "بازکردن ZIP برای تحویل ممکن نیست"
 
 msgid "Cannot prepare flat ZIP: %s"
-msgstr "امکان آماده‌سازی ZIP تخت نیست: %s"
+msgstr "امکان آماده‌سازی ZIP بدون پوشه‌بندی نیست: %s"
 
 msgid "Cannot read source"
 msgstr "امکان خواندن فایل مبدأ نیست"
@@ -192,7 +192,7 @@ msgid "Composite separator"
 msgstr "جداکنندهٔ Composite"
 
 msgid "Concurrent NEW coverage confirmation rejected"
-msgstr "تأیید هم‌زمان پوشش NEW رد شد"
+msgstr "تأیید هم‌زمان ثبت در سابقهٔ پوشش NEW رد شد"
 
 msgid "Configuration needs attention before renamed downloads can be expected."
 msgstr "تا اصلاح پیکربندی، نباید انتظار دانلود با نام تغییر‌یافته داشت."
@@ -204,7 +204,7 @@ msgid "Configure which form and which field holds the unique counter number. The
 msgstr "فرم و فیلد دارای شمارهٔ شمارندهٔ یکتا را تعیین کنید. نام فایل‌های دانلودی به الگوی d[COUNTER].extension تبدیل می‌شود."
 
 msgid "Confirm receipt and advance NEW"
-msgstr "تأیید دریافت و پیش‌برد پوشش NEW"
+msgstr "تأیید دریافت و ثبت در سابقهٔ NEW"
 
 msgid "Consistent Entry selection snapshot unavailable"
 msgstr "امکان تهیهٔ تصویر سازگار از انتخاب ورودی‌ها نیست"
@@ -231,7 +231,7 @@ msgid "Download ALL ZIP"
 msgstr "دانلود ZIP عملیات ALL"
 
 msgid "Download Flat ZIP with Rename"
-msgstr "دانلود ZIP تخت با تغییر نام"
+msgstr "دانلود ZIP بدون پوشه‌بندی با تغییر نام"
 
 msgid "Download eligible files from %d explicitly checked Entries on this page? File count may differ."
 msgstr "فایل‌های واجد شرایط %d ورودی که در همین صفحه صریحاً انتخاب شده‌اند دانلود شوند؟ تعداد فایل‌ها ممکن است متفاوت باشد."
@@ -282,7 +282,7 @@ msgid "Entry uploads changed before atomic acknowledgment"
 msgstr "فایل‌های بارگذاری‌شدهٔ ورودی پیش از تأیید اتمی تغییر کردند"
 
 msgid "Exact NEW coverage exceeded safe storage budget"
-msgstr "پوشش دقیق NEW از سقف امن ذخیره‌سازی فراتر رفت"
+msgstr "سابقهٔ دقیق پوشش NEW از سقف امن ذخیره‌سازی فراتر رفت"
 
 msgid "Explicit operator confirmation required"
 msgstr "تأیید صریح کاربر لازم است"
@@ -312,7 +312,7 @@ msgid "First configure a Counter Field ID for Legacy downloads, or select a form
 msgstr "ابتدا برای دانلودهای Legacy شناسهٔ فیلد شمارنده را تنظیم کنید، یا فرمی را در پایین انتخاب و یک قانون مستقل Single Field یا Composite ذخیره کنید. این تنظیمات جدا هستند؛ ذخیرهٔ یکی دیگری را پیکربندی نمی‌کند."
 
 msgid "Flat ZIP download not available"
-msgstr "دانلود ZIP تخت در دسترس نیست"
+msgstr "دانلود ZIP بدون پوشه‌بندی در دسترس نیست"
 
 msgid "For Composite, check at least two eligible text/number fields and assign consecutive positions 1, 2, 3 … . Empty Entry values will block ZIP creation."
 msgstr "برای Composite دست‌کم دو فیلد متنی/عددی واجد شرایط را انتخاب و جایگاه‌های پیاپی ۱، ۲، ۳ و … تعیین کنید. مقدار خالی در ورودی، ساخت ZIP را متوقف می‌کند."
@@ -396,7 +396,7 @@ msgid "Independent ZIP: inherited Legacy defaults"
 msgstr "ZIP مستقل: تنظیمات پیش‌فرض Legacy به‌ارث‌رسیده"
 
 msgid "Initial batch; no automatic coverage update. "
-msgstr "بستهٔ اولیه است؛ پوشش به‌طور خودکار پیش نمی‌رود. "
+msgstr "بستهٔ اولیه است؛ سابقهٔ پوشش NEW به‌طور خودکار تغییر نمی‌کند. "
 
 msgid "Installed GF Entry storage contract unavailable"
 msgstr "قرارداد ذخیره‌سازی ورودی GF نصب‌شده در دسترس نیست"
@@ -450,7 +450,7 @@ msgid "Invalid or forged Entry List scope"
 msgstr "محدودهٔ فهرست ورودی‌ها نامعتبر یا جعل‌شده است"
 
 msgid "Invalid or overlapping coverage ranges"
-msgstr "بازه‌های پوشش نامعتبر یا دارای هم‌پوشانی‌اند"
+msgstr "بازه‌های سابقهٔ پوشش NEW نامعتبر یا دارای هم‌پوشانی‌اند"
 
 msgid "Invalid pending-operation schema"
 msgstr "ساختار دادهٔ عملیات در انتظار نامعتبر است"
@@ -492,7 +492,7 @@ msgid "Legacy applies through the original Bulk Download action. Selected, All m
 msgstr "Legacy از عملیات دانلود گروهی اصلی استفاده می‌کند. Selected، All matching، NEW و ALL از قانون ZIP مستقلِ فرم استفاده می‌کنند؛ اگر قانون جداگانه‌ای نباشد، شمارنده و محدودهٔ فرم Legacy را به ارث می‌برند."
 
 msgid "Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients."
-msgstr "تنظیمات Legacy در بالا همچنان بر مسیر اصلی Bulk Download حاکم است. قوانین Single Field و Composite فقط بر «دانلود ZIP تخت با تغییر نام» اثر می‌گذارند. مقادیر موجود در نام فایل ممکن است اطلاعات شخصی را برای دریافت‌کنندگان ZIP آشکار کنند."
+msgstr "تنظیمات Legacy در بالا همچنان بر مسیر اصلی Bulk Download حاکم است. قوانین Single Field و Composite فقط بر «دانلود ZIP بدون پوشه‌بندی با تغییر نام» اثر می‌گذارند. مقادیر موجود در نام فایل ممکن است اطلاعات شخصی را برای دریافت‌کنندگان ZIP آشکار کنند."
 
 msgid "Legacy targets form %d, not this form. Original filenames here are expected."
 msgstr "Legacy فرم %d را هدف گرفته است، نه این فرم؛ باقی‌ماندن نام اصلی فایل‌ها در اینجا طبیعی است."
@@ -537,10 +537,10 @@ msgid "NEW ZIP stream failed"
 msgstr "جریان ارسال ZIP مربوط به NEW ناموفق بود"
 
 msgid "NEW coverage changed in another tab; prepare again"
-msgstr "پوشش NEW در برگهٔ دیگری تغییر کرده است؛ دوباره آماده کنید"
+msgstr "سابقهٔ پوشش NEW در برگهٔ دیگری تغییر کرده است؛ دوباره آماده کنید"
 
 msgid "NEW coverage state missing or unreadable"
-msgstr "وضعیت پوشش NEW وجود ندارد یا قابل خواندن نیست"
+msgstr "وضعیت سابقهٔ پوشش NEW وجود ندارد یا قابل خواندن نیست"
 
 msgid "NEW download generation COMMIT failed"
 msgstr "ثبت تراکنش نسل دانلود NEW ناموفق بود"
@@ -549,16 +549,16 @@ msgid "NEW download generation is no longer active"
 msgstr "نسل دانلود NEW دیگر فعال نیست"
 
 msgid "NEW exceeds 500 eligible Entries; no partial coverage will be committed"
-msgstr "NEW بیش از ۵۰۰ ورودی واجد شرایط دارد؛ هیچ پوشش ناقصی ثبت نمی‌شود"
+msgstr "NEW بیش از ۵۰۰ ورودی واجد شرایط دارد؛ هیچ سابقهٔ پوشش ناقصی ثبت نمی‌شود"
 
 msgid "NEW failed: %s — coverage is unchanged unless receipt confirmation already succeeded."
-msgstr "عملیات NEW ناموفق بود: %s — پوشش تغییر نکرده است، مگر آنکه تأیید دریافت پیش‌تر موفق شده باشد."
+msgstr "عملیات NEW ناموفق بود: %s — سابقهٔ پوشش NEW تغییر نکرده است، مگر آنکه تأیید دریافت پیش‌تر موفق شده باشد."
 
 msgid "NEW history exceeds bounded storage"
 msgstr "سابقهٔ NEW از سقف امن ذخیره‌سازی فراتر رفت"
 
 msgid "NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action."
-msgstr "NEW ورودی‌های فعالِ تازه‌ساخته‌شده‌ای را در بر می‌گیرد که دریافت آن‌ها هنوز تأیید نشده است. بررسی، پوشش را جلو نمی‌برد. پس از دانلود، پیش از تأیید دریافت، نسخهٔ ذخیره‌شدهٔ محلی را بررسی کنید؛ تأیید دریافت عملی جداگانه و برگشت‌ناپذیر برای پیش‌برد پوشش است."
+msgstr "NEW فقط ورودی‌های فعالِ تازه‌ساخته‌شده‌ای را شامل می‌شود که دریافت آن‌ها هنوز تأیید نشده است. بررسی NEW، سابقهٔ پوشش NEW را تغییر نمی‌دهد. با تأیید این عملیات، ورودی‌های این نوبت در دانلودهای بعدی NEW دوباره نمایش داده نمی‌شوند. این اقدام برگشت‌ناپذیر است. فقط پس از اطمینان از ذخیره‌شدن ZIP روی دستگاه خود، دریافت را تأیید کنید. اگر این نوبت فایل واجد شرایطی ندارد، به‌جای ZIP، ورودی‌های بدون فایل را صریحاً بازبینی کنید."
 
 msgid "NEW metadata range-lock isolation unavailable"
 msgstr "امکان قفل‌گذاری محدودهٔ فرادادهٔ NEW وجود ندارد"
@@ -570,7 +570,7 @@ msgid "NEW operation expired or superseded by a newer generation"
 msgstr "عملیات NEW منقضی شده یا نسل جدیدتری جایگزین آن شده است"
 
 msgid "NEW operation or coverage changed; reload and retry"
-msgstr "عملیات یا پوشش NEW تغییر کرده است؛ صفحه را بازخوانی و دوباره تلاش کنید"
+msgstr "عملیات یا سابقهٔ پوشش NEW تغییر کرده است؛ صفحه را بازخوانی و دوباره تلاش کنید"
 
 msgid "NEW request did not return a valid response"
 msgstr "پاسخ درخواست NEW معتبر نبود"
@@ -585,7 +585,7 @@ msgid "NEW — newly created Entries"
 msgstr "NEW — ورودی‌های تازه‌ساخته‌شده"
 
 msgid "NEW: check for newly created Entries, download and inspect the verified ZIP, then explicitly acknowledge receipt. Browser verification does not prove the ZIP was retained locally. The first check establishes the initial batch; acknowledgment advances coverage."
-msgstr "NEW: ورودی‌های تازه‌ساخته‌شده را بررسی کنید، ZIP را دانلود و بازبینی کنید، سپس دریافت را صریحاً تأیید کنید. راستی‌آزمایی در مرورگر اثبات نمی‌کند ZIP روی دستگاه ذخیره شده است. نخستین بررسی بستهٔ اولیه را مشخص می‌کند؛ تأیید دریافت پوشش را جلو می‌برد."
+msgstr "NEW: ورودی‌های فعالِ تازه‌ساخته‌شده و هنوز تأییدنشده را بررسی کنید. اگر فایل واجد شرایط وجود دارد، ZIP را دانلود، ذخیره و بررسی کنید؛ اگر فایل ندارد، ورودی‌های بدون فایل را صریحاً بازبینی کنید. سپس دریافت را صریحاً تأیید و این نوبت را در سابقهٔ NEW ثبت کنید. این ثبت برگشت‌ناپذیر است. راستی‌آزمایی مرورگر به‌تنهایی ذخیرهٔ ZIP روی دستگاه را اثبات نمی‌کند. نخستین بررسی، بستهٔ اولیه را مشخص می‌کند."
 
 msgid "Naming field %1$d is empty or invalid for Entry %2$s"
 msgstr "فیلد نام‌گذاری %1$d برای ورودی %2$s خالی یا نامعتبر است"
@@ -666,7 +666,7 @@ msgid "Pending-operation generation transition did not persist"
 msgstr "تغییر نسل عملیات در انتظار ذخیره نشد"
 
 msgid "Per-form naming (independent flat ZIP only)"
-msgstr "نام‌گذاری به‌ازای هر فرم (فقط ZIP تخت مستقل)"
+msgstr "نام‌گذاری به‌ازای هر فرم (فقط ZIP بدون پوشه‌بندی مستقل)"
 
 msgid "Per-form rule needs repair"
 msgstr "قانون فرم نیازمند اصلاح است"
@@ -723,7 +723,7 @@ msgid "Selected form unavailable"
 msgstr "فرم انتخاب‌شده در دسترس نیست"
 
 msgid "Selected: choose rows on this page, then use “Download Flat ZIP with Rename” in Bulk Actions. It includes eligible uploads only from those rows."
-msgstr "Selected: ردیف‌ها را در همین صفحه انتخاب کنید و در «عملیات گروهی»، «دانلود ZIP تخت با تغییر نام» را بزنید. فقط فایل‌های واجد شرایط همان ردیف‌ها شامل می‌شوند."
+msgstr "Selected: ردیف‌ها را در همین صفحه انتخاب کنید و در «عملیات گروهی»، «دانلود ZIP بدون پوشه‌بندی با تغییر نام» را بزنید. فقط فایل‌های واجد شرایط همان ردیف‌ها شامل می‌شوند."
 
 msgid "Selection exceeds 500 Entries; no partial ZIP was generated"
 msgstr "انتخاب بیش از ۵۰۰ ورودی دارد؛ ZIP ناقص ساخته نشد"
@@ -789,7 +789,7 @@ msgid "Unsafe output filename"
 msgstr "نام فایل خروجی ناامن است"
 
 msgid "Unsupported NEW coverage state"
-msgstr "ساختار وضعیت پوشش NEW پشتیبانی نمی‌شود"
+msgstr "ساختار سابقهٔ پوشش NEW پشتیبانی نمی‌شود"
 
 msgid "Unsupported file URL"
 msgstr "نشانی فایل پشتیبانی نمی‌شود"
@@ -834,7 +834,7 @@ msgid "ZIP open failed"
 msgstr "بازکردن ZIP ناموفق بود"
 
 msgid "ZIP received and SHA-256 matched in this browser. Check your locally saved ZIP%1$s, then explicitly confirm receipt."
-msgstr "ZIP در این مرورگر دریافت شد و SHA-256 مطابقت داشت. ZIP ذخیره‌شده روی دستگاه خود را بررسی کنید%1$s و سپس دریافت را صریحاً تأیید کنید."
+msgstr "ZIP در این مرورگر دریافت شد و SHA-256 مطابقت داشت. ZIP ذخیره‌شده روی دستگاه خود را بررسی کنید%1$s؛ سپس فقط در صورت اطمینان، دریافت را تأیید و این نوبت را در سابقهٔ NEW ثبت کنید. این تأیید برگشت‌ناپذیر است."
 
 msgid "ZIP response read failed"
 msgstr "خواندن پاسخ ZIP ناموفق بود"
