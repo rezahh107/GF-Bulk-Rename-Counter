@@ -82,6 +82,25 @@ class PersianCatalog(unittest.TestCase):
             with self.subTest(english=english):
                 self.assertNotIn("ZIP تخت", localized)
 
+    def test_result_tokens_are_not_translated_into_ack_status(self):
+        translated = pairs(PO)
+        self.assertEqual(translated["Field %d"], "فیلد %d")
+        expected = {
+            "NEW: Receipt/review confirmation for %d Entries recorded in NEW coverage. Check NEW again for later Entries.": (
+                "سابقهٔ پوشش NEW ثبت شد", "برای ورودی‌های بعدی"),
+            "NEW: Receipt/review for %d Entries was already confirmed. NEW coverage was not advanced again.": (
+                "پیش‌تر ثبت شده است", "دوباره تغییر نکرد"),
+        }
+        for english, required in expected.items():
+            self.assertIn("%d", translated[english])
+            for phrase in required:
+                self.assertIn(phrase, translated[english])
+            self.assertNotIn("acknowledged", translated[english])
+            self.assertNotIn("duplicate", translated[english])
+        self.assertNotIn(
+            "NEW %1$s: %2$d Entries confirmed. Check NEW again for later Entries.",
+            translated)
+
 
 if __name__ == "__main__":
     unittest.main()

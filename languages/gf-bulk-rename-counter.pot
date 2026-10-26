@@ -284,6 +284,9 @@ msgstr ""
 msgid "Explicit operator confirmation required"
 msgstr ""
 
+msgid "Field %d"
+msgstr ""
+
 msgid "File URL outside configured upload directories"
 msgstr ""
 
@@ -518,9 +521,6 @@ msgstr ""
 msgid "More than 500 Entries match. Narrow the current search or filters before downloading."
 msgstr ""
 
-msgid "NEW %1$s: %2$d Entries confirmed. Check NEW again for later Entries."
-msgstr ""
-
 msgid "NEW ZIP cannot be opened"
 msgstr ""
 
@@ -579,6 +579,12 @@ msgid "NEW requires transactional Gravity Forms Entry and field storage"
 msgstr ""
 
 msgid "NEW — newly created Entries"
+msgstr ""
+
+msgid "NEW: Receipt/review confirmation for %d Entries recorded in NEW coverage. Check NEW again for later Entries."
+msgstr ""
+
+msgid "NEW: Receipt/review for %d Entries was already confirmed. NEW coverage was not advanced again."
 msgstr ""
 
 msgid "NEW: check for newly created Entries, download and inspect the verified ZIP, then explicitly acknowledge receipt. Browser verification does not prove the ZIP was retained locally. The first check establishes the initial batch; acknowledgment advances coverage."

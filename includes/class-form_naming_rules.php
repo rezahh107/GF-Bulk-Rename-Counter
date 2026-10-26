@@ -19,7 +19,10 @@ final class Form_Naming_Rules {
             }
             $id = (int)($field->id ?? 0);
             if ($id > 0 && (string)$id === (string)($field->id ?? '')) {
-                $fields[$id] = (string)($field->label ?? ('Field ' . $id));
+                $label = (string)($field->label ?? '');
+                $fields[$id] = preg_match('/[^\\p{Z}\\s]/u', $label) === 1
+                    ? $label
+                    : sprintf(__('Field %d', 'gf-bulk-rename-counter'), $id);
             }
         }
         return $fields;

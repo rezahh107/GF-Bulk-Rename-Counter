@@ -267,7 +267,7 @@ const {chromium} = require('playwright-core');
       await secondTab.locator('#gfbrc-new-result').filter({hasText:'SHA-256 matched'}).waitFor();
       await secondTab.locator('#gfbrc-new-review').check();
       await secondTab.locator('#gfbrc-new-ack').click();
-      await secondTab.locator('#gfbrc-new-result').filter({hasText:'NEW acknowledged'}).waitFor();
+      await secondTab.locator('#gfbrc-new-result').filter({hasText:'NEW: Receipt/review confirmation'}).waitFor();
       if(mutate('read_coverage').state.rev!==beforeRace+1)throw Error('Fresh second tab failed to persist');
       console.log('PASS_NEW_BROWSER_TWO_TABS_STALE_REJECTED_FRESH_CONFIRMED');
     } finally {await secondTab.close();}

@@ -724,7 +724,8 @@ final class New_Download {
                 'zip_ok' => __('ZIP received and SHA-256 matched in this browser. Check your locally saved ZIP%1$s, then explicitly confirm receipt.', 'gf-bulk-rename-counter'),
                 'zero_review' => __(' and review %d Entries with no files', 'gf-bulk-rename-counter'),
                 'ack_needed' => __('Check your saved ZIP or explicitly review the zero-file Entries first.', 'gf-bulk-rename-counter'),
-                'ack_success' => __('NEW %1$s: %2$d Entries confirmed. Check NEW again for later Entries.', 'gf-bulk-rename-counter'),
+                'ack_recorded' => __('NEW: Receipt/review confirmation for %d Entries recorded in NEW coverage. Check NEW again for later Entries.', 'gf-bulk-rename-counter'),
+                'ack_duplicate' => __('NEW: Receipt/review for %d Entries was already confirmed. NEW coverage was not advanced again.', 'gf-bulk-rename-counter'),
             ],
         ]);
         echo '<script id="gfbrc-new-config" type="application/json">' .
@@ -853,7 +854,13 @@ final class New_Download {
       var result = await api('ack', {
         operation:operation, confirmed:'yes', zero_reviewed:zero?'yes':'no', sha256:checksum
       });
-      status(tr('ack_success', result.result, result.covered));
+      // Server result identifiers are protocol values, never operator copy.
+      if (!result || !Number.isSafeInteger(result.covered) || result.covered < 0 ||
+          (result.result !== 'acknowledged' && result.result !== 'duplicate')) {
+        throw Error(cfg.text.invalid);
+      }
+      status(tr(result.result === 'acknowledged' ? 'ack_recorded' : 'ack_duplicate',
+        result.covered));
       reset();
     });
   });

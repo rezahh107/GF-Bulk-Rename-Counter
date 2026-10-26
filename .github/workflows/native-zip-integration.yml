@@ -432,6 +432,12 @@ jobs:
           BRC_UI_PHASE=configured php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/admin-guidance-qualify.php
           BRC_UI_PHASE=configured BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-per-form-browser.php
+          # NEW ACK locale qualification on the REAL installed candidate with
+          # genuine first/duplicate server ACKs and final rendered aria-live.
+          php -l tests/production-candidate/localized-field-labels.php
+          node --check tests/production-candidate/new-ack-localization.cjs
+          BRC_EXPECT_LOCALE=en_US php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/localized-field-labels.php
+          BRC_EXPECT_LOCALE=en_US BRC_CHROME="$chrome" node tests/production-candidate/new-ack-localization.cjs
           # Canonical ZIP bytes, actual fa_IR WordPress pack and plugin MO loaded.
           unzip -p "$BRC_TARGET_ZIP" gf-bulk-rename-counter/languages/gf-bulk-rename-counter-fa_IR.po |
             cmp - languages/gf-bulk-rename-counter-fa_IR.po
@@ -444,6 +450,8 @@ jobs:
           php -l tests/production-candidate/locale-zero-file-qualify.php
           BRC_EXPECT_LOCALE=fa_IR php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/locale-zero-file-qualify.php
           BRC_UI_PHASE=fa_ir BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
+          BRC_EXPECT_LOCALE=fa_IR php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/localized-field-labels.php
+          BRC_EXPECT_LOCALE=fa_IR BRC_CHROME="$chrome" node tests/production-candidate/new-ack-localization.cjs
           # Independent WP-CLI process: explicitly switch the active user-scoped
           # locale to en_US and assert it before exercising the same real ZIP.
           BRC_EXPECT_LOCALE=en_US php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/locale-zero-file-qualify.php
