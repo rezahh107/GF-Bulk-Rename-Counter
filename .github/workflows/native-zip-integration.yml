@@ -444,10 +444,10 @@ jobs:
           php -l tests/production-candidate/locale-zero-file-qualify.php
           BRC_EXPECT_LOCALE=fa_IR php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/locale-zero-file-qualify.php
           BRC_UI_PHASE=fa_ir BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
-          # A separate authentic WordPress bootstrap in en_US, not a process-local
-          # switch that can silently retain a cached translation locale.
-          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option update WPLANG en_US
+          # Independent WP-CLI process: explicitly switch the active user-scoped
+          # locale to en_US and assert it before exercising the same real ZIP.
           BRC_EXPECT_LOCALE=en_US php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/locale-zero-file-qualify.php
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option update WPLANG en_US
           php -l tests/production-candidate/windows-names-qualify.php
           php -l tests/production-candidate/windows-names-verify.php
           python3 -m py_compile tests/production-candidate/windows-names-http.py

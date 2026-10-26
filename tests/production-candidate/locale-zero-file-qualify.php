@@ -8,7 +8,16 @@ if (!defined('ABSPATH') || !class_exists('GFAPI')) {
 }
 $domain = 'gf-bulk-rename-counter';
 $expected_locale = getenv('BRC_EXPECT_LOCALE');
-if (!in_array($expected_locale, ['en_US', 'fa_IR'], true) || get_locale() !== $expected_locale) {
+if (!in_array($expected_locale, ['en_US', 'fa_IR'], true)) {
+    throw new RuntimeException('Unsupported test locale');
+}
+// User-scoped WP-CLI locale may override the site WPLANG option. Switch only
+// the en_US process, then require the effective real WP locale to match.
+if ($expected_locale === 'en_US' && get_locale() !== 'en_US' &&
+    !switch_to_locale('en_US')) {
+    throw new RuntimeException('Real en_US WordPress locale switch unavailable');
+}
+if (get_locale() !== $expected_locale) {
     throw new RuntimeException('Actual WordPress locale differs from expected: ' .
         (string)$expected_locale . ' vs ' . get_locale());
 }
