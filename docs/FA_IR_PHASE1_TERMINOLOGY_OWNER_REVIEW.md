@@ -2,6 +2,8 @@
 
 **Owner-approved terminology — 2026-10-26.** The Owner explicitly accepted the five terminology recommendations and the proposed NEW/ACK button and warning. This is **wording approval only**, not Phase 2/3 acceptance, permission to merge, or permission to publish/deploy.
 
+**Subsequent status update (2026-10-26):** PR [#36](https://github.com/rezahh107/GF-Bulk-Rename-Counter/pull/36) was later **merged** at `2026-10-26T17:20:12Z` (final Head `2805a674f727b155ac51227ee8f88ce9815bd32d`, Merge SHA `9c0b64ba06ea56ef249e55f7a24295e51947c20a`). The wording-approval boundary above remains a historical fact, not a claim that the full independent Phase 2/3 process was documented as completed. The exact final Head passed [Source](https://github.com/rezahh107/GF-Bulk-Rename-Counter/actions/runs/40363981372), [ZIP dry-run](https://github.com/rezahh107/GF-Bulk-Rename-Counter/actions/runs/40363981292), and [real WP/GF/Chromium](https://github.com/rezahh107/GF-Bulk-Rename-Counter/actions/runs/40363984685) tests with installed `fa_IR` text. No new public release or Owner-site deployment is established; `v2.2.0` remains unchanged. An independent Engineering Compass review report was not found in the inspected GitHub PR review records; this does not establish that no external review occurred.
+
 | Concept | Approved Persian label | Operational boundary |
 | --- | --- | --- |
 | Entry | ورودی | One Gravity Forms submission; not one uploaded file |
