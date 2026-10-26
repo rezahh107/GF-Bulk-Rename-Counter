@@ -9,6 +9,9 @@ use Throwable;
 use ZipArchive;
 if (!defined('ABSPATH')) { exit; }
 
+/** A valid selection with no eligible uploads; distinct from a real ZIP failure. */
+final class No_Eligible_Files_Exception extends RuntimeException {}
+
 final class Flat_Zip_Download {
     const ACTION = 'gfbrc_independent_flat_zip';
     const ENDPOINT = 'gfbrc_flat_zip_download';
@@ -501,7 +504,7 @@ final class Flat_Zip_Download {
                 }
             }
         }
-        if (!$plan) { throw new RuntimeException(__('No eligible files found', 'gf-bulk-rename-counter')); }
+        if (!$plan) { throw new No_Eligible_Files_Exception(__('No eligible files found', 'gf-bulk-rename-counter')); }
         // Reserve naturally occurring names before creating Legacy-style suffixes.
         $reserved = [];
         foreach ($plan as $item) { $reserved[strtolower($item['candidate'])] = true; }

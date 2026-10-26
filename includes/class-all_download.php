@@ -144,9 +144,8 @@ final class All_Download {
         if (!$ids) { return []; }
         try {
             return Flat_Zip_Download::plan($form, $ids);
-        } catch (RuntimeException $e) {
-            if ($e->getMessage() === 'No eligible files found') { return []; }
-            throw $e;
+        } catch (No_Eligible_Files_Exception $e) {
+            return [];
         }
     }
 
