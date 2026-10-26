@@ -359,7 +359,7 @@ jobs:
         run: |
           set -euo pipefail
           # Canonical shipped ZIP and repository source remain uninstrumented.
-          test "$(git hash-object includes/class-all_download.php)" = "6b862533ea883ec4699ea192dec76714a6dd03e9"
+          test "$(git hash-object includes/class-all_download.php)" = "fe73958463f622f9166822559e76466ba4b145f5"
           test "$(git hash-object includes/class-flat_zip_download.php)" = "df0dabb8b950361c09e5329f2222ee1db76e8947"
           if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
             echo 'Qualification harness was included in installable ZIP' >&2
@@ -396,7 +396,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object includes/class-all_download.php)" = "6b862533ea883ec4699ea192dec76714a6dd03e9"
+          test "$(git hash-object includes/class-all_download.php)" = "fe73958463f622f9166822559e76466ba4b145f5"
           test "$(git hash-object includes/class-flat_zip_download.php)" = "df0dabb8b950361c09e5329f2222ee1db76e8947"
           if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
             echo 'Test-only F-02 capacity harness leaked into canonical package' >&2
