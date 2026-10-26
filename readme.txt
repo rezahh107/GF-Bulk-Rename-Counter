@@ -2,7 +2,7 @@
 Tags: gravity forms, bulk download, rename files, counter
 Requires at least: 5.8
 Tested up to: 6.8
-Stable tag: 2.2.0
+Stable tag: 2.3.0
 Requires PHP: 8.0
 License: GPL-2.0-or-later
 
@@ -39,6 +39,9 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 **Privacy:** Values selected for Single Field / Composite naming appear in ZIP filenames. Do not choose personal or sensitive fields unless sharing those values with recipients is intended. Invalid or missing naming values stop the independent ZIP with an error.
 
 == Changelog ==
+
+= 2.3.0 =
+* Release candidate; see reviewed GitHub changes for details.
 
 = 2.2.0 =
 * Add creation-only **NEW** incremental flat ZIP download with separate explicit receipt acknowledgment and atomic confirmed coverage advancement; previously known Entries do not become NEW when files are added later.
