@@ -125,7 +125,7 @@ foreach ($cases as $key => $scenario) {
             Download::plan($scenario['form_id'], $scenario['entry_ids']);
             throw new RuntimeException('Reserved device output incorrectly planned: ' . $key);
         } catch (RuntimeException $error) {
-            if (!str_contains($error->getMessage(), 'Windows reserved device')) {
+            if (!str_contains($error->getMessage(), __('Naming fields produce a Windows reserved device filename', 'gf-bulk-rename-counter'))) {
                 throw new RuntimeException('Unexpected rejection: ' . $key, 0, $error);
             }
         }
