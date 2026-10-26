@@ -35,6 +35,9 @@ msgstr ""
 msgid "ALL Entry enumeration overflow"
 msgstr ""
 
+msgid "ALL check could not be completed or verified. Check ALL again before downloading."
+msgstr ""
+
 msgid "ALL check failed"
 msgstr ""
 
@@ -533,6 +536,9 @@ msgstr ""
 msgid "NEW ZIP stream failed"
 msgstr ""
 
+msgid "NEW acknowledgment status could not be determined. The server may have recorded it. Reload Entries and check NEW before confirming again; do not assume coverage is unchanged."
+msgstr ""
+
 msgid "NEW coverage changed in another tab; prepare again"
 msgstr ""
 
@@ -567,6 +573,9 @@ msgid "NEW operation expired or superseded by a newer generation"
 msgstr ""
 
 msgid "NEW operation or coverage changed; reload and retry"
+msgstr ""
+
+msgid "NEW request could not be completed or verified. Check NEW again before proceeding."
 msgstr ""
 
 msgid "NEW request did not return a valid response"

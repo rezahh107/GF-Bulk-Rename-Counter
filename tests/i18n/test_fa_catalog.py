@@ -101,6 +101,24 @@ class PersianCatalog(unittest.TestCase):
             "NEW %1$s: %2$d Entries confirmed. Check NEW again for later Entries.",
             translated)
 
+    def test_localized_runtime_fallback_and_ack_ambiguity(self):
+        translated = pairs(PO)
+        expected = {
+            "NEW request could not be completed or verified. Check NEW again before proceeding.":
+                ("NEW", "دوباره بررسی"),
+            "NEW acknowledgment status could not be determined. The server may have recorded it. Reload Entries and check NEW before confirming again; do not assume coverage is unchanged.":
+                ("ممکن است", "دوباره بارگذاری", "فرض نکنید", "سابقهٔ پوشش"),
+            "ALL check could not be completed or verified. Check ALL again before downloading.":
+                ("ALL", "پیش از دانلود"),
+        }
+        for source, fragments in expected.items():
+            self.assertIn(source, translated)
+            for fragment in fragments:
+                self.assertIn(fragment, translated[source])
+            self.assertNotIn("Failed to fetch", translated[source])
+            self.assertNotIn("Unexpected token", translated[source])
+        self.assertIn("NEW", translated["Confirm receipt and advance NEW"])
+
 
 if __name__ == "__main__":
     unittest.main()

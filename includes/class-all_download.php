@@ -291,6 +291,7 @@ final class All_Download {
                 'summary' => __('%1$d active Entries / %2$d eligible files / %3$d Entries without files. Entire form; filters, pages, selection and NEW history are ignored.', 'gf-bulk-rename-counter'),
                 'empty' => __('No ZIP exists for this scope.', 'gf-bulk-rename-counter'),
                 'failed' => __('ALL failed: %s — no partial ZIP delivered.', 'gf-bulk-rename-counter'),
+                'unexpected' => __('ALL check could not be completed or verified. Check ALL again before downloading.', 'gf-bulk-rename-counter'),
                 'confirm' => __('Download ALL %1$d active Entries / %2$d eligible files / %3$d Entries without files? Filters and NEW history are ignored; NEW acknowledgment does not change.', 'gf-bulk-rename-counter'),
             ],
         ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
@@ -332,6 +333,11 @@ final class All_Download {
   var status = panel.querySelector('#gfbrc-all-result');
   var current = null, busy = false;
   function message(s) { status.textContent = s; }
+  function applicationError(text) {
+    var error = new Error(text);
+    error.gfbMessage = text;
+    return error;
+  }
   prepare.addEventListener('click', async function () {
     if (busy) return;
     busy = true; prepare.disabled = true; download.hidden = true; current = null;
@@ -341,15 +347,24 @@ final class All_Download {
         form_id:String(cfg.form), _wpnonce:cfg.nonce});
       var response = await fetch(new URL('admin-ajax.php', location.href).href, {
         method:'POST', credentials:'same-origin', body:body, headers:{'Cache-Control':'no-store'}});
-      var result = await response.json();
-      if (!response.ok || !result.success) {
-        throw Error((result.data && result.data.message) || cfg.text.failed_check);
+      var result;
+      try { result = await response.json(); } catch (_) { throw Error(cfg.text.unexpected); }
+      if (!result || typeof result !== 'object') { throw Error(cfg.text.unexpected); }
+      if (!response.ok || result.success === false) {
+        throw applicationError(result.data && typeof result.data.message === 'string'
+          ? result.data.message : cfg.text.failed_check);
+      }
+      if (result.success !== true || !result.data || typeof result.data !== 'object') {
+        throw Error(cfg.text.unexpected);
       }
       var data = result.data;
       message(tr('summary', data.entries, data.files, data.zero_entries));
       if (data.files > 0) {current = data; download.hidden = false;}
       else message(status.textContent+' '+cfg.text.empty);
-    } catch (e) {message(tr('failed', e.message));}
+    } catch (e) {
+      message(e && typeof e.gfbMessage === 'string' ?
+        tr('failed', e.gfbMessage) : cfg.text.unexpected);
+    }
     finally {busy = false; prepare.disabled = false;}
   });
   download.addEventListener('click', function () {

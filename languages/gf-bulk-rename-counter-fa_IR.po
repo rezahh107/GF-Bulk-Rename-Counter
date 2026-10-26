@@ -38,6 +38,9 @@ msgstr "تعداد ورودی‌های پیمایش‌شدهٔ ALL تغییر ک
 msgid "ALL Entry enumeration overflow"
 msgstr "تعداد ورودی‌های ALL از محدودهٔ مجاز پیمایش فراتر رفت"
 
+msgid "ALL check could not be completed or verified. Check ALL again before downloading."
+msgstr "بررسی ALL کامل نشد یا نتیجهٔ آن قابل‌تأیید نیست. پیش از دانلود، ALL را دوباره بررسی کنید."
+
 msgid "ALL check failed"
 msgstr "بررسی ALL ناموفق بود"
 
@@ -536,6 +539,9 @@ msgstr "امکان اعتبارسنجی اندازه یا پاسخ ZIP مربو�
 msgid "NEW ZIP stream failed"
 msgstr "جریان ارسال ZIP مربوط به NEW ناموفق بود"
 
+msgid "NEW acknowledgment status could not be determined. The server may have recorded it. Reload Entries and check NEW before confirming again; do not assume coverage is unchanged."
+msgstr "وضعیت تأیید دریافت NEW مشخص نیست؛ ممکن است در سرور ثبت شده باشد. صفحهٔ ورودی‌ها را دوباره بارگذاری کنید و پیش از تأیید مجدد وضعیت NEW را بررسی کنید؛ فرض نکنید سابقهٔ پوشش بدون تغییر مانده است."
+
 msgid "NEW coverage changed in another tab; prepare again"
 msgstr "سابقهٔ پوشش NEW در برگهٔ دیگری تغییر کرده است؛ دوباره آماده کنید"
 
@@ -571,6 +577,9 @@ msgstr "عملیات NEW منقضی شده یا نسل جدیدتری جایگز
 
 msgid "NEW operation or coverage changed; reload and retry"
 msgstr "عملیات یا سابقهٔ پوشش NEW تغییر کرده است؛ صفحه را بازخوانی و دوباره تلاش کنید"
+
+msgid "NEW request could not be completed or verified. Check NEW again before proceeding."
+msgstr "درخواست NEW کامل نشد یا نتیجهٔ آن قابل‌تأیید نیست. پیش از ادامه، NEW را دوباره بررسی کنید."
 
 msgid "NEW request did not return a valid response"
 msgstr "پاسخ درخواست NEW معتبر نبود"

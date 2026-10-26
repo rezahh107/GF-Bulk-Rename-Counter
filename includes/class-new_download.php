@@ -726,6 +726,8 @@ final class New_Download {
                 'ack_needed' => __('Check your saved ZIP or explicitly review the zero-file Entries first.', 'gf-bulk-rename-counter'),
                 'ack_recorded' => __('NEW: Receipt/review confirmation recorded in NEW coverage (Entry count: %d). Check NEW again for later Entries.', 'gf-bulk-rename-counter'),
                 'ack_duplicate' => __('NEW: Receipt/review for this batch was already confirmed (Entry count: %d). NEW coverage was not advanced again.', 'gf-bulk-rename-counter'),
+                'unexpected' => __('NEW request could not be completed or verified. Check NEW again before proceeding.', 'gf-bulk-rename-counter'),
+                'ack_uncertain' => __('NEW acknowledgment status could not be determined. The server may have recorded it. Reload Entries and check NEW before confirming again; do not assume coverage is unchanged.', 'gf-bulk-rename-counter'),
             ],
         ]);
         echo '<script id="gfbrc-new-config" type="application/json">' .
@@ -785,6 +787,12 @@ final class New_Download {
   var operation = null, checksum = '', zero = false, downloaded = false, busy = false;
   var zeroEntries = 0;
   function status(s) { message.textContent = s; }
+  // Only explicit application failures may supply operator-facing detail.
+  function applicationError(text) {
+    var error = new Error(text);
+    error.gfbMessage = text;
+    return error;
+  }
   function reset() {
     operation = null; checksum = ''; zero = false; zeroEntries = 0; downloaded = false;
     download.hidden = true; ack.hidden = true; reviewWrap.hidden = true; review.checked = false;
@@ -799,16 +807,28 @@ final class New_Download {
       return {response:response, bytes:await response.arrayBuffer()};
     }
     var payload;
-    try { payload = await response.json(); } catch (_) {throw Error(cfg.text.invalid);}
-    if (!response.ok || !payload.success) {
-      throw Error((payload.data && payload.data.message) || cfg.text.rejected);
+    try { payload = await response.json(); }
+    catch (_) { throw action === 'ack' ? Error(cfg.text.invalid) : applicationError(cfg.text.invalid); }
+    if (!payload || typeof payload !== 'object') {
+      throw action === 'ack' ? Error(cfg.text.invalid) : applicationError(cfg.text.invalid);
+    }
+    if (!response.ok || payload.success === false) {
+      var reason = payload.data && typeof payload.data.message === 'string'
+        ? payload.data.message : cfg.text.rejected;
+      throw applicationError(reason);
+    }
+    if (payload.success !== true || !payload.data || typeof payload.data !== 'object') {
+      throw action === 'ack' ? Error(cfg.text.invalid) : applicationError(cfg.text.invalid);
     }
     return payload.data;
   }
-  async function guarded(fn) {
+  async function guarded(fn, ackRequest) {
     if (busy) return;
     busy = true; prepare.disabled = true; download.disabled = true; ack.disabled = true;
-    try { await fn(); } catch (e) {status(tr('failure', e.message));}
+    try { await fn(); } catch (e) {
+      status(e && typeof e.gfbMessage === 'string' ? tr('failure', e.gfbMessage) :
+        (ackRequest ? cfg.text.ack_uncertain : cfg.text.unexpected));
+    }
     finally {busy = false; prepare.disabled = false; download.disabled = false; ack.disabled = false;}
   }
   prepare.addEventListener('click', function () {
@@ -832,7 +852,7 @@ final class New_Download {
       var expected = delivered.response.headers.get('X-GFBRC-ZIP-SHA256');
       var digest = await crypto.subtle.digest('SHA-256', delivered.bytes);
       var actual = Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,'0')).join('');
-      if (!expected || expected !== actual) throw Error(cfg.text.sha);
+      if (!expected || expected !== actual) throw applicationError(cfg.text.sha);
       checksum = actual;
       var name = (delivered.response.headers.get('content-disposition') || '')
         .match(/filename="([^"]+\.zip)"/i);
@@ -862,7 +882,7 @@ final class New_Download {
       status(tr(result.result === 'acknowledged' ? 'ack_recorded' : 'ack_duplicate',
         result.covered));
       reset();
-    });
+    }, true);
   });
 })();
 </script>
