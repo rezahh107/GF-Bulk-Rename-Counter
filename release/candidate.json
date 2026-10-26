@@ -1,0 +1,10 @@
+{
+  "base": {
+    "commit": "8f9cf9d82b96105feaa9b882e1dd15cfee911a1c",
+    "tree": "7c41545ea6d82eaa139b7ba400ebebef729ec1ca"
+  },
+  "branch": "release-candidate/v2.3.0-from-8f9cf9d82b96105feaa9b882e1dd15cfee911a1c",
+  "intent": "minor",
+  "schema": 1,
+  "version": "2.3.0"
+}

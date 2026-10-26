@@ -2,7 +2,7 @@
 Tags: gravity forms, bulk download, rename files, counter
 Requires at least: 5.8
 Tested up to: 6.8
-Stable tag: 2.2.0
+Stable tag: 2.3.0
 Requires PHP: 8.0
 License: GPL-2.0-or-later
 
@@ -15,7 +15,7 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 **Features:**
 - Settings page to select target form (optional) and counter field ID.
 - Uses WordPress Settings API.
-- Uses WordPress gettext for available interface messages; translations are not bundled.
+- Uses WordPress gettext for interface messages and bundles Persian (`fa_IR`) PO/MO translations.
 - Requires Gravity Forms and Bulk Download for Gravity Forms; does not bundle them.
 - Preserves the original Legacy filename hook and its existing duplicate handling.
 - **Selected:** use **Download Flat ZIP with Rename** on explicitly checked Entry rows on the visible page. Selections from other pages are not retained automatically.
@@ -39,6 +39,12 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 **Privacy:** Values selected for Single Field / Composite naming appear in ZIP filenames. Do not choose personal or sensitive fields unless sharing those values with recipients is intended. Invalid or missing naming values stop the independent ZIP with an error.
 
 == Changelog ==
+
+= 2.3.0 =
+* Improve WordPress-native administration with direct Settings and Gravity Forms navigation, clear effective per-form naming status, and guidance for inherited Legacy defaults versus Single Field / Composite rules.
+* Add contextual Entries help for Legacy, Selected, filtered all-matching, NEW with separate irreversible receipt acknowledgment, and independent ALL, including explanations of unchanged filenames and file-free Entries.
+* Bundle complete Persian (`fa_IR`) gettext PO/MO translations for administration, download controls, statuses and errors, including Owner-approved NEW/ACK safety wording.
+* Preserve existing naming, ZIP integrity, authorization, NEW coverage and ALL isolation behavior without modifying stored uploads or Gravity Forms Entries.
 
 = 2.2.0 =
 * Add creation-only **NEW** incremental flat ZIP download with separate explicit receipt acknowledgment and atomic confirmed coverage advancement; previously known Entries do not become NEW when files are added later.
