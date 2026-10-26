@@ -3,6 +3,13 @@
 declare(strict_types=1);
 if ($argc < 2) { fwrite(STDERR, "Missing case\n"); exit(2); }
 define('ABSPATH', '/');
+// Isolated CLI fallback mirrors untranslated WordPress gettext in en_US.
+function __(string $message, string $domain): string {
+    if ($domain !== 'gf-bulk-rename-counter') {
+        throw new RuntimeException('Unexpected translation domain');
+    }
+    return $message;
+}
 require $argv[2] ?? dirname(__DIR__, 2) . '/includes/class-flat_zip_download.php';
 $case = $argv[1];
 if (!in_array($case, ['none', 'removable', 'nested', 'nonremovable', 'stack'], true)) {
