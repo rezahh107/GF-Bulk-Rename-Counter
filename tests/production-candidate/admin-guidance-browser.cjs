@@ -86,12 +86,16 @@ const {chromium}=require('playwright-core');
       if(await page.locator('#gfbrc-form-select').inputValue()!==String(data.b.form_id))
         throw Error('Toolbar did not open independent configuration for B');
       const preview=page.locator('summary').filter({hasText:'Show Global Legacy field labels and IDs for'});
-      const actualTitle=await page.locator('#gf_bulk_rename_form_id option:checked').textContent();
+      const actualTitle=(await page.locator('#gf_bulk_rename_form_id option:checked').textContent()).trim();
+      const savedForm=await page.locator('#gf_bulk_rename_form_id').inputValue();
+      const previewText=await preview.count()?await preview.first().innerText():'[missing]';
       const expectedId='form ID '+data.a.form_id;
-      if(!await preview.count()||
-        !(await preview.innerText()).includes(expectedId)||
-        !(await preview.innerText()).includes(actualTitle.replace(/ \(ID: .*\)$/,'')))
-        throw Error('Legacy A fields not attributed to actual saved target A');
+      if(savedForm!==String(data.a.form_id)||
+        !previewText.includes(expectedId)||
+        !previewText.includes(actualTitle.replace(/ \(ID: .*\)$/,'')))
+        throw Error('Legacy A fields misattributed: '+JSON.stringify({
+          savedForm,expectedForm:data.a.form_id,actualTitle,previewText,expectedId
+        }));
       if(await page.locator('#gf_bulk_rename_counter_field_id').inputValue()!=='5')
         throw Error('Legacy Counter unexpectedly changed while navigating B');
       console.log('PASS_BROWSER_GLOBAL_LEGACY_A_VIA_B_TOOLBAR_FORM_ID_AND_SCOPE');
