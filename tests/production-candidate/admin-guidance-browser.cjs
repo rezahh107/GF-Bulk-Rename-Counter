@@ -30,6 +30,17 @@ const {chromium}=require('playwright-core');
       await open(entries(formId));
       const box=page.locator('#gfbrc-entries-guide');
       if(await box.count()!==1) throw Error('Entries guide missing');
+      // Assert final placement after the real native Entry List action toolbar.
+      const placement=await box.evaluate(el=>{
+        const apply=document.getElementById('doaction');
+        const anchor=apply&&(apply.closest('.tablenav')||apply);
+        return {present:!!anchor,adjacent:!!anchor&&anchor.nextElementSibling===el,
+          visible:el.getClientRects().length>0};
+      });
+      if(placement.present&&!placement.adjacent)
+        throw Error('Guide not adjacent to native Entries actions: '+JSON.stringify(placement));
+      if(!placement.visible)throw Error('Guide hidden when native anchor absent');
+      if(!placement.present)console.log('OBSERVED_ENTRY_ANCHOR_ABSENT_GUIDE_REMAINS_VISIBLE');
       if(await box.locator('.gfbrc-rule-status').getAttribute('data-gfbrc-status')!==expected)
         throw Error('Wrong effective naming status, expected '+expected);
       if(!await page.locator('#gfbrc-new-prepare').count()||
@@ -52,8 +63,44 @@ const {chromium}=require('playwright-core');
       if(!await page.locator('form[action="options.php"]').count()||
          !(await page.locator('.gfbrc-rule-status').innerText()).includes('Legacy'))
         throw Error('Initial settings orientation absent');
-      if(!await page.getByText('Show field labels and IDs for this form').count())
-        throw Error('Global counter field labels missing');
+      if(!await page.locator('summary').filter({hasText:'Show Global Legacy field labels and IDs for'}).count())
+        throw Error('Global Legacy preview form identity missing');
+      // Real Settings API mutation: Global Legacy targets A, but navigation starts at B.
+      await page.locator('#gf_bulk_rename_form_id').selectOption(String(data.a.form_id));
+      await Promise.all([
+        page.waitForURL(/settings-updated=true/,{timeout:20000}),
+        page.locator('form[action="options.php"]').first().locator('input[type="submit"]').click()
+      ]);
+      await open(entries(data.b.form_id));
+      const toolbar=page.getByRole('link',{name:'File naming settings'});
+      if(await toolbar.count()!==1||!await toolbar.isVisible())
+        throw Error('Native GF form toolbar naming link not visibly rendered');
+      if(new URL(await toolbar.getAttribute('href'),base).searchParams.get('gfbrc_form')!==
+          String(data.b.form_id))
+        throw Error('Unreachable toolbar form target');
+      await Promise.all([
+        page.waitForURL(url=>url.pathname.endsWith('/options-general.php')&&
+          url.searchParams.get('gfbrc_form')===String(data.b.form_id),{timeout:20000}),
+        toolbar.click()
+      ]);
+      if(await page.locator('#gfbrc-form-select').inputValue()!==String(data.b.form_id))
+        throw Error('Toolbar did not open independent configuration for B');
+      const preview=page.locator('summary').filter({hasText:'Show Global Legacy field labels and IDs for'});
+      const actualTitle=await page.locator('#gf_bulk_rename_form_id option:checked').textContent();
+      const expectedId='form ID '+data.a.form_id;
+      if(!await preview.count()||
+        !(await preview.innerText()).includes(expectedId)||
+        !(await preview.innerText()).includes(actualTitle.replace(/ \(ID: .*\)$/,'')))
+        throw Error('Legacy A fields not attributed to actual saved target A');
+      if(await page.locator('#gf_bulk_rename_counter_field_id').inputValue()!=='5')
+        throw Error('Legacy Counter unexpectedly changed while navigating B');
+      console.log('PASS_BROWSER_GLOBAL_LEGACY_A_VIA_B_TOOLBAR_FORM_ID_AND_SCOPE');
+      // Restore the exact baseline before inherited Legacy and ZIP checks.
+      await page.locator('#gf_bulk_rename_form_id').selectOption('0');
+      await Promise.all([
+        page.waitForURL(/settings-updated=true/,{timeout:20000}),
+        page.locator('form[action="options.php"]').first().locator('input[type="submit"]').click()
+      ]);
       await state(data.a.form_id,'ready');
       // Real options.php save: empty Legacy Counter deliberately preserves original names.
       await open(settings(data.a.form_id));
@@ -81,6 +128,8 @@ const {chromium}=require('playwright-core');
       const result=await opPage.goto(entries(data.a.form_id),{waitUntil:'domcontentloaded'});
       if(result.status()!==200 || !await opPage.locator('#gfbrc-entries-guide').count())
         throw Error('Operator cannot reach read-only download help');
+      if(await opPage.getByRole('link',{name:'File naming settings'}).count())
+        throw Error('Operator sees forbidden GF toolbar navigation');
       if(await opPage.locator('#gfbrc-entries-guide a[href*="gf-bulk-rename-settings"]').count())
         throw Error('Operator has forbidden configuration link');
       await opPage.goto(settings(data.a.form_id),{waitUntil:'domcontentloaded'});
@@ -88,6 +137,35 @@ const {chromium}=require('playwright-core');
         throw Error('Operator can edit protected settings');
       await operator.close();
       console.log('PASS_BROWSER_UI_INITIAL_LEGACY_CONFIG_OPERATOR_NAV');
+    } else if(phase==='fa_ir'){
+      await open(entries(data.a.form_id));
+      const locale=await page.evaluate(()=>({
+        lang:document.documentElement.lang,dir:document.documentElement.dir,
+        bodyDirection:getComputedStyle(document.body).direction,
+        guideDirection:getComputedStyle(document.getElementById('gfbrc-entries-guide')).direction
+      }));
+      if(locale.lang.toLowerCase()!=='fa-ir'||locale.dir!=='rtl'||
+        locale.bodyDirection!=='rtl'||locale.guideDirection!=='rtl')
+        throw Error('Actual WordPress fa_IR RTL environment not active: '+JSON.stringify(locale));
+      await page.setViewportSize({width:375,height:800});
+      const guide=page.locator('#gfbrc-entries-guide');
+      const pos=await guide.evaluate(el=>{const b=el.getBoundingClientRect();
+        return {left:b.left,right:b.right,viewport:innerWidth};});
+      if(pos.left < -5||pos.right>pos.viewport+5)
+        throw Error('Real fa_IR narrow admin guide clipped: '+JSON.stringify(pos));
+      const summary=guide.locator('details summary');
+      await summary.focus();
+      if(!await summary.evaluate(el=>document.activeElement===el))
+        throw Error('fa_IR guide summary not keyboard focusable');
+      await summary.press('Enter');
+      if(!await guide.locator('details').evaluate(el=>el.open))
+        throw Error('fa_IR guide cannot open with Enter key');
+      await page.locator('#gfbrc-new-prepare').focus();
+      if(!await page.locator('#gfbrc-new-prepare').evaluate(el=>document.activeElement===el))
+        throw Error('fa_IR NEW control not keyboard focusable');
+      console.log('PASS_REAL_FA_IR_WORDPRESS_RTL_NARROW_GUIDE_AND_KEYBOARD');
+      if(await page.getByRole('heading',{name:'File downloads and naming'}).count())
+        console.log('NOT_TRANSLATED_FA_IR_PLUGIN_COPY_USES_ENGLISH_FALLBACK');
     } else {
       await state(data.b.form_id,'ready');
       if(!(await page.locator('#gfbrc-entries-guide').innerText()).includes('Single Field'))
