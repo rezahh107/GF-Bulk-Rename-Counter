@@ -99,7 +99,24 @@ class Settings_Page {
         $current = $options['counter_field_id'] ?? 0;
         ?>
         <input type="number" name="<?php echo esc_attr( self::OPTION_NAME ); ?>[counter_field_id]" id="gf_bulk_rename_counter_field_id" value="<?php echo esc_attr( $current ); ?>" class="small-text" />
-        <p class="description"><?php esc_html_e( 'Enter the ID of the field that stores the unique counter number (e.g., 5).', 'gf-bulk-rename-counter' ); ?></p>
+        <p class="description"><?php esc_html_e( 'Global Legacy Counter Field ID. 0 keeps original names. Set the target form above (or All forms); independent Single Field/Composite overrides are configured separately below.', 'gf-bulk-rename-counter' ); ?></p>
+        <?php
+        $preview_form_id = ! empty( $options['form_id'] ) ? absint( $options['form_id'] ) :
+            ( isset( $_GET['gfbrc_form'] ) && is_scalar( $_GET['gfbrc_form'] ) ? absint( $_GET['gfbrc_form'] ) : 0 );
+        if ( $preview_form_id && class_exists( 'GFAPI' ) ) {
+            $selected_form = \GFAPI::get_form( $preview_form_id );
+            if ( is_array( $selected_form ) ) {
+                echo '<details><summary>' . esc_html( sprintf( __( 'Show Global Legacy field labels and IDs for %1$s (form ID %2$d)', 'gf-bulk-rename-counter' ),
+                    (string) ( $selected_form['title'] ?? '' ), $preview_form_id ) ) . '</summary><ul>';
+                foreach ( $selected_form['fields'] ?? [] as $field ) {
+                    if ( ! is_object( $field ) ) { continue; }
+                    echo '<li>' . esc_html( (string) ( $field->label ?? '' ) ) . ' — <bdi dir="ltr">ID: ' .
+                        esc_html( (string) ( $field->id ?? '' ) ) . '</bdi></li>';
+                }
+                echo '</ul></details>';
+            }
+        }
+        ?>
         <?php
         if ( $current > 0 && ! empty( $options['form_id'] ) && class_exists( 'GFAPI' ) ) {
             $form = \GFAPI::get_form( $options['form_id'] );
@@ -116,6 +133,7 @@ class Settings_Page {
         ?>
         <div class="wrap">
             <h1><?php echo esc_html__( 'Gravity Forms Bulk Rename Settings', 'gf-bulk-rename-counter' ); ?></h1>
+            <?php Admin_Experience::settings_intro(); ?>
             <?php settings_errors( Form_Naming_Rules::OPTION_NAME ); ?>
             <form action="options.php" method="post">
                 <?php
@@ -147,12 +165,16 @@ class Settings_Page {
         echo '</select> ';
         submit_button(__('Open form rule', 'gf-bulk-rename-counter'), 'secondary', '', false);
         echo '</form>';
-        if (!$selected || !class_exists('GFAPI')) { return; }
+        if (!$selected || !class_exists('GFAPI')) {
+            echo '<p class="description">' . esc_html__('Choose a form to see its effective download naming rule and edit an optional independent override.', 'gf-bulk-rename-counter') . '</p>';
+            return;
+        }
         $form = \GFAPI::get_form($selected);
         if (!is_array($form)) {
             echo '<p>' . esc_html__('Form unavailable.', 'gf-bulk-rename-counter') . '</p>';
             return;
         }
+        Admin_Experience::render_status($form);
         $fields = Form_Naming_Rules::eligible_fields($form);
         $rules = get_option(Form_Naming_Rules::OPTION_NAME, []);
         $stored = is_array($rules) ? ($rules[(string)$selected] ?? []) : [];
@@ -194,7 +216,7 @@ class Settings_Page {
             '</th><td><fieldset><legend class="screen-reader-text">' .
             esc_html__('Composite fields and order', 'gf-bulk-rename-counter') . '</legend>';
         echo '<p class="description">' .
-            esc_html__('Check at least two fields and assign consecutive positions 1, 2, 3 … to control filename order.', 'gf-bulk-rename-counter') . '</p>';
+            esc_html__('For Composite, check at least two eligible text/number fields and assign consecutive positions 1, 2, 3 … . Empty Entry values will block ZIP creation.', 'gf-bulk-rename-counter') . '</p>';
         foreach ($fields as $id => $label) {
             $rank = isset($ranks[$id]) ? $ranks[$id] + 1 : '';
             echo '<p><label><input type="checkbox" name="' . esc_attr($prefix) . '[_include][' . esc_attr((string)$id) .

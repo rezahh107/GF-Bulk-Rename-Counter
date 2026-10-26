@@ -11,7 +11,7 @@ import sys
 lab = Path(os.environ["BRC_LAB_DIR"])
 installed = Path(os.environ["BRC_WP_PATH"]) / "wp-content/plugins/gf-bulk-rename-counter/includes/class-flat_zip_download.php"
 backup = lab / "flat-zip-before-race.php"
-expected = "396f89f91dcc2022906f61ef9b0f5d3c4df448e8"
+expected = "df0dabb8b950361c09e5329f2222ee1db76e8947"
 before_anchor = "                [$ids, $all_plan, $all_zero] = All_Download::validated_download($form_id);"
 after_anchor = "            $temp = self::write_verified_zip($plan);"
 validation_anchor = "                All_Download::assert_manifest($form_id, $ids, $plan);"

@@ -33,7 +33,9 @@ for label, scenario in fixture["cases"].items():
         assert not payload.startswith(b"PK"), label
         assert "content-disposition: attachment" not in head, label
         assert "application/zip" not in head, label
-        assert b"Windows reserved device" in payload, (label, payload[:500])
+        # Same fail-closed semantic reason under either installed WP UI locale.
+        assert (b"Windows reserved device" in payload or
+                "نام رزروشدهٔ دستگاه ویندوز".encode("utf-8") in payload), (label, payload[:500])
         print("PASS_WINDOWS_RESERVED_HTTP_NO_ZIP", label, status, flush=True)
         continue
     assert status == "200", (label, status, payload[:500])

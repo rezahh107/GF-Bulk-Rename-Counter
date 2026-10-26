@@ -2,6 +2,13 @@
 /** Isolated simulated host-version change: production metadata code, NOT a published host. */
 define('ABSPATH', '/');
 define('BDFGF_VERSION', '999.0-simulated');
+// Match the en_US identity behavior of WordPress gettext in this isolated host.
+function __(string $message, string $domain): string {
+    if ($domain !== 'gf-bulk-rename-counter') {
+        throw new RuntimeException('Unexpected translation domain');
+    }
+    return $message;
+}
 $records = [];
 function gform_get_meta($entry_id, $key) { global $records; return $records[$entry_id][$key] ?? ''; }
 function maybe_unserialize($value) { return $value; }

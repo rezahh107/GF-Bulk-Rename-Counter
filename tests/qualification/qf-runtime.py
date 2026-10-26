@@ -215,7 +215,10 @@ try:
             "mutation":mutation,"options_engine":dbengine(options_table),
             "entry_engine":dbengine(table)}
         for rejection in (guard,idle,concurrent):
-            assert "transactional Gravity Forms" in rejection["rejection"],rejection
+            # The same storage precondition is reported in the active WordPress locale.
+            message = rejection["rejection"]
+            assert ("transactional Gravity Forms" in message
+                    or "ذخیره‌سازی تراکنشی" in message), rejection
         print("QF01_MYISAM_REJECTED_BEFORE_NEW_OPERATION",
               json.dumps(report["qf01"]["myisam"]),flush=True)
     finally:

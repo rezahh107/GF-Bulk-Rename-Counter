@@ -23,21 +23,21 @@ final class All_Download {
     private static function authorize(): int {
         if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST' ||
             !\GFCommon::current_user_can_any('gravityforms_view_entries')) {
-            throw new RuntimeException('ALL requires authenticated Entry viewing permission');
+            throw new RuntimeException(__('ALL requires authenticated Entry viewing permission', 'gf-bulk-rename-counter'));
         }
         $raw = $_POST['form_id'] ?? null;
         if (!is_string($raw) || !ctype_digit($raw) ||
             (string)(int)$raw !== $raw || (int)$raw < 1) {
-            throw new RuntimeException('Invalid ALL form scope');
+            throw new RuntimeException(__('Invalid ALL form scope', 'gf-bulk-rename-counter'));
         }
         $form = (int)$raw;
         $nonce = $_POST['_wpnonce'] ?? null;
         if (!is_string($nonce) ||
             !wp_verify_nonce(sanitize_text_field(wp_unslash($nonce)), 'gfbrc_independent_flat_zip_' . $form)) {
-            throw new RuntimeException('Invalid ALL request nonce');
+            throw new RuntimeException(__('Invalid ALL request nonce', 'gf-bulk-rename-counter'));
         }
         if (!is_array(\GFAPI::get_form($form))) {
-            throw new RuntimeException('ALL form is unavailable');
+            throw new RuntimeException(__('ALL form is unavailable', 'gf-bulk-rename-counter'));
         }
         return $form;
     }
@@ -48,7 +48,7 @@ final class All_Download {
         if (!class_exists('\GFFormsModel') ||
             !method_exists('\GFFormsModel', 'get_entry_table_name') ||
             !method_exists('\GFFormsModel', 'get_entry_meta_table_name')) {
-            throw new RuntimeException('Transactional Gravity Forms storage unavailable');
+            throw new RuntimeException(__('Transactional Gravity Forms storage unavailable', 'gf-bulk-rename-counter'));
         }
         foreach ([\GFFormsModel::get_entry_table_name(),
                   \GFFormsModel::get_entry_meta_table_name()] as $table) {
@@ -57,7 +57,7 @@ final class All_Download {
                     'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s',
                     $table
                 )) !== 'InnoDB') {
-                throw new RuntimeException('ALL requires transactional InnoDB Entry and field storage');
+                throw new RuntimeException(__('ALL requires transactional InnoDB Entry and field storage', 'gf-bulk-rename-counter'));
             }
         }
     }
@@ -69,17 +69,17 @@ final class All_Download {
             $available = (float)$m[1] * $multiplier - memory_get_usage(true);
             // Admission allowance, not a promise about ZIP compression or hosting throughput.
             if ($available < 16777216 + $entries * 8192) {
-                throw new RuntimeException('Insufficient PHP memory headroom for complete ALL; no ZIP generated');
+                throw new RuntimeException(__('Insufficient PHP memory headroom for complete ALL; no ZIP generated', 'gf-bulk-rename-counter'));
             }
         }
         $max = (int)ini_get('max_execution_time');
         if ($max > 0 && microtime(true) - $start >= max(1, $max - 5)) {
-            throw new RuntimeException('Insufficient PHP execution-time budget for complete ALL');
+            throw new RuntimeException(__('Insufficient PHP execution-time budget for complete ALL', 'gf-bulk-rename-counter'));
         }
         if ($bytes > 0) {
             $free = disk_free_space(get_temp_dir());
             if ($free === false || $free < $bytes + 16777216) {
-                throw new RuntimeException('Insufficient temporary disk space for complete ALL ZIP');
+                throw new RuntimeException(__('Insufficient temporary disk space for complete ALL ZIP', 'gf-bulk-rename-counter'));
             }
         }
     }
@@ -93,7 +93,7 @@ final class All_Download {
         self::storage();
         if ($wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false ||
             $wpdb->query('START TRANSACTION WITH CONSISTENT SNAPSHOT') === false) {
-            throw new RuntimeException('ALL consistent selection snapshot unavailable');
+            throw new RuntimeException(__('ALL consistent selection snapshot unavailable', 'gf-bulk-rename-counter'));
         }
         $committed = false;
         try {
@@ -109,14 +109,14 @@ final class All_Download {
                 if (!is_array($part) || !is_numeric($part_total) ||
                     (int)$part_total < 0 || (float)(int)$part_total != (float)$part_total ||
                     ($total !== null && $total !== (int)$part_total)) {
-                    throw new RuntimeException('ALL Entry enumeration count changed or failed');
+                    throw new RuntimeException(__('ALL Entry enumeration count changed or failed', 'gf-bulk-rename-counter'));
                 }
                 $total = (int)$part_total;
                 foreach ($part as $id) {
                     $id = (int)$id;
                     if ($id < 1 || isset($seen[$id]) ||
                         ($ids && $id <= $ids[count($ids) - 1])) {
-                        throw new RuntimeException('ALL selection has duplicate or unsorted Entry IDs');
+                        throw new RuntimeException(__('ALL selection has duplicate or unsorted Entry IDs', 'gf-bulk-rename-counter'));
                     }
                     $seen[$id] = true;
                     $ids[] = $id;
@@ -124,14 +124,14 @@ final class All_Download {
                 $offset += count($part);
                 if (!$part || count($part) < self::BATCH) { break; }
                 if ($offset > $total) {
-                    throw new RuntimeException('ALL Entry enumeration overflow');
+                    throw new RuntimeException(__('ALL Entry enumeration overflow', 'gf-bulk-rename-counter'));
                 }
             } while ($offset < $total);
             if ($offset !== $total || count($seen) !== $total) {
-                throw new RuntimeException('ALL selection incomplete; no partial ZIP');
+                throw new RuntimeException(__('ALL selection incomplete; no partial ZIP', 'gf-bulk-rename-counter'));
             }
             if ($wpdb->query('COMMIT') === false) {
-                throw new RuntimeException('ALL selection snapshot commit failed');
+                throw new RuntimeException(__('ALL selection snapshot commit failed', 'gf-bulk-rename-counter'));
             }
             $committed = true;
             return $ids;
@@ -144,9 +144,8 @@ final class All_Download {
         if (!$ids) { return []; }
         try {
             return Flat_Zip_Download::plan($form, $ids);
-        } catch (RuntimeException $e) {
-            if ($e->getMessage() === 'No eligible files found') { return []; }
-            throw $e;
+        } catch (No_Eligible_Files_Exception $e) {
+            return [];
         }
     }
 
@@ -161,7 +160,7 @@ final class All_Download {
         foreach ($plan as $item) {
             $covered[(int)$item['entry_id']] = true;
             if ((int)$item['size'] > PHP_INT_MAX - $bytes) {
-                throw new RuntimeException('ALL source size exceeds supported integer range');
+                throw new RuntimeException(__('ALL source size exceeds supported integer range', 'gf-bulk-rename-counter'));
             }
             $bytes += (int)$item['size'];
             $parts[] = [(int)$item['entry_id'], (string)$item['field_id'],
@@ -174,7 +173,7 @@ final class All_Download {
         self::budget(count($ids), $admit_zip_disk ? $bytes : 0, $start);
         // Re-evaluate active membership after the potentially slow source plan.
         if (self::ids($form, $start) !== $ids) {
-            throw new RuntimeException('ALL form membership changed during preparation');
+            throw new RuntimeException(__('ALL form membership changed during preparation', 'gf-bulk-rename-counter'));
         }
         return [
             'ids' => $ids, 'plan' => $plan,
@@ -201,7 +200,7 @@ final class All_Download {
                 'ids_hash' => $result['ids_hash'], 'plan_hash' => $result['plan_hash'],
             ];
             $json = wp_json_encode($payload);
-            if (!is_string($json)) { throw new RuntimeException('ALL preview cannot be encoded'); }
+            if (!is_string($json)) { throw new RuntimeException(__('ALL preview cannot be encoded', 'gf-bulk-rename-counter')); }
             wp_send_json_success([
                 'entries' => $result['entries'], 'files' => $result['files'],
                 'zero_entries' => $result['zero_entries'], 'token' => $json,
@@ -216,13 +215,13 @@ final class All_Download {
     public static function validated_download(int $form): array {
         if (self::authorize() !== $form || isset($_POST['entry_ids']) ||
             isset($_POST['selection_scope']) || isset($_POST['selection_effective'])) {
-            throw new RuntimeException('Ambiguous ALL form selection');
+            throw new RuntimeException(__('Ambiguous ALL form selection', 'gf-bulk-rename-counter'));
         }
         $token = $_POST['all_token'] ?? null;
         $seal = $_POST['all_seal'] ?? null;
         if (!is_string($token) || strlen($token) > 2048 || !is_string($seal) ||
             !hash_equals(self::sign(wp_unslash($token)), $seal)) {
-            throw new RuntimeException('ALL preview seal missing or invalid');
+            throw new RuntimeException(__('ALL preview seal missing or invalid', 'gf-bulk-rename-counter'));
         }
         $data = json_decode(wp_unslash($token), true);
         if (!is_array($data) || ($data['v'] ?? null) !== 1 ||
@@ -231,16 +230,16 @@ final class All_Download {
             !is_int($data['issued'] ?? null) ||
             $data['issued'] > time() + 60 ||
             time() - $data['issued'] > self::TTL) {
-            throw new RuntimeException('ALL preview expired or form/user changed');
+            throw new RuntimeException(__('ALL preview expired or form/user changed', 'gf-bulk-rename-counter'));
         }
         $actual = self::manifest($form);
         foreach (['entries', 'files', 'zero_entries', 'ids_hash', 'plan_hash'] as $key) {
             if (!array_key_exists($key, $data) || $data[$key] !== $actual[$key]) {
-                throw new RuntimeException('ALL Entries or source files changed; check ALL again');
+                throw new RuntimeException(__('ALL Entries or source files changed; check ALL again', 'gf-bulk-rename-counter'));
             }
         }
         if (!$actual['plan']) {
-            throw new RuntimeException('ALL has no eligible files; no empty ZIP was sent');
+            throw new RuntimeException(__('ALL has no eligible files; no empty ZIP was sent', 'gf-bulk-rename-counter'));
         }
         return [$actual['ids'], $actual['plan'], $actual['zero_entries']];
     }
@@ -259,7 +258,7 @@ final class All_Download {
         // Do not flush unrelated GF caches or change NEW/Selected behavior.
         global $_gform_lead_meta;
         if (!is_array($_gform_lead_meta)) {
-            throw new RuntimeException('Gravity Forms deletion metadata cache unavailable');
+            throw new RuntimeException(__('Gravity Forms deletion metadata cache unavailable', 'gf-bulk-rename-counter'));
         }
         $prefix = get_current_blog_id() . '_';
         foreach ($expected_ids as $entry_id) {
@@ -270,7 +269,7 @@ final class All_Download {
         }
         $actual = self::manifest($form, false);
         if ($actual['ids'] !== $expected_ids || $actual['plan'] !== $expected_plan) {
-            throw new RuntimeException('ALL Entries or eligible source files changed before ZIP delivery; check ALL again');
+            throw new RuntimeException(__('ALL Entries or eligible source files changed before ZIP delivery; check ALL again', 'gf-bulk-rename-counter'));
         }
     }
 
@@ -282,11 +281,26 @@ final class All_Download {
         $config = wp_json_encode([
             'form' => $form, 'nonce' => wp_create_nonce('gfbrc_independent_flat_zip_' . $form),
             'action' => Flat_Zip_Download::ENDPOINT,
+            'text' => [
+                'title' => __('ALL — Download all eligible files', 'gf-bulk-rename-counter'),
+                'check' => __('Check ALL', 'gf-bulk-rename-counter'),
+                'download' => __('Download ALL ZIP', 'gf-bulk-rename-counter'),
+                'guide' => __('ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage.', 'gf-bulk-rename-counter'),
+                'checking' => __('Counting all active Entries and verifying source files…', 'gf-bulk-rename-counter'),
+                'failed_check' => __('ALL check failed', 'gf-bulk-rename-counter'),
+                'summary' => __('%1$d active Entries / %2$d eligible files / %3$d Entries without files. Entire form; filters, pages, selection and NEW history are ignored.', 'gf-bulk-rename-counter'),
+                'empty' => __('No ZIP exists for this scope.', 'gf-bulk-rename-counter'),
+                'failed' => __('ALL failed: %s — no partial ZIP delivered.', 'gf-bulk-rename-counter'),
+                'unexpected' => __('ALL check could not be completed or verified. Check ALL again before downloading.', 'gf-bulk-rename-counter'),
+                'confirm' => __('Download ALL %1$d active Entries / %2$d eligible files / %3$d Entries without files? Filters and NEW history are ignored; NEW acknowledgment does not change.', 'gf-bulk-rename-counter'),
+            ],
         ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         echo '<script id="gfbrc-all-config" type="application/json">' . $config . '</script>';
         ?>
 <style id="gfbrc-all-visibility">
 #gfbrc-all-panel [hidden] { display: none !important; }
+#gfbrc-all-panel .button {margin:4px;max-width:100%;white-space:normal}
+#gfbrc-all-panel .description {margin:8px 0}
 </style>
 <script id="gfbrc-all-workflow">
 (function () {
@@ -298,42 +312,64 @@ final class All_Download {
   var panel = document.createElement('section');
   panel.id = 'gfbrc-all-panel';
   panel.style.cssText = 'display:block;box-sizing:border-box;margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
-  panel.innerHTML = '<strong>ALL — Download all eligible files</strong> ' +
-    '<button type="button" class="button" id="gfbrc-all-prepare">Check ALL</button> ' +
-    '<span id="gfbrc-all-result" role="status" aria-live="polite"></span>' +
-    '<div><button type="button" class="button button-primary" id="gfbrc-all-download" hidden>Download ALL ZIP</button></div>';
+  panel.innerHTML = '<strong id="gfbrc-all-title"></strong> ' +
+    '<button type="button" class="button" id="gfbrc-all-prepare"></button> ' +
+    '<p class="description" id="gfbrc-all-guide"></p>' +
+    '<div><span id="gfbrc-all-result" role="status" aria-live="polite"></span></div>' +
+    '<div><button type="button" class="button button-primary" id="gfbrc-all-download" hidden></button></div>';
+  panel.querySelector('#gfbrc-all-title').textContent = cfg.text.title;
+  panel.querySelector('#gfbrc-all-prepare').textContent = cfg.text.check;
+  panel.querySelector('#gfbrc-all-guide').textContent = cfg.text.guide;
+  panel.querySelector('#gfbrc-all-download').textContent = cfg.text.download;
+  function tr(key) {
+    var args = Array.prototype.slice.call(arguments, 1), next = 0;
+    return cfg.text[key].replace(/%(?:(\d+)\$)?[ds]/g, function (_, index) {
+      return String(args[index ? Number(index) - 1 : next++]);
+    });
+  }
   (apply.closest('.tablenav') || apply).insertAdjacentElement('afterend', panel);
   var prepare = panel.querySelector('#gfbrc-all-prepare');
   var download = panel.querySelector('#gfbrc-all-download');
   var status = panel.querySelector('#gfbrc-all-result');
   var current = null, busy = false;
   function message(s) { status.textContent = s; }
+  function applicationError(text) {
+    var error = new Error(text);
+    error.gfbMessage = text;
+    return error;
+  }
   prepare.addEventListener('click', async function () {
     if (busy) return;
     busy = true; prepare.disabled = true; download.hidden = true; current = null;
-    message('Counting all active Entries and verifying source files…');
+    message(cfg.text.checking);
     try {
       var body = new URLSearchParams({action:'gfbrc_all_prepare',
         form_id:String(cfg.form), _wpnonce:cfg.nonce});
       var response = await fetch(new URL('admin-ajax.php', location.href).href, {
         method:'POST', credentials:'same-origin', body:body, headers:{'Cache-Control':'no-store'}});
-      var result = await response.json();
-      if (!response.ok || !result.success) {
-        throw Error((result.data && result.data.message) || 'ALL check failed');
+      var result;
+      try { result = await response.json(); } catch (_) { throw Error(cfg.text.unexpected); }
+      if (!result || typeof result !== 'object') { throw Error(cfg.text.unexpected); }
+      if (!response.ok || result.success === false) {
+        throw applicationError(result.data && typeof result.data.message === 'string'
+          ? result.data.message : cfg.text.failed_check);
+      }
+      if (result.success !== true || !result.data || typeof result.data !== 'object') {
+        throw Error(cfg.text.unexpected);
       }
       var data = result.data;
-      message(data.entries+' active Entries / '+data.files+' eligible files / '+
-        data.zero_entries+' Entries without files. Entire form, ignoring search, pages, selections and NEW history.');
+      message(tr('summary', data.entries, data.files, data.zero_entries));
       if (data.files > 0) {current = data; download.hidden = false;}
-      else message(status.textContent+' No ZIP exists for this scope.');
-    } catch (e) {message('ALL failed: '+e.message+' — no partial ZIP delivered.');}
+      else message(status.textContent+' '+cfg.text.empty);
+    } catch (e) {
+      message(e && typeof e.gfbMessage === 'string' ?
+        tr('failed', e.gfbMessage) : cfg.text.unexpected);
+    }
     finally {busy = false; prepare.disabled = false;}
   });
   download.addEventListener('click', function () {
     if (!current || busy) return;
-    if (!window.confirm('Download ALL '+current.entries+' active Entries / '+
-        current.files+' eligible files / '+current.zero_entries+
-        ' Entries without files? Ignore current filters and NEW history.')) return;
+    if (!window.confirm(tr('confirm', current.entries, current.files, current.zero_entries))) return;
     // Browser-submitted IDs, filters, counts cannot establish ALL membership.
     // The signed preview only detects changes; the server re-enumerates it.
     var form = document.createElement('form');

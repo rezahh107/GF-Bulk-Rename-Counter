@@ -19,7 +19,10 @@ final class Form_Naming_Rules {
             }
             $id = (int)($field->id ?? 0);
             if ($id > 0 && (string)$id === (string)($field->id ?? '')) {
-                $fields[$id] = (string)($field->label ?? ('Field ' . $id));
+                $label = (string)($field->label ?? '');
+                $fields[$id] = preg_match('/[^\\p{Z}\\s]/u', $label) === 1
+                    ? $label
+                    : sprintf(__('Field %d', 'gf-bulk-rename-counter'), $id);
             }
         }
         return $fields;
@@ -27,7 +30,7 @@ final class Form_Naming_Rules {
 
     private static function validate_saved(array $form, $rule): array {
         if (!is_array($rule) || !isset($rule['method']) || !is_string($rule['method'])) {
-            throw new \RuntimeException('Invalid saved naming rule');
+            throw new \RuntimeException(__('Invalid saved naming rule', 'gf-bulk-rename-counter'));
         }
         $method = $rule['method'];
         if ($method === 'legacy') {
@@ -37,22 +40,22 @@ final class Form_Naming_Rules {
         if ($method === 'single') {
             $field_id = $rule['field_id'] ?? null;
             if (!is_int($field_id) || !isset($allowed[$field_id])) {
-                throw new \RuntimeException('Selected Single Field is no longer valid');
+                throw new \RuntimeException(__('Selected Single Field is no longer valid', 'gf-bulk-rename-counter'));
             }
             return ['method' => 'single', 'field_id' => $field_id];
         }
         if ($method !== 'composite' || !isset($rule['field_ids'], $rule['separator']) ||
             !is_array($rule['field_ids']) || !is_string($rule['separator'])) {
-            throw new \RuntimeException('Invalid saved Composite rule');
+            throw new \RuntimeException(__('Invalid saved Composite rule', 'gf-bulk-rename-counter'));
         }
         $ids = $rule['field_ids'];
         if (array_values($ids) !== $ids || count($ids) < 2 ||
             count($ids) > count($allowed) || count(array_unique($ids)) !== count($ids)) {
-            throw new \RuntimeException('Composite field order is invalid');
+            throw new \RuntimeException(__('Composite field order is invalid', 'gf-bulk-rename-counter'));
         }
         foreach ($ids as $id) {
             if (!is_int($id) || !isset($allowed[$id])) {
-                throw new \RuntimeException('Composite field no longer exists or is ineligible');
+                throw new \RuntimeException(__('Composite field no longer exists or is ineligible', 'gf-bulk-rename-counter'));
             }
         }
         self::validate_separator($rule['separator']);
@@ -62,14 +65,14 @@ final class Form_Naming_Rules {
     private static function validate_separator(string $separator): void {
         if (strlen($separator) > 32 || !preg_match('//u', $separator) ||
             strpbrk($separator, '/\\\\') !== false || preg_match('/[\\x00-\\x1f\\x7f]/', $separator)) {
-            throw new \RuntimeException('Separator must be valid text without slashes or control characters (max 32 bytes)');
+            throw new \RuntimeException(__('Separator must be valid text without slashes or control characters (max 32 bytes)', 'gf-bulk-rename-counter'));
         }
     }
 
     /** Invalid persisted rules fail at the ZIP preparation boundary. */
     public static function for_form(array $form): ?array {
         $all = get_option(self::OPTION_NAME, []);
-        if (!is_array($all)) { throw new \RuntimeException('Invalid saved per-form rules'); }
+        if (!is_array($all)) { throw new \RuntimeException(__('Invalid saved per-form rules', 'gf-bulk-rename-counter')); }
         $id = (string)(int)($form['id'] ?? 0);
         if (!array_key_exists($id, $all)) { return null; }
         return self::validate_saved($form, $all[$id]);
@@ -87,14 +90,14 @@ final class Form_Naming_Rules {
         try {
             if (!is_array($input) || !isset($input['_form_id'], $input['_method']) ||
                 !is_scalar($input['_form_id']) || !is_string($input['_method'])) {
-                throw new \RuntimeException('Invalid form rule submission');
+                throw new \RuntimeException(__('Invalid form rule submission', 'gf-bulk-rename-counter'));
             }
             $id = absint($input['_form_id']);
             if ($id < 1 || (string)$id !== (string)$input['_form_id']) {
-                throw new \RuntimeException('Select a valid Gravity Form');
+                throw new \RuntimeException(__('Select a valid Gravity Form', 'gf-bulk-rename-counter'));
             }
             $form = \GFAPI::get_form($id);
-            if (!is_array($form)) { throw new \RuntimeException('Form no longer exists'); }
+            if (!is_array($form)) { throw new \RuntimeException(__('Form no longer exists', 'gf-bulk-rename-counter')); }
             $method = $input['_method'];
             if ($method === 'inherit') {
                 unset($old[(string)$id]);
@@ -107,14 +110,14 @@ final class Form_Naming_Rules {
                 $field_id = $input['_single_field_id'] ?? null;
                 $field_id = is_scalar($field_id) ? (string)$field_id : '';
                 if (!ctype_digit($field_id) || (int)$field_id < 1) {
-                    throw new \RuntimeException('Choose a Single Field');
+                    throw new \RuntimeException(__('Choose a Single Field', 'gf-bulk-rename-counter'));
                 }
                 $rule = ['method' => 'single', 'field_id' => (int)$field_id];
             } elseif ($method === 'composite') {
                 $chosen = $input['_include'] ?? [];
                 $positions = $input['_field_order'] ?? [];
                 if (!is_array($chosen) || !is_array($positions) || count($chosen) < 2) {
-                    throw new \RuntimeException('Select at least two Composite fields');
+                    throw new \RuntimeException(__('Select at least two Composite fields', 'gf-bulk-rename-counter'));
                 }
                 $ranked = [];
                 foreach ($chosen as $field_id => $checked) {
@@ -124,20 +127,20 @@ final class Form_Naming_Rules {
                         !ctype_digit((string)$rank) || (int)$rank < 1 ||
                         (int)$rank > count($chosen) || (string)$checked !== '1' ||
                         isset($ranked[(int)$rank])) {
-                        throw new \RuntimeException('Composite fields need unique consecutive order numbers');
+                        throw new \RuntimeException(__('Composite fields need unique consecutive order numbers', 'gf-bulk-rename-counter'));
                     }
                     $ranked[(int)$rank] = (int)$fid;
                 }
                 ksort($ranked, SORT_NUMERIC);
                 if (array_keys($ranked) !== range(1, count($ranked))) {
-                    throw new \RuntimeException('Composite order must start at 1 without gaps');
+                    throw new \RuntimeException(__('Composite order must start at 1 without gaps', 'gf-bulk-rename-counter'));
                 }
                 $separator = $input['_separator'] ?? null;
-                if (!is_string($separator)) { throw new \RuntimeException('Invalid separator'); }
+                if (!is_string($separator)) { throw new \RuntimeException(__('Invalid separator', 'gf-bulk-rename-counter')); }
                 $rule = ['method' => 'composite', 'field_ids' => array_values($ranked),
                     'separator' => $separator];
             } else {
-                throw new \RuntimeException('Unknown naming method');
+                throw new \RuntimeException(__('Unknown naming method', 'gf-bulk-rename-counter'));
             }
             $old[(string)$id] = self::validate_saved($form, $rule);
             $previous_normalized = $old;

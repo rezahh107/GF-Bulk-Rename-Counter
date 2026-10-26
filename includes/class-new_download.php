@@ -50,21 +50,21 @@ final class New_Download {
             ($lock ? " FOR UPDATE" : ""), self::pending_key($form)
         ));
         if (!is_string($value) || $value === '') {
-            throw new RuntimeException('Authoritative pending NEW row unavailable');
+            throw new RuntimeException(__('Authoritative pending NEW row unavailable', 'gf-bulk-rename-counter'));
         }
         return $value;
     }
 
     private static function pending_decode(string $raw): array {
         if (strlen($raw) > self::MAX_STATE_BYTES) {
-            throw new RuntimeException('Pending NEW operation too large');
+            throw new RuntimeException(__('Pending NEW operation too large', 'gf-bulk-rename-counter'));
         }
         $op = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($op) || ($op['v'] ?? null) !== 2 ||
             !is_string($op['id'] ?? null) ||
             !is_string($op['status'] ?? null) ||
             !is_int($op['expires'] ?? null)) {
-            throw new RuntimeException('Invalid pending-operation schema');
+            throw new RuntimeException(__('Invalid pending-operation schema', 'gf-bulk-rename-counter'));
         }
         return $op;
     }
@@ -79,21 +79,21 @@ final class New_Download {
         if (!class_exists('\GFFormsModel') ||
             !method_exists('\GFFormsModel', 'get_entry_table_name') ||
             !method_exists('\GFFormsModel', 'get_entry_meta_table_name')) {
-            throw new RuntimeException('Gravity Forms transactional Entry storage unavailable');
+            throw new RuntimeException(__('Gravity Forms transactional Entry storage unavailable', 'gf-bulk-rename-counter'));
         }
         foreach ([
             \GFFormsModel::get_entry_table_name(),
             \GFFormsModel::get_entry_meta_table_name(),
         ] as $table) {
             if (!is_string($table) || !preg_match('/^[A-Za-z0-9_]+$/', $table)) {
-                throw new RuntimeException('Unrecognized Gravity Forms Entry storage identifier');
+                throw new RuntimeException(__('Unrecognized Gravity Forms Entry storage identifier', 'gf-bulk-rename-counter'));
             }
             $engine = $wpdb->get_var($wpdb->prepare(
                 'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s',
                 $table
             ));
             if ($engine !== 'InnoDB') {
-                throw new RuntimeException('NEW requires transactional Gravity Forms Entry and field storage');
+                throw new RuntimeException(__('NEW requires transactional Gravity Forms Entry and field storage', 'gf-bulk-rename-counter'));
             }
         }
     }
@@ -102,14 +102,14 @@ final class New_Download {
         global $wpdb;
         self::require_transactional_gf_storage();
         if ($wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false) {
-            throw new RuntimeException('NEW metadata range-lock isolation unavailable');
+            throw new RuntimeException(__('NEW metadata range-lock isolation unavailable', 'gf-bulk-rename-counter'));
         }
         $engine = $wpdb->get_var($wpdb->prepare(
             'SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s',
             $wpdb->options
         ));
         if ($engine !== 'InnoDB' || $wpdb->query('START TRANSACTION') === false) {
-            throw new RuntimeException('Atomic pending-operation database unavailable');
+            throw new RuntimeException(__('Atomic pending-operation database unavailable', 'gf-bulk-rename-counter'));
         }
     }
 
@@ -127,11 +127,11 @@ final class New_Download {
         global $wpdb;
         $table = \GFFormsModel::get_entry_meta_table_name();
         if (!is_string($table) || !preg_match('/^[A-Za-z0-9_]+$/', $table)) {
-            throw new RuntimeException('GF upload metadata table unavailable');
+            throw new RuntimeException(__('GF upload metadata table unavailable', 'gf-bulk-rename-counter'));
         }
         $indexes = $wpdb->get_results("SHOW INDEX FROM {$table}", ARRAY_A);
         if (!is_array($indexes)) {
-            throw new RuntimeException('GF upload metadata index inventory unavailable');
+            throw new RuntimeException(__('GF upload metadata index inventory unavailable', 'gf-bulk-rename-counter'));
         }
         $index = null;
         foreach ($indexes as $row) {
@@ -144,13 +144,13 @@ final class New_Download {
             }
         }
         if ($index === null) {
-            throw new RuntimeException('GF upload metadata requires a leading Entry identity index');
+            throw new RuntimeException(__('GF upload metadata requires a leading Entry identity index', 'gf-bulk-rename-counter'));
         }
         $ids = array_values(array_unique($ids));
         sort($ids, SORT_NUMERIC);
         foreach ($ids as $entry_id) {
             if (!is_int($entry_id) || $entry_id < 1) {
-                throw new RuntimeException('Invalid GF Entry identity for upload lock');
+                throw new RuntimeException(__('Invalid GF Entry identity for upload lock', 'gf-bulk-rename-counter'));
             }
             $rows = $wpdb->get_results($wpdb->prepare(
                 "SELECT id FROM {$table} FORCE INDEX (`{$index}`)
@@ -161,7 +161,7 @@ final class New_Download {
             // a legitimate absent-field range. Never mistake an invalid
             // locking statement for a successfully protected empty gap.
             if (!is_array($rows) || $wpdb->last_error !== '') {
-                throw new RuntimeException('Unable to lock GF upload rows and insertion gap');
+                throw new RuntimeException(__('Unable to lock GF upload rows and insertion gap', 'gf-bulk-rename-counter'));
             }
         }
     }
@@ -173,7 +173,7 @@ final class New_Download {
             self::key($form)
         ));
         if (!is_string($value) || $value === '') {
-            throw new RuntimeException('Locked NEW coverage record unavailable');
+            throw new RuntimeException(__('Locked NEW coverage record unavailable', 'gf-bulk-rename-counter'));
         }
         return $value;
     }
@@ -182,14 +182,14 @@ final class New_Download {
         global $wpdb;
         $json = wp_json_encode($op);
         if (!is_string($json) || strlen($json) > self::MAX_STATE_BYTES) {
-            throw new RuntimeException('Pending NEW operation exceeds bounded storage');
+            throw new RuntimeException(__('Pending NEW operation exceeds bounded storage', 'gf-bulk-rename-counter'));
         }
         $changed = $wpdb->query($wpdb->prepare(
             "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s",
             $json, self::pending_key($form)
         ));
         if ($changed !== 1) {
-            throw new RuntimeException('Pending-operation generation transition did not persist');
+            throw new RuntimeException(__('Pending-operation generation transition did not persist', 'gf-bulk-rename-counter'));
         }
     }
 
@@ -210,11 +210,11 @@ final class New_Download {
             $pending = self::pending_raw($form, true);
             if (!hash_equals($coverage, $current_coverage) ||
                 !hash_equals($observed_pending, $pending)) {
-                throw new RuntimeException('NEW operation or coverage changed; reload and retry');
+                throw new RuntimeException(__('NEW operation or coverage changed; reload and retry', 'gf-bulk-rename-counter'));
             }
             self::update_pending($form, $candidate);
             if ($wpdb->query('COMMIT') === false) {
-                throw new RuntimeException('Pending-operation COMMIT failed');
+                throw new RuntimeException(__('Pending-operation COMMIT failed', 'gf-bulk-rename-counter'));
             }
             $committed = true;
         } finally {
@@ -226,19 +226,19 @@ final class New_Download {
     private static function check(): int {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' ||
             !\GFCommon::current_user_can_any('gravityforms_view_entries')) {
-            throw new RuntimeException('Not authorized');
+            throw new RuntimeException(__('Not authorized', 'gf-bulk-rename-counter'));
         }
         $raw = $_POST['form_id'] ?? null;
         if (!is_string($raw) || !ctype_digit($raw) || (string)(int)$raw !== $raw || (int)$raw < 1) {
-            throw new RuntimeException('Invalid form');
+            throw new RuntimeException(__('Invalid form', 'gf-bulk-rename-counter'));
         }
         $form = (int)$raw;
         $nonce = $_POST['_wpnonce'] ?? null;
         if (!is_string($nonce) || !wp_verify_nonce(sanitize_text_field(wp_unslash($nonce)), 'gfbrc_new_' . $form)) {
-            throw new RuntimeException('Invalid request nonce');
+            throw new RuntimeException(__('Invalid request nonce', 'gf-bulk-rename-counter'));
         }
         if (!is_array(\GFAPI::get_form($form))) {
-            throw new RuntimeException('Form unavailable');
+            throw new RuntimeException(__('Form unavailable', 'gf-bulk-rename-counter'));
         }
         return $form;
     }
@@ -253,7 +253,7 @@ final class New_Download {
             "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", self::key($form)
         ));
         if (!is_string($value) || $value === '') {
-            throw new RuntimeException('NEW coverage state missing or unreadable');
+            throw new RuntimeException(__('NEW coverage state missing or unreadable', 'gf-bulk-rename-counter'));
         }
         return $value;
     }
@@ -264,7 +264,7 @@ final class New_Download {
             if (!is_array($range) || count($range) !== 2 ||
                 !is_int($range[0]) || !is_int($range[1]) ||
                 $range[0] <= $last || $range[1] < $range[0]) {
-                throw new RuntimeException('Invalid or overlapping coverage ranges');
+                throw new RuntimeException(__('Invalid or overlapping coverage ranges', 'gf-bulk-rename-counter'));
             }
             $last = $range[1];
         }
@@ -272,13 +272,13 @@ final class New_Download {
 
     private static function state(string $raw): array {
         if (strlen($raw) > self::MAX_STATE_BYTES) {
-            throw new RuntimeException('NEW history exceeds bounded storage');
+            throw new RuntimeException(__('NEW history exceeds bounded storage', 'gf-bulk-rename-counter'));
         }
         $state = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($state) || ($state['schema'] ?? null) !== 1 ||
             !is_int($state['rev'] ?? null) || $state['rev'] < 0 ||
             !is_array($state['known'] ?? null) || !is_array($state['covered'] ?? null)) {
-            throw new RuntimeException('Unsupported NEW coverage state');
+            throw new RuntimeException(__('Unsupported NEW coverage state', 'gf-bulk-rename-counter'));
         }
         self::ranges($state['known']);
         self::ranges($state['covered']);
@@ -303,7 +303,7 @@ final class New_Download {
 
     private static function union(array $ranges, array $ids): array {
         foreach ($ids as $id) {
-            if (!is_int($id) || $id < 1) { throw new RuntimeException('Invalid Entry identity'); }
+            if (!is_int($id) || $id < 1) { throw new RuntimeException(__('Invalid Entry identity', 'gf-bulk-rename-counter')); }
             $ranges[] = [$id, $id];
         }
         usort($ranges, static fn($a, $b) => $a[0] <=> $b[0]);
@@ -338,14 +338,14 @@ final class New_Download {
     private static function snapshot(int $form, array $state): array {
         global $wpdb;
         if (!class_exists('\GFFormsModel') || !method_exists('\GFFormsModel', 'get_entry_table_name')) {
-            throw new RuntimeException('Installed GF Entry storage contract unavailable');
+            throw new RuntimeException(__('Installed GF Entry storage contract unavailable', 'gf-bulk-rename-counter'));
         }
         self::require_transactional_gf_storage();
         $table = \GFFormsModel::get_entry_table_name();
         if (!preg_match('/^[a-zA-Z0-9_]+$/', $table) ||
             $wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false ||
             $wpdb->query('START TRANSACTION WITH CONSISTENT SNAPSHOT') === false) {
-            throw new RuntimeException('Consistent NEW snapshot unavailable');
+            throw new RuntimeException(__('Consistent NEW snapshot unavailable', 'gf-bulk-rename-counter'));
         }
         $committed = false;
         try {
@@ -354,12 +354,12 @@ final class New_Download {
                 $form, self::MAX_HISTORY + 1
             ), ARRAY_A);
             if (!is_array($rows) || count($rows) > self::MAX_HISTORY) {
-                throw new RuntimeException('Form has too many historical Entries for safe NEW enumeration');
+                throw new RuntimeException(__('Form has too many historical Entries for safe NEW enumeration', 'gf-bulk-rename-counter'));
             }
             $all = []; $sql_active = [];
             foreach ($rows as $row) {
                 $id = (int)$row['id'];
-                if ($id < 1 || isset($all[$id])) { throw new RuntimeException('Invalid stored Entry identity'); }
+                if ($id < 1 || isset($all[$id])) { throw new RuntimeException(__('Invalid stored Entry identity', 'gf-bulk-rename-counter')); }
                 $all[$id] = $id;
                 if ($row['status'] === 'active') { $sql_active[$id] = $id; }
             }
@@ -368,11 +368,11 @@ final class New_Download {
                 $part = \GFAPI::get_entry_ids($form, ['status' => 'active'],
                     ['key' => 'id', 'direction' => 'ASC', 'is_numeric' => true],
                     ['offset' => $offset, 'page_size' => 200], $total);
-                if (!is_array($part)) { throw new RuntimeException('GFAPI Entry enumeration unavailable'); }
+                if (!is_array($part)) { throw new RuntimeException(__('GFAPI Entry enumeration unavailable', 'gf-bulk-rename-counter')); }
                 foreach ($part as $id) {
                     $id = (int)$id;
                     if ($id < 1 || isset($gf_active[$id])) {
-                        throw new RuntimeException('Duplicate or invalid GFAPI Entry identity');
+                        throw new RuntimeException(__('Duplicate or invalid GFAPI Entry identity', 'gf-bulk-rename-counter'));
                     }
                     $gf_active[$id] = $id;
                 }
@@ -381,16 +381,16 @@ final class New_Download {
             ksort($gf_active, SORT_NUMERIC);
             if (count($gf_active) !== (int)$total ||
                 array_values($gf_active) !== array_values($sql_active)) {
-                throw new RuntimeException('GFAPI and stored active Entry snapshot differ');
+                throw new RuntimeException(__('GFAPI and stored active Entry snapshot differ', 'gf-bulk-rename-counter'));
             }
-            if ($wpdb->query('COMMIT') === false) { throw new RuntimeException('Snapshot commit failed'); }
+            if ($wpdb->query('COMMIT') === false) { throw new RuntimeException(__('Snapshot commit failed', 'gf-bulk-rename-counter')); }
             $committed = true;
             $new = [];
             foreach ($gf_active as $id) {
                 if (!self::known($state['known'], $id)) { $new[] = $id; }
             }
             if (count($new) > self::MAX_ENTRIES) {
-                throw new RuntimeException('NEW exceeds 500 eligible Entries; no partial coverage will be committed');
+                throw new RuntimeException(__('NEW exceeds 500 eligible Entries; no partial coverage will be committed', 'gf-bulk-rename-counter'));
             }
             return [array_values($all), $new];
         } finally {
@@ -402,9 +402,8 @@ final class New_Download {
         if (!$ids) { return []; }
         try {
             return Flat_Zip_Download::plan($form, $ids);
-        } catch (RuntimeException $e) {
-            if ($e->getMessage() === 'No eligible files found') { return []; }
-            throw $e;
+        } catch (No_Eligible_Files_Exception $e) {
+            return [];
         }
     }
 
@@ -461,7 +460,7 @@ final class New_Download {
     private static function operation_id(): string {
         $id = $_POST['operation'] ?? null;
         if (!is_string($id) || !preg_match('/^[a-f0-9]{32}$/', $id)) {
-            throw new RuntimeException('Invalid NEW operation identity');
+            throw new RuntimeException(__('Invalid NEW operation identity', 'gf-bulk-rename-counter'));
         }
         return $id;
     }
@@ -472,7 +471,7 @@ final class New_Download {
             ($op['user'] ?? null) !== get_current_user_id() ||
             ($op['form'] ?? null) !== $form ||
             $op['expires'] < time()) {
-            throw new RuntimeException('NEW operation expired or superseded by a newer generation');
+            throw new RuntimeException(__('NEW operation expired or superseded by a newer generation', 'gf-bulk-rename-counter'));
         }
         return $op;
     }
@@ -485,7 +484,7 @@ final class New_Download {
         try {
             $op = self::operation($form, $id, true);
             if ($op['zero'] || !in_array($op['status'], ['prepared', 'ready'], true)) {
-                throw new RuntimeException('NEW download generation is no longer active');
+                throw new RuntimeException(__('NEW download generation is no longer active', 'gf-bulk-rename-counter'));
             }
             // Retrying the exact same verified ZIP may legitimately be a
             // no-op; generation validation is still enforced by FOR UPDATE.
@@ -495,7 +494,7 @@ final class New_Download {
                 self::update_pending($form, $op);
             }
             if ($wpdb->query('COMMIT') === false) {
-                throw new RuntimeException('NEW download generation COMMIT failed');
+                throw new RuntimeException(__('NEW download generation COMMIT failed', 'gf-bulk-rename-counter'));
             }
             $committed = true;
         } finally {
@@ -511,25 +510,25 @@ final class New_Download {
             $id = self::operation_id();
             $op = self::operation($form, $id);
             if ($op['zero'] || !$op['ids']) {
-                throw new RuntimeException('This operation has no files; confirm the zero-file review explicitly');
+                throw new RuntimeException(__('This operation has no files; confirm the zero-file review explicitly', 'gf-bulk-rename-counter'));
             }
             if (!in_array($op['status'], ['prepared', 'ready'], true)) {
-                throw new RuntimeException('Operation no longer available');
+                throw new RuntimeException(__('Operation no longer available', 'gf-bulk-rename-counter'));
             }
             $plan = self::plan($form, $op['ids']);
             if (count($plan) !== $op['files'] ||
                 !hash_equals($op['fingerprint'], self::fingerprint($plan))) {
-                throw new RuntimeException('Files changed since NEW selection; prepare a fresh operation');
+                throw new RuntimeException(__('Files changed since NEW selection; prepare a fresh operation', 'gf-bulk-rename-counter'));
             }
             $tmp = Flat_Zip_Download::write_verified_zip($plan);
             $bytes = filesize($tmp);
             $sha = hash_file('sha256', $tmp);
             if (!is_int($bytes) || $bytes <= 0 || $bytes > self::MAX_ZIP_BYTES ||
                 !is_string($sha) || headers_sent()) {
-                throw new RuntimeException('NEW ZIP size or response cannot be validated');
+                throw new RuntimeException(__('NEW ZIP size or response cannot be validated', 'gf-bulk-rename-counter'));
             }
             $handle = fopen($tmp, 'rb');
-            if (!$handle) { throw new RuntimeException('NEW ZIP cannot be opened'); }
+            if (!$handle) { throw new RuntimeException(__('NEW ZIP cannot be opened', 'gf-bulk-rename-counter')); }
             try {
                 self::mark_ready($form, $id, $sha);
             } catch (Throwable $e) {
@@ -537,7 +536,7 @@ final class New_Download {
                 throw $e;
             }
             Flat_Zip_Download::prepare_output_buffers_for_new();
-            if (headers_sent()) { fclose($handle); throw new RuntimeException('NEW ZIP headers unavailable'); }
+            if (headers_sent()) { fclose($handle); throw new RuntimeException(__('NEW ZIP headers unavailable', 'gf-bulk-rename-counter')); }
             nocache_headers();
             header('Cache-Control: private, no-store, max-age=0');
             header('Content-Type: application/zip');
@@ -550,7 +549,7 @@ final class New_Download {
             try {
                 while (!feof($handle)) {
                     $chunk = fread($handle, 65536);
-                    if ($chunk === false) { throw new RuntimeException('NEW ZIP stream failed'); }
+                    if ($chunk === false) { throw new RuntimeException(__('NEW ZIP stream failed', 'gf-bulk-rename-counter')); }
                     echo $chunk;
                 }
             } finally { fclose($handle); }
@@ -575,19 +574,19 @@ final class New_Download {
                 wp_send_json_success(['result' => 'duplicate', 'covered' => count($op['ids'])]);
             }
             if ($op['status'] !== ($op['zero'] ? 'prepared' : 'ready')) {
-                throw new RuntimeException('Download has not completed in the browser');
+                throw new RuntimeException(__('Download has not completed in the browser', 'gf-bulk-rename-counter'));
             }
             $confirmed = $_POST['confirmed'] ?? null;
             if ($confirmed !== 'yes') {
-                throw new RuntimeException('Explicit operator confirmation required');
+                throw new RuntimeException(__('Explicit operator confirmation required', 'gf-bulk-rename-counter'));
             }
             if (!$op['zero']) {
                 $sha = $_POST['sha256'] ?? null;
                 if (!is_string($sha) || !hash_equals($op['zip_sha'], $sha)) {
-                    throw new RuntimeException('Downloaded ZIP identity differs from verified operation');
+                    throw new RuntimeException(__('Downloaded ZIP identity differs from verified operation', 'gf-bulk-rename-counter'));
                 }
             } elseif (($_POST['zero_reviewed'] ?? '') !== 'yes') {
-                throw new RuntimeException('File-free Entries require a separate explicit review');
+                throw new RuntimeException(__('File-free Entries require a separate explicit review', 'gf-bulk-rename-counter'));
             }
             // Revalidate genuine source bytes and status before the short
             // DB transaction; database generation authority is enforced again
@@ -595,13 +594,13 @@ final class New_Download {
             foreach ($op['ids'] as $entry_id) {
                 $entry = \GFAPI::get_entry($entry_id);
                 if (!is_array($entry) || ($entry['status'] ?? '') !== 'active') {
-                    throw new RuntimeException('Selected Entry status changed; retry NEW');
+                    throw new RuntimeException(__('Selected Entry status changed; retry NEW', 'gf-bulk-rename-counter'));
                 }
             }
             $now_plan = self::plan($form, $op['ids']);
             if (count($now_plan) !== $op['files'] ||
                 !hash_equals($op['fingerprint'], self::fingerprint($now_plan))) {
-                throw new RuntimeException('Entry uploads changed before acknowledgment; retry NEW');
+                throw new RuntimeException(__('Entry uploads changed before acknowledgment; retry NEW', 'gf-bulk-rename-counter'));
             }
             $result = self::commit_ack($form, $id, $op);
             wp_send_json_success(['result' => $result, 'covered' => count($op['ids'])]);
@@ -621,17 +620,17 @@ final class New_Download {
             $op = self::operation($form, $id, true);
             if ($op['status'] === 'acknowledged') {
                 if ($wpdb->query('COMMIT') === false) {
-                    throw new RuntimeException('Duplicate acknowledgment COMMIT failed');
+                    throw new RuntimeException(__('Duplicate acknowledgment COMMIT failed', 'gf-bulk-rename-counter'));
                 }
                 $committed = true;
                 return 'duplicate';
             }
             if ($op['status'] !== ($op['zero'] ? 'prepared' : 'ready') ||
                 !hash_equals(wp_json_encode($validated), wp_json_encode($op))) {
-                throw new RuntimeException('NEW operation changed before atomic confirmation');
+                throw new RuntimeException(__('NEW operation changed before atomic confirmation', 'gf-bulk-rename-counter'));
             }
             if (!hash_equals($op['base'], hash('sha256', $old))) {
-                throw new RuntimeException('NEW coverage changed in another tab; prepare again');
+                throw new RuntimeException(__('NEW coverage changed in another tab; prepare again', 'gf-bulk-rename-counter'));
             }
             // Recheck genuine GF Entry status and upload bytes after the
             // database locks are held. GFAPI's UPDATE and absent-field INSERT
@@ -642,7 +641,7 @@ final class New_Download {
             // check; hold the locks through coverage/pending COMMIT or ROLLBACK.
             $entry_table = \GFFormsModel::get_entry_table_name();
             if (!is_string($entry_table) || !preg_match('/^[A-Za-z0-9_]+$/', $entry_table)) {
-                throw new RuntimeException('GF Entry identity storage unavailable');
+                throw new RuntimeException(__('GF Entry identity storage unavailable', 'gf-bulk-rename-counter'));
             }
             $entry_ids = $op['ids'];
             sort($entry_ids, SORT_NUMERIC);
@@ -652,19 +651,19 @@ final class New_Download {
                     $entry_id
                 ));
                 if ((int)$locked_id !== $entry_id || $wpdb->last_error !== '') {
-                    throw new RuntimeException('Unable to lock selected GF Entry status');
+                    throw new RuntimeException(__('Unable to lock selected GF Entry status', 'gf-bulk-rename-counter'));
                 }
             }
             foreach ($op['ids'] as $entry_id) {
                 $entry = \GFAPI::get_entry($entry_id);
                 if (!is_array($entry) || ($entry['status'] ?? '') !== 'active') {
-                    throw new RuntimeException('Selected Entry status changed before atomic acknowledgment');
+                    throw new RuntimeException(__('Selected Entry status changed before atomic acknowledgment', 'gf-bulk-rename-counter'));
                 }
             }
             $locked_plan = self::plan($form, $op['ids']);
             if (count($locked_plan) !== $op['files'] ||
                 !hash_equals($op['fingerprint'], self::fingerprint($locked_plan))) {
-                throw new RuntimeException('Entry uploads changed before atomic acknowledgment');
+                throw new RuntimeException(__('Entry uploads changed before atomic acknowledgment', 'gf-bulk-rename-counter'));
             }
             $state = self::state($old);
             $next = [
@@ -674,7 +673,7 @@ final class New_Download {
             ];
             $json = wp_json_encode($next);
             if (!is_string($json) || strlen($json) > self::MAX_STATE_BYTES) {
-                throw new RuntimeException('Exact NEW coverage exceeded safe storage budget');
+                throw new RuntimeException(__('Exact NEW coverage exceeded safe storage budget', 'gf-bulk-rename-counter'));
             }
             $affected = $wpdb->query($wpdb->prepare(
                 "UPDATE {$wpdb->options} SET option_value = %s
@@ -682,12 +681,12 @@ final class New_Download {
                 $json, self::key($form), $old
             ));
             if ($affected !== 1) {
-                throw new RuntimeException('Concurrent NEW coverage confirmation rejected');
+                throw new RuntimeException(__('Concurrent NEW coverage confirmation rejected', 'gf-bulk-rename-counter'));
             }
             $op['status'] = 'acknowledged';
             self::update_pending($form, $op);
             if ($wpdb->query('COMMIT') === false) {
-                throw new RuntimeException('Atomic NEW acknowledgment COMMIT failed');
+                throw new RuntimeException(__('Atomic NEW acknowledgment COMMIT failed', 'gf-bulk-rename-counter'));
             }
             $committed = true;
             return 'acknowledged';
@@ -705,12 +704,40 @@ final class New_Download {
         if (!$form) { return; }
         $config = wp_json_encode([
             'form' => $form, 'nonce' => wp_create_nonce('gfbrc_new_' . $form),
+            'text' => [
+                'title' => __('NEW — newly created Entries', 'gf-bulk-rename-counter'),
+                'check' => __('Check NEW', 'gf-bulk-rename-counter'),
+                'download' => __('Download verified ZIP', 'gf-bulk-rename-counter'),
+                'ack' => __('Confirm receipt and advance NEW', 'gf-bulk-rename-counter'),
+                'review' => __('I saved and checked the ZIP (or reviewed the zero-file Entries)', 'gf-bulk-rename-counter'),
+                'guide' => __('NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action.', 'gf-bulk-rename-counter'),
+                'invalid' => __('NEW request did not return a valid response', 'gf-bulk-rename-counter'),
+                'rejected' => __('NEW request rejected', 'gf-bulk-rename-counter'),
+                'failure' => __('NEW failed: %s — coverage is unchanged unless receipt confirmation already succeeded.', 'gf-bulk-rename-counter'),
+                'checking' => __('Checking exact Entries and files…', 'gf-bulk-rename-counter'),
+                'summary' => __('%1$d Entries / %2$d eligible files / %3$d Entries with no files. ', 'gf-bulk-rename-counter'),
+                'first' => __('Initial batch; no automatic coverage update. ', 'gf-bulk-rename-counter'),
+                'nozip' => __('No ZIP exists for this batch; explicitly review the file-free Entries.', 'gf-bulk-rename-counter'),
+                'empty' => __('0 newly created eligible Entries / 0 files. Nothing to acknowledge.', 'gf-bulk-rename-counter'),
+                'receiving' => __('Receiving and verifying the ZIP in this browser…', 'gf-bulk-rename-counter'),
+                'sha' => __('Downloaded ZIP SHA-256 mismatch', 'gf-bulk-rename-counter'),
+                'zip_ok' => __('ZIP received and SHA-256 matched in this browser. Check your locally saved ZIP%1$s, then explicitly confirm receipt.', 'gf-bulk-rename-counter'),
+                'zero_review' => __(' and review %d Entries with no files', 'gf-bulk-rename-counter'),
+                'ack_needed' => __('Check your saved ZIP or explicitly review the zero-file Entries first.', 'gf-bulk-rename-counter'),
+                'ack_recorded' => __('NEW: Receipt/review confirmation recorded in NEW coverage (Entry count: %d). Check NEW again for later Entries.', 'gf-bulk-rename-counter'),
+                'ack_duplicate' => __('NEW: Receipt/review for this batch was already confirmed (Entry count: %d). NEW coverage was not advanced again.', 'gf-bulk-rename-counter'),
+                'unexpected' => __('NEW request could not be completed or verified. Check NEW again before proceeding.', 'gf-bulk-rename-counter'),
+                'ack_uncertain' => __('NEW acknowledgment status could not be determined. The server may have recorded it. Reload Entries and check NEW before confirming again; do not assume coverage is unchanged.', 'gf-bulk-rename-counter'),
+            ],
         ]);
         echo '<script id="gfbrc-new-config" type="application/json">' .
             wp_json_encode(json_decode($config, true), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) . '</script>';
         ?>
 <style id="gfbrc-new-visibility">
 #gfbrc-new-panel [hidden] { display: none !important; }
+#gfbrc-new-panel .button {margin:4px;max-width:100%;white-space:normal}
+#gfbrc-new-panel .description {margin:8px 0}
+#gfbrc-new-panel > div {display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 </style>
 <script id="gfbrc-new-workflow">
 (function () {
@@ -725,13 +752,26 @@ final class New_Download {
   var panel = document.createElement('section');
   panel.id = 'gfbrc-new-panel';
   panel.style.cssText = 'display:block;box-sizing:border-box;margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
-  panel.innerHTML = '<strong>NEW — newly created Entries</strong> ' +
-    '<button type="button" class="button" id="gfbrc-new-prepare">Check NEW</button> ' +
-    '<span id="gfbrc-new-result" role="status" aria-live="polite"></span>' +
-    '<div><button type="button" class="button button-primary" id="gfbrc-new-download" hidden>Download verified ZIP</button> ' +
+  panel.innerHTML = '<strong id="gfbrc-new-title"></strong> ' +
+    '<button type="button" class="button" id="gfbrc-new-prepare"></button> ' +
+    '<p class="description" id="gfbrc-new-guide"></p>' +
+    '<div><span id="gfbrc-new-result" role="status" aria-live="polite"></span></div>' +
+    '<div><button type="button" class="button button-primary" id="gfbrc-new-download" hidden></button> ' +
     '<label id="gfbrc-new-review-wrap" hidden><input type="checkbox" id="gfbrc-new-review"> ' +
-    'I saved and checked the ZIP (or reviewed the zero-file Entries)</label> ' +
-    '<button type="button" class="button" id="gfbrc-new-ack" hidden>Confirm receipt and advance NEW</button></div>';
+    '<span id="gfbrc-new-review-text"></span></label> ' +
+    '<button type="button" class="button" id="gfbrc-new-ack" hidden></button></div>';
+  panel.querySelector('#gfbrc-new-title').textContent = cfg.text.title;
+  panel.querySelector('#gfbrc-new-prepare').textContent = cfg.text.check;
+  panel.querySelector('#gfbrc-new-guide').textContent = cfg.text.guide;
+  panel.querySelector('#gfbrc-new-download').textContent = cfg.text.download;
+  panel.querySelector('#gfbrc-new-review-text').textContent = cfg.text.review;
+  panel.querySelector('#gfbrc-new-ack').textContent = cfg.text.ack;
+  function tr(key) {
+    var args = Array.prototype.slice.call(arguments, 1), next = 0;
+    return cfg.text[key].replace(/%(?:(\d+)\$)?[ds]/g, function (_, index) {
+      return String(args[index ? Number(index) - 1 : next++]);
+    });
+  }
   // The real GF Entry List JavaScript positions the native table on top
   // of content that protrudes beyond its fixed-height bulk-action toolbar.
   // Keep NEW in normal document flow AFTER the complete toolbar so neither
@@ -747,6 +787,12 @@ final class New_Download {
   var operation = null, checksum = '', zero = false, downloaded = false, busy = false;
   var zeroEntries = 0;
   function status(s) { message.textContent = s; }
+  // Only explicit application failures may supply operator-facing detail.
+  function applicationError(text) {
+    var error = new Error(text);
+    error.gfbMessage = text;
+    return error;
+  }
   function reset() {
     operation = null; checksum = ''; zero = false; zeroEntries = 0; downloaded = false;
     download.hidden = true; ack.hidden = true; reviewWrap.hidden = true; review.checked = false;
@@ -761,29 +807,39 @@ final class New_Download {
       return {response:response, bytes:await response.arrayBuffer()};
     }
     var payload;
-    try { payload = await response.json(); } catch (_) {throw Error('NEW request did not return a valid response');}
-    if (!response.ok || !payload.success) {
-      throw Error((payload.data && payload.data.message) || 'NEW request rejected');
+    try { payload = await response.json(); }
+    catch (_) { throw action === 'ack' ? Error(cfg.text.invalid) : applicationError(cfg.text.invalid); }
+    if (!payload || typeof payload !== 'object') {
+      throw action === 'ack' ? Error(cfg.text.invalid) : applicationError(cfg.text.invalid);
+    }
+    if (!response.ok || payload.success === false) {
+      var reason = payload.data && typeof payload.data.message === 'string'
+        ? payload.data.message : cfg.text.rejected;
+      throw applicationError(reason);
+    }
+    if (payload.success !== true || !payload.data || typeof payload.data !== 'object') {
+      throw action === 'ack' ? Error(cfg.text.invalid) : applicationError(cfg.text.invalid);
     }
     return payload.data;
   }
-  async function guarded(fn) {
+  async function guarded(fn, ackRequest) {
     if (busy) return;
     busy = true; prepare.disabled = true; download.disabled = true; ack.disabled = true;
-    try { await fn(); } catch (e) {status('NEW failed: '+e.message+' — coverage unchanged unless confirmation succeeded.');}
+    try { await fn(); } catch (e) {
+      status(e && typeof e.gfbMessage === 'string' ? tr('failure', e.gfbMessage) :
+        (ackRequest ? cfg.text.ack_uncertain : cfg.text.unexpected));
+    }
     finally {busy = false; prepare.disabled = false; download.disabled = false; ack.disabled = false;}
   }
   prepare.addEventListener('click', function () {
     guarded(async function () {
-      reset(); status('Checking exact Entries and files…');
+      reset(); status(cfg.text.checking);
       var data = await api('prepare');
       operation = data.op; zero = data.zero; zeroEntries = data.zero_entries;
-      status(data.entries+' Entries / '+data.files+' eligible files / '+
-        data.zero_entries+' Entries with no files. '+
-        (data.first?'Initial batch; no automatic coverage update. ':'')+
-        (zero?'No ZIP exists for this batch; explicitly review the file-free Entries.':''));
+      status(tr('summary', data.entries, data.files, data.zero_entries)+
+        (data.first?cfg.text.first:'')+(zero?cfg.text.nozip:''));
       if (!data.op) {
-        status('0 newly created eligible Entries / 0 files. Nothing to acknowledge.');
+        status(cfg.text.empty);
       } else if (!zero) download.hidden = false;
       else {downloaded = true; reviewWrap.hidden = false; ack.hidden = false;}
     });
@@ -791,12 +847,12 @@ final class New_Download {
   download.addEventListener('click', function () {
     guarded(async function () {
       if (!operation || zero) return;
-      status('Receiving and verifying the ZIP in this browser…');
+      status(cfg.text.receiving);
       var delivered = await api('download', {operation:operation}, true);
       var expected = delivered.response.headers.get('X-GFBRC-ZIP-SHA256');
       var digest = await crypto.subtle.digest('SHA-256', delivered.bytes);
       var actual = Array.from(new Uint8Array(digest)).map(x=>x.toString(16).padStart(2,'0')).join('');
-      if (!expected || expected !== actual) throw Error('Downloaded ZIP SHA-256 mismatch');
+      if (!expected || expected !== actual) throw applicationError(cfg.text.sha);
       checksum = actual;
       var name = (delivered.response.headers.get('content-disposition') || '')
         .match(/filename="([^"]+\.zip)"/i);
@@ -807,22 +863,26 @@ final class New_Download {
       document.body.appendChild(anchor); anchor.click(); anchor.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
       downloaded = true; reviewWrap.hidden = false; ack.hidden = false;
-      status('ZIP received and SHA-256 matched. Check your locally saved ZIP'+
-        (zeroEntries>0?' and review '+zeroEntries+' Entries with no files':'')+
-        ', then explicitly confirm.');
+      status(tr('zip_ok', zeroEntries>0 ? tr('zero_review', zeroEntries) : ''));
     });
   });
   ack.addEventListener('click', function () {
     guarded(async function () {
       if (!operation || !downloaded || !review.checked) {
-        status('Please check the saved ZIP or explicitly review the zero-file Entries first.'); return;
+        status(cfg.text.ack_needed); return;
       }
       var result = await api('ack', {
         operation:operation, confirmed:'yes', zero_reviewed:zero?'yes':'no', sha256:checksum
       });
-      status('NEW '+result.result+': '+result.covered+' Entries confirmed. Check NEW again for later Entries.');
+      // Server result identifiers are protocol values, never operator copy.
+      if (!result || !Number.isSafeInteger(result.covered) || result.covered < 0 ||
+          (result.result !== 'acknowledged' && result.result !== 'duplicate')) {
+        throw Error(cfg.text.invalid);
+      }
+      status(tr(result.result === 'acknowledged' ? 'ack_recorded' : 'ack_duplicate',
+        result.covered));
       reset();
-    });
+    }, true);
   });
 })();
 </script>

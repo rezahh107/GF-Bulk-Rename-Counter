@@ -68,6 +68,7 @@ final class Plugin {
         add_action( 'plugins_loaded', [ $this, 'register_filters' ], 20 );
         add_action( 'admin_init', [ Settings_Page::class, 'register_settings' ] );
         add_action( 'admin_menu', [ $this, 'register_admin_menu' ] );
+        add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), [ Admin_Experience::class, 'plugin_links' ] );
         register_activation_hook( __FILE__, [ $this, 'activate' ] );
     }
 
@@ -99,6 +100,8 @@ final class Plugin {
         $handler = new Rename_Handler();
         add_filter( 'bdfgf_entry_filename', [ $handler, 'rename_by_counter' ], 10, 3 );
         Flat_Zip_Download::register();
+        add_filter( 'gform_toolbar_menu', [ Admin_Experience::class, 'gf_toolbar' ], 10, 2 );
+        add_action( 'admin_footer', [ Admin_Experience::class, 'entries_footer' ], 30 );
     }
 
     public function missing_gf_notice(): void {

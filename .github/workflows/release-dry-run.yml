@@ -38,6 +38,8 @@ jobs:
           sudo apt-get install -y -qq gettext
           catalog=languages/gf-bulk-rename-counter.pot
           msgfmt --check -o /dev/null "$catalog"
+          msgfmt --check -o /dev/null languages/gf-bulk-rename-counter-fa_IR.po
+          python3 -m unittest discover -s tests/i18n -p 'test_*.py' -v
           tmp="$(mktemp -d)"
           xgettext --language=PHP --from-code=UTF-8 \
             --keyword= --keyword=__ --keyword=esc_html__ --keyword=esc_html_e \
