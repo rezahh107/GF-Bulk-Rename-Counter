@@ -106,7 +106,8 @@ class Settings_Page {
         if ( $preview_form_id && class_exists( 'GFAPI' ) ) {
             $selected_form = \GFAPI::get_form( $preview_form_id );
             if ( is_array( $selected_form ) ) {
-                echo '<details><summary>' . esc_html__( 'Show field labels and IDs for this form', 'gf-bulk-rename-counter' ) . '</summary><ul>';
+                echo '<details><summary>' . esc_html( sprintf( __( 'Show Global Legacy field labels and IDs for %1$s (form ID %2$d)', 'gf-bulk-rename-counter' ),
+                    (string) ( $selected_form['title'] ?? '' ), $preview_form_id ) ) . '</summary><ul>';
                 foreach ( $selected_form['fields'] ?? [] as $field ) {
                     if ( ! is_object( $field ) ) { continue; }
                     echo '<li>' . esc_html( (string) ( $field->label ?? '' ) ) . ' — <bdi dir="ltr">ID: ' .
