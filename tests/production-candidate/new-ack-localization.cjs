@@ -152,7 +152,7 @@ const {chromium}=require('playwright-core');
     await page.route('**/admin-ajax.php',unknown);
     await page.locator('#gfbrc-new-review').check();
     await page.locator('#gfbrc-new-ack').click();
-    await page.locator('#gfbrc-new-result').filter({hasText:configInitial.text.invalid}).waitFor();
+    await page.locator('#gfbrc-new-result').filter({hasText:configInitial.text.ack_uncertain}).waitFor();
     await page.unroute('**/admin-ajax.php',unknown);
     if(mutate('read_coverage').state.rev!==badBefore||
        !(await page.locator('#gfbrc-new-ack').isVisible())||
