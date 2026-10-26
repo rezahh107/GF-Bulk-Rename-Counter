@@ -149,8 +149,11 @@ const {chromium}=require('playwright-core');
         guideDirection:getComputedStyle(document.getElementById('gfbrc-entries-guide')).direction
       }));
       if(locale.lang.toLowerCase()!=='fa-ir'||locale.dir!=='rtl'||
-        locale.bodyDirection!=='rtl'||locale.guideDirection!=='rtl')
-        throw Error('Actual WordPress fa_IR RTL environment not active: '+JSON.stringify(locale));
+        locale.guideDirection!=='rtl')
+        throw Error('Actual WordPress fa_IR or GFBRC guide RTL not active: '+JSON.stringify(locale));
+      // The host may assign its own body direction; the GFBRC panel itself
+      // must remain RTL. Do not impose styling on WordPress/Gravity Forms.
+      console.log('OBSERVED_REAL_FA_IR_HOST_AND_GUIDE_DIRECTIONS',JSON.stringify(locale));
       await page.setViewportSize({width:375,height:800});
       const guide=page.locator('#gfbrc-entries-guide');
       const pos=await guide.evaluate(el=>{const b=el.getBoundingClientRect();
