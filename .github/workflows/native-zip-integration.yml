@@ -432,12 +432,15 @@ jobs:
           BRC_UI_PHASE=configured php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/admin-guidance-qualify.php
           BRC_UI_PHASE=configured BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-per-form-browser.php
-          # Real WordPress language-pack exercise, not simulated document.dir.
-          # GFBRC intentionally ships gettext catalog template only; do not
-          # interpret English plugin fallback as a Persian translation PASS.
+          # Canonical ZIP bytes, actual fa_IR WordPress pack and plugin MO loaded.
+          unzip -p "$BRC_TARGET_ZIP" gf-bulk-rename-counter/languages/gf-bulk-rename-counter-fa_IR.po |
+            cmp - languages/gf-bulk-rename-counter-fa_IR.po
+          unzip -p "$BRC_TARGET_ZIP" gf-bulk-rename-counter/languages/gf-bulk-rename-counter-fa_IR.mo |
+            cmp - languages/gf-bulk-rename-counter-fa_IR.mo
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" language core install fa_IR --activate
           test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option get WPLANG)" = "fa_IR"
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval 'if (get_locale() !== "fa_IR" || !is_rtl()) { throw new RuntimeException("Real fa_IR WordPress locale unavailable"); } echo "PASS_REAL_WP_FA_IR_LOCALE_ACTIVE\\n";'
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval 'if (__("File downloads and naming", "gf-bulk-rename-counter") !== "دانلود فایل‌ها و نام‌گذاری" || __("Confirm receipt and advance NEW", "gf-bulk-rename-counter") !== "تأیید دریافت و پیش‌برد پوشش NEW") { throw new RuntimeException("Installed GFBRC fa_IR MO not loaded"); } echo "PASS_REAL_FA_IR_INSTALLED_ZIP_GETTEXT_LOADED\n";'
           BRC_UI_PHASE=fa_ir BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option update WPLANG en_US
           php -l tests/production-candidate/windows-names-qualify.php

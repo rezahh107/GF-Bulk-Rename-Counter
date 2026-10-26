@@ -2,6 +2,13 @@
 /** Isolated candidate evaluator checks; not a WP/GF integration claim. */
 declare(strict_types=1);
 define('ABSPATH', __DIR__ . '/../');
+// This isolated fixture uses WP's en_US gettext fallback, not a fake Persian locale.
+function __(string $message, string $domain): string {
+    if ($domain !== 'gf-bulk-rename-counter') {
+        throw new RuntimeException('Unexpected gettext domain');
+    }
+    return $message;
+}
 function sanitize_file_name(string $v): string {
     return str_replace(['?', '/', '\\', ':'], '', $v);
 }

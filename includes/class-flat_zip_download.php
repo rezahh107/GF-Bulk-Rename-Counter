@@ -142,7 +142,7 @@ final class Flat_Zip_Download {
             !self::supported_args(self::$native_effective, $form_id) ||
             self::canonical(self::$native_initial['sorting']) !== self::canonical(self::$native_effective['sorting']) ||
             self::canonical(self::$native_initial['paging']) !== self::canonical(self::$native_effective['paging'])) {
-            throw new RuntimeException('Native Entry List effective filter boundary is unsupported');
+            throw new RuntimeException(__('Native Entry List effective filter boundary is unsupported', 'gf-bulk-rename-counter'));
         }
         $payload = [
             'v' => 1, 'form_id' => $form_id, 'user_id' => get_current_user_id(),
@@ -153,7 +153,7 @@ final class Flat_Zip_Download {
         ];
         $json = wp_json_encode($payload);
         if (!is_string($json) || strlen($json) > 8192) {
-            throw new RuntimeException('Native Entry List capture exceeds safe size');
+            throw new RuntimeException(__('Native Entry List capture exceeds safe size', 'gf-bulk-rename-counter'));
         }
         return [$json, self::sign_effective($json), $payload['criteria']];
     }
@@ -164,7 +164,7 @@ final class Flat_Zip_Download {
         $seal = $_POST['selection_effective_seal'] ?? null;
         if (!is_string($raw) || strlen($raw) > 8192 || !is_string($seal) ||
             !hash_equals(self::sign_effective(wp_unslash($raw)), $seal)) {
-            throw new RuntimeException('Missing or invalid signed native Entry List criteria');
+            throw new RuntimeException(__('Missing or invalid signed native Entry List criteria', 'gf-bulk-rename-counter'));
         }
         $payload = json_decode(wp_unslash($raw), true);
         if (!is_array($payload) || ($payload['v'] ?? null) !== 1 ||
@@ -176,7 +176,7 @@ final class Flat_Zip_Download {
             time() - $payload['issued_at'] > self::CAPTURE_TTL ||
             !is_array($payload['sorting'] ?? null) || !is_array($payload['paging'] ?? null) ||
             !self::supported_criteria($payload['criteria'] ?? null)) {
-            throw new RuntimeException('Entry List authorization context changed or expired');
+            throw new RuntimeException(__('Entry List authorization context changed or expired', 'gf-bulk-rename-counter'));
         }
         if (!class_exists('\GF_Entry_List_Table', false)) {
             require_once \GFCommon::get_base_path() . '/entry_list.php';
@@ -184,7 +184,7 @@ final class Flat_Zip_Download {
         if (!class_exists('\GF_Entry_List_Table') ||
             !method_exists('\GF_Entry_List_Table', 'get_search_criteria') ||
             !function_exists('gf_apply_filters')) {
-            throw new RuntimeException('Native Gravity Forms query resolver unavailable');
+            throw new RuntimeException(__('Native Gravity Forms query resolver unavailable', 'gf-bulk-rename-counter'));
         }
         $old_get = $_GET;
         try {
@@ -195,7 +195,7 @@ final class Flat_Zip_Download {
             ]);
             $base = $table->get_search_criteria();
             if (!self::supported_criteria($base)) {
-                throw new RuntimeException('Native Entry List base filter shape unavailable');
+                throw new RuntimeException(__('Native Entry List base filter shape unavailable', 'gf-bulk-rename-counter'));
             }
             $current = gf_apply_filters(['gform_get_entries_args_entry_list', $form_id], [
                 'form_id' => $form_id, 'search_criteria' => $base,
@@ -208,7 +208,7 @@ final class Flat_Zip_Download {
             self::canonical($current['sorting']) !== self::canonical($payload['sorting']) ||
             self::canonical($current['paging']) !== self::canonical($payload['paging']) ||
             self::canonical($current['search_criteria']) !== self::canonical($payload['criteria'])) {
-            throw new RuntimeException('Effective Entry List filter criteria changed; reload the list');
+            throw new RuntimeException(__('Effective Entry List filter criteria changed; reload the list', 'gf-bulk-rename-counter'));
         }
         return $current['search_criteria'];
     }
@@ -251,7 +251,7 @@ final class Flat_Zip_Download {
                     self::effective_for_display($form_id, $scope_json);
                 $matching_count = \GFAPI::count_entries($form_id, $criteria);
                 if (!is_int($matching_count) || $matching_count < 0) {
-                    throw new RuntimeException('Native Entry List count unavailable');
+                    throw new RuntimeException(__('Native Entry List count unavailable', 'gf-bulk-rename-counter'));
                 }
             } catch (Throwable $e) {
                 $scope_supported = false;
@@ -373,11 +373,11 @@ final class Flat_Zip_Download {
         $gf_path = \GFFormsModel::get_upload_path($form_id);
         if (is_string($gf_url) && is_string($gf_path)) { $roots[] = [$gf_url, $gf_path]; }
         $decoded_url = rawurldecode($url);
-        if (preg_match('/[\x00-\x1f\x7f\\\\]/', $decoded_url)) { throw new RuntimeException('Invalid stored upload URL'); }
+        if (preg_match('/[\x00-\x1f\x7f\\\\]/', $decoded_url)) { throw new RuntimeException(__('Invalid stored upload URL', 'gf-bulk-rename-counter')); }
         $u = wp_parse_url($decoded_url);
         if (!is_array($u) || !in_array(strtolower($u['scheme'] ?? ''), ['http','https'], true) ||
             !empty($u['user']) || !empty($u['pass']) || !empty($u['query']) || !empty($u['fragment'])) {
-            throw new RuntimeException('Unsupported file URL');
+            throw new RuntimeException(__('Unsupported file URL', 'gf-bulk-rename-counter'));
         }
         foreach ($roots as [$baseurl, $basedir]) {
             $base = wp_parse_url($baseurl);
@@ -390,22 +390,22 @@ final class Flat_Zip_Download {
             $relative = substr($path_url, strlen($root_url) + 1);
             $segments = explode('/', $relative);
             if ($relative === '' || in_array('..', $segments, true) || in_array('.', $segments, true) ||
-                in_array('', $segments, true)) { throw new RuntimeException('Invalid file path'); }
+                in_array('', $segments, true)) { throw new RuntimeException(__('Invalid file path', 'gf-bulk-rename-counter')); }
             $root = realpath($basedir);
             $file = $root ? realpath($root . '/' . $relative) : false;
             if (!$root || !$file || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) ||
                 !is_file($file) || !is_readable($file)) {
-                throw new RuntimeException('Referenced upload missing or unreadable');
+                throw new RuntimeException(__('Referenced upload missing or unreadable', 'gf-bulk-rename-counter'));
             }
             return $file;
         }
-        throw new RuntimeException('File URL outside configured upload directories');
+        throw new RuntimeException(__('File URL outside configured upload directories', 'gf-bulk-rename-counter'));
     }
 
     /** Fail closed on observable deletion metadata contradictions, not version strings. */
     private static function deleted_urls_for_entry(int $entry_id): array {
         if (!defined('BDFGF_VERSION') || !function_exists('gform_get_meta')) {
-            throw new RuntimeException('Bulk Download deletion metadata unavailable');
+            throw new RuntimeException(__('Bulk Download deletion metadata unavailable', 'gf-bulk-rename-counter'));
         }
         $raw = maybe_unserialize(gform_get_meta($entry_id, 'bdfgf_deleted_file_urls'));
         $flag = gform_get_meta($entry_id, 'bdfgf_files_deleted');
@@ -414,28 +414,28 @@ final class Flat_Zip_Download {
         } elseif (in_array($flag, [true, 1, '1'], true)) {
             $deleted = true;
         } else {
-            throw new RuntimeException('Unrecognized deleted-file flag');
+            throw new RuntimeException(__('Unrecognized deleted-file flag', 'gf-bulk-rename-counter'));
         }
         if (in_array($raw, [false, null, ''], true)) { $raw = []; }
         if (!is_array($raw) || array_values($raw) !== $raw) {
-            throw new RuntimeException('Malformed deleted-file URL list');
+            throw new RuntimeException(__('Malformed deleted-file URL list', 'gf-bulk-rename-counter'));
         }
         $urls = [];
         foreach ($raw as $url) {
             if (!is_string($url) || trim($url) === '' || isset($urls[$url])) {
-                throw new RuntimeException('Malformed or duplicate deleted-file URL');
+                throw new RuntimeException(__('Malformed or duplicate deleted-file URL', 'gf-bulk-rename-counter'));
             }
             $urls[$url] = true;
         }
         if ($deleted !== (count($urls) > 0)) {
-            throw new RuntimeException('Inconsistent deleted-file flag and URL list');
+            throw new RuntimeException(__('Inconsistent deleted-file flag and URL list', 'gf-bulk-rename-counter'));
         }
         return $urls;
     }
 
     public static function plan(int $form_id, array $ids): array {
         $form = \GFAPI::get_form($form_id);
-        if (!is_array($form)) { throw new RuntimeException('Form unavailable'); }
+        if (!is_array($form)) { throw new RuntimeException(__('Form unavailable', 'gf-bulk-rename-counter')); }
         $fields = [];
         foreach ($form['fields'] as $field) {
             if (($field->type ?? '') === 'fileupload') { $fields[] = (string)$field->id; }
@@ -448,7 +448,7 @@ final class Flat_Zip_Download {
         foreach ($ids as $entry_id) {
             $entry = \GFAPI::get_entry($entry_id);
             if (!is_array($entry) || (int)($entry['form_id'] ?? 0) !== $form_id) {
-                throw new RuntimeException('Selected entry missing or belongs to a different form');
+                throw new RuntimeException(__('Selected entry missing or belongs to a different form', 'gf-bulk-rename-counter'));
             }
             $deleted_set = self::deleted_urls_for_entry((int)$entry_id);
             $seen_urls = [];
@@ -458,11 +458,11 @@ final class Flat_Zip_Download {
                 $decoded = json_decode($raw, true);
                 if (json_last_error() !== JSON_ERROR_NONE) { $decoded = [$raw]; }
                 if (!is_array($decoded) || array_values($decoded) !== $decoded) {
-                    throw new RuntimeException('Invalid stored multi-file data');
+                    throw new RuntimeException(__('Invalid stored multi-file data', 'gf-bulk-rename-counter'));
                 }
                 foreach ($decoded as $url) {
                     if (!is_string($url) || trim($url) === '') {
-                        throw new RuntimeException('Invalid stored upload reference');
+                        throw new RuntimeException(__('Invalid stored upload reference', 'gf-bulk-rename-counter'));
                     }
                     $seen_urls[$url] = true;
                     if (isset($deleted_set[$url])) { continue; }
@@ -483,11 +483,11 @@ final class Flat_Zip_Download {
                     }
                     if ($base === '' || $base === '.' || $base === '..' ||
                         str_contains($base, '/') || str_contains($base, '\\')) {
-                        throw new RuntimeException('Unsafe output filename');
+                        throw new RuntimeException(__('Unsafe output filename', 'gf-bulk-rename-counter'));
                     }
                     $sha = hash_file('sha256', $path);
                     $size = filesize($path);
-                    if (!is_string($sha) || $size === false) { throw new RuntimeException('Cannot read source'); }
+                    if (!is_string($sha) || $size === false) { throw new RuntimeException(__('Cannot read source', 'gf-bulk-rename-counter')); }
                     $plan[] = [
                         'entry_id' => $entry_id, 'field_id' => $field_id,
                         'url' => $url, 'source' => $path, 'candidate' => $base,
@@ -497,11 +497,11 @@ final class Flat_Zip_Download {
             }
             foreach ($deleted_set as $deleted_url => $_) {
                 if (!isset($seen_urls[$deleted_url])) {
-                    throw new RuntimeException('Deleted URL not present in source Entry');
+                    throw new RuntimeException(__('Deleted URL not present in source Entry', 'gf-bulk-rename-counter'));
                 }
             }
         }
-        if (!$plan) { throw new RuntimeException('No eligible files found'); }
+        if (!$plan) { throw new RuntimeException(__('No eligible files found', 'gf-bulk-rename-counter')); }
         // Reserve naturally occurring names before creating Legacy-style suffixes.
         $reserved = [];
         foreach ($plan as $item) { $reserved[strtolower($item['candidate'])] = true; }
@@ -525,42 +525,42 @@ final class Flat_Zip_Download {
                         break;
                     }
                 }
-                if (!$found) { throw new RuntimeException('Unique output name unavailable'); }
+                if (!$found) { throw new RuntimeException(__('Unique output name unavailable', 'gf-bulk-rename-counter')); }
             }
             $used[strtolower($name)] = true;
             $item['name'] = $name;
         }
         unset($item);
-        if (count($used) !== count($plan)) { throw new RuntimeException('Duplicate planned names'); }
+        if (count($used) !== count($plan)) { throw new RuntimeException(__('Duplicate planned names', 'gf-bulk-rename-counter')); }
         return $plan;
     }
 
     public static function write_verified_zip(array $plan): string {
-        if (!class_exists('ZipArchive')) { throw new RuntimeException('ZIP support unavailable'); }
+        if (!class_exists('ZipArchive')) { throw new RuntimeException(__('ZIP support unavailable', 'gf-bulk-rename-counter')); }
         $temp = wp_tempnam('gfbrc-independent-flat.zip');
-        if (!$temp) { throw new RuntimeException('Temporary ZIP unavailable'); }
+        if (!$temp) { throw new RuntimeException(__('Temporary ZIP unavailable', 'gf-bulk-rename-counter')); }
         $zip = new ZipArchive();
         try {
             if ($zip->open($temp, ZipArchive::OVERWRITE) !== true) {
-                throw new RuntimeException('ZIP open failed');
+                throw new RuntimeException(__('ZIP open failed', 'gf-bulk-rename-counter'));
             }
             try {
                 $names = [];
                 foreach ($plan as $index => $item) {
                     if (isset($names[strtolower($item['name'])])) {
-                        throw new RuntimeException('Duplicate ZIP name');
+                        throw new RuntimeException(__('Duplicate ZIP name', 'gf-bulk-rename-counter'));
                     }
                     $names[strtolower($item['name'])] = true;
 
                     if (!$zip->addFile($item['source'], $item['name'])) {
-                        throw new RuntimeException('ZIP addFile failed');
+                        throw new RuntimeException(__('ZIP addFile failed', 'gf-bulk-rename-counter'));
                     }
                 }
             } finally {
                 $closed = $zip->close();
             }
             if (!$closed) {
-                throw new RuntimeException('ZIP finalization failed');
+                throw new RuntimeException(__('ZIP finalization failed', 'gf-bulk-rename-counter'));
             }
             self::verify_closed_zip($temp, $plan);
             return $temp;
@@ -573,26 +573,26 @@ final class Flat_Zip_Download {
     /** Verify an already closed ZIP before a response begins (also used in CI mutation controls). */
     public static function verify_closed_zip(string $temp, array $plan): void {
             $read = new ZipArchive();
-            if ($read->open($temp) !== true) { throw new RuntimeException('Closed ZIP unreadable'); }
+            if ($read->open($temp) !== true) { throw new RuntimeException(__('Closed ZIP unreadable', 'gf-bulk-rename-counter')); }
             try {
-                if ($read->numFiles !== count($plan)) { throw new RuntimeException('ZIP member count mismatch'); }
+                if ($read->numFiles !== count($plan)) { throw new RuntimeException(__('ZIP member count mismatch', 'gf-bulk-rename-counter')); }
                 foreach ($plan as $i => $item) {
                     $name = $read->getNameIndex($i);
                     if ($name !== $item['name'] || str_contains($name, '/') || str_contains($name, '\\')) {
-                        throw new RuntimeException('ZIP member path mismatch');
+                        throw new RuntimeException(__('ZIP member path mismatch', 'gf-bulk-rename-counter'));
                     }
                     $stream = $read->getStream($name);
-                    if (!$stream) { throw new RuntimeException('ZIP member unreadable'); }
+                    if (!$stream) { throw new RuntimeException(__('ZIP member unreadable', 'gf-bulk-rename-counter')); }
                     $hash = hash_init('sha256'); $size = 0;
                     while (!feof($stream)) {
                         $chunk = fread($stream, 65536);
-                        if ($chunk === false) { fclose($stream); throw new RuntimeException('ZIP streaming read failed'); }
+                        if ($chunk === false) { fclose($stream); throw new RuntimeException(__('ZIP streaming read failed', 'gf-bulk-rename-counter')); }
                         $size += strlen($chunk); hash_update($hash, $chunk);
                     }
                     fclose($stream);
                     if ($size !== $item['size'] || hash_final($hash) !== $item['sha256'] ||
                         hash_file('sha256', $item['source']) !== $item['sha256']) {
-                        throw new RuntimeException('ZIP member source integrity mismatch');
+                        throw new RuntimeException(__('ZIP member source integrity mismatch', 'gf-bulk-rename-counter'));
                     }
                 }
             } finally { $read->close(); }
@@ -609,10 +609,10 @@ final class Flat_Zip_Download {
             $status = ob_get_status();
             if (!is_array($status) || !isset($status['flags']) ||
                 ($status['flags'] & PHP_OUTPUT_HANDLER_REMOVABLE) === 0) {
-                throw new RuntimeException('Cannot remove output buffer before ZIP response');
+                throw new RuntimeException(__('Cannot remove output buffer before ZIP response', 'gf-bulk-rename-counter'));
             }
             if (!ob_end_clean() || ob_get_level() >= $level) {
-                throw new RuntimeException('Output buffer cleanup failed to make progress');
+                throw new RuntimeException(__('Output buffer cleanup failed to make progress', 'gf-bulk-rename-counter'));
             }
         }
     }
@@ -657,7 +657,7 @@ final class Flat_Zip_Download {
         global $wpdb;
         if ($wpdb->query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ') === false ||
             $wpdb->query('START TRANSACTION WITH CONSISTENT SNAPSHOT') === false) {
-            throw new RuntimeException('Consistent Entry selection snapshot unavailable');
+            throw new RuntimeException(__('Consistent Entry selection snapshot unavailable', 'gf-bulk-rename-counter'));
         }
         $committed = false;
         try {
@@ -669,26 +669,26 @@ final class Flat_Zip_Download {
                     ['key' => 'id', 'direction' => 'ASC', 'is_numeric' => true],
                     ['offset' => $offset, 'page_size' => 100], $total);
                 if (!is_array($batch)) {
-                    throw new RuntimeException('GF Entry ID enumeration failed');
+                    throw new RuntimeException(__('GF Entry ID enumeration failed', 'gf-bulk-rename-counter'));
                 }
                 foreach ($batch as $id) {
                     $id = (int)$id;
                     if ($id <= 0 || isset($seen[$id])) {
-                        throw new RuntimeException('Non-unique or invalid Entry in selection');
+                        throw new RuntimeException(__('Non-unique or invalid Entry in selection', 'gf-bulk-rename-counter'));
                     }
                     $seen[$id] = true;
                     $ids[] = $id;
                 }
                 if (count($ids) > 500) {
-                    throw new RuntimeException('Selection exceeds 500 Entries; no partial ZIP was generated');
+                    throw new RuntimeException(__('Selection exceeds 500 Entries; no partial ZIP was generated', 'gf-bulk-rename-counter'));
                 }
                 if (count($batch) < 100) { break; }
             }
             if (count($ids) !== (int)$total || !$ids) {
-                throw new RuntimeException('Entry selection incomplete or empty');
+                throw new RuntimeException(__('Entry selection incomplete or empty', 'gf-bulk-rename-counter'));
             }
             if ($wpdb->query('COMMIT') === false) {
-                throw new RuntimeException('Entry selection snapshot commit failed');
+                throw new RuntimeException(__('Entry selection snapshot commit failed', 'gf-bulk-rename-counter'));
             }
             $committed = true;
             return $ids;
@@ -728,7 +728,7 @@ final class Flat_Zip_Download {
                 $expected = $_POST['expected_entry_count'] ?? null;
                 if ($expected !== null && (!is_string($expected) || !ctype_digit($expected) ||
                     (string)(int)$expected !== $expected || (int)$expected !== count($ids))) {
-                    throw new RuntimeException('Matching Entry count changed; reload the Entry List and retry');
+                    throw new RuntimeException(__('Matching Entry count changed; reload the Entry List and retry', 'gf-bulk-rename-counter'));
                 }
             } catch (Throwable $e) {
                 self::fail(sprintf(__('Cannot resolve all matching Entries: %s', 'gf-bulk-rename-counter'),
@@ -758,18 +758,18 @@ final class Flat_Zip_Download {
             }
             $size = filesize($temp);
             if ($size === false || $size <= 0 || headers_sent()) {
-                throw new RuntimeException('Validated ZIP response unavailable');
+                throw new RuntimeException(__('Validated ZIP response unavailable', 'gf-bulk-rename-counter'));
             }
             // Never open the response stream or send ZIP headers until all
             // active output buffers have been safely discarded.
             self::clear_output_buffers();
             if (headers_sent()) {
-                throw new RuntimeException('Headers sent during output buffer cleanup');
+                throw new RuntimeException(__('Headers sent during output buffer cleanup', 'gf-bulk-rename-counter'));
             }
             // Open before emitting headers; preparation failures must yield an
             // ordinary error page, not a promised but missing attachment.
             $f = fopen($temp, 'rb');
-            if (!$f) { throw new RuntimeException('Cannot open ZIP for delivery'); }
+            if (!$f) { throw new RuntimeException(__('Cannot open ZIP for delivery', 'gf-bulk-rename-counter')); }
             nocache_headers();
             header('Cache-Control: private, no-store, max-age=0');
             header('Content-Type: application/zip');
@@ -785,7 +785,7 @@ final class Flat_Zip_Download {
             header('Content-Length: ' . $size);
             while (!feof($f)) {
                 $bytes = fread($f, 65536);
-                if ($bytes === false) { fclose($f); throw new RuntimeException('ZIP response read failed'); }
+                if ($bytes === false) { fclose($f); throw new RuntimeException(__('ZIP response read failed', 'gf-bulk-rename-counter')); }
                 echo $bytes;
             }
             fclose($f);

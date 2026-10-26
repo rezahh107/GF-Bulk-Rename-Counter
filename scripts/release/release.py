@@ -24,6 +24,8 @@ FILES = (
     "includes/class-form_naming_rules.php",
     "includes/class-naming_strategy.php",
     "languages/gf-bulk-rename-counter.pot",
+    "languages/gf-bulk-rename-counter-fa_IR.po",
+    "languages/gf-bulk-rename-counter-fa_IR.mo",
     "readme.txt",
     "uninstall.php",
 )

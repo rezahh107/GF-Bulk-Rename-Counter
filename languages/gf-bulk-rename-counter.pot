@@ -1,4 +1,3 @@
-# Generated from current plugin PHP gettext calls; no translations or publisher identity supplied.
 msgid ""
 msgstr ""
 "Project-Id-Version: GF Bulk Rename Counter 2.2.0\n"
@@ -24,13 +23,64 @@ msgstr ""
 msgid "0 newly created eligible Entries / 0 files. Nothing to acknowledge."
 msgstr ""
 
+msgid "ALL Entries or eligible source files changed before ZIP delivery; check ALL again"
+msgstr ""
+
+msgid "ALL Entries or source files changed; check ALL again"
+msgstr ""
+
+msgid "ALL Entry enumeration count changed or failed"
+msgstr ""
+
+msgid "ALL Entry enumeration overflow"
+msgstr ""
+
 msgid "ALL check failed"
+msgstr ""
+
+msgid "ALL consistent selection snapshot unavailable"
 msgstr ""
 
 msgid "ALL failed: %s — no partial ZIP delivered."
 msgstr ""
 
+msgid "ALL form is unavailable"
+msgstr ""
+
+msgid "ALL form membership changed during preparation"
+msgstr ""
+
+msgid "ALL has no eligible files; no empty ZIP was sent"
+msgstr ""
+
 msgid "ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage."
+msgstr ""
+
+msgid "ALL preview cannot be encoded"
+msgstr ""
+
+msgid "ALL preview expired or form/user changed"
+msgstr ""
+
+msgid "ALL preview seal missing or invalid"
+msgstr ""
+
+msgid "ALL requires authenticated Entry viewing permission"
+msgstr ""
+
+msgid "ALL requires transactional InnoDB Entry and field storage"
+msgstr ""
+
+msgid "ALL selection has duplicate or unsorted Entry IDs"
+msgstr ""
+
+msgid "ALL selection incomplete; no partial ZIP"
+msgstr ""
+
+msgid "ALL selection snapshot commit failed"
+msgstr ""
+
+msgid "ALL source size exceeds supported integer range"
 msgstr ""
 
 msgid "ALL — Download all eligible files"
@@ -45,10 +95,22 @@ msgstr ""
 msgid "All matching: choose the all-matching checkbox with the independent Bulk Action. It includes the current search and filters across pages (maximum 500 Entries), not just checked rows."
 msgstr ""
 
+msgid "Ambiguous ALL form selection"
+msgstr ""
+
 msgid "Ambiguous Entry selection"
 msgstr ""
 
 msgid "Ask an administrator to review the naming settings."
+msgstr ""
+
+msgid "Atomic NEW acknowledgment COMMIT failed"
+msgstr ""
+
+msgid "Atomic pending-operation database unavailable"
+msgstr ""
+
+msgid "Authoritative pending NEW row unavailable"
 msgstr ""
 
 msgid "Avoid personal data in selected fields; missing or unsafe values cause a visible ZIP preparation error."
@@ -57,7 +119,19 @@ msgstr ""
 msgid "Bulk Download Rename Settings"
 msgstr ""
 
+msgid "Bulk Download deletion metadata unavailable"
+msgstr ""
+
+msgid "Cannot open ZIP for delivery"
+msgstr ""
+
 msgid "Cannot prepare flat ZIP: %s"
+msgstr ""
+
+msgid "Cannot read source"
+msgstr ""
+
+msgid "Cannot remove output buffer before ZIP response"
 msgstr ""
 
 msgid "Cannot resolve ALL: %s"
@@ -81,19 +155,40 @@ msgstr ""
 msgid "Checking or downloading never assigns counter values. A missing Legacy counter may intentionally keep an original filename; invalid Single Field / Composite Entry values stop independent ZIP preparation instead."
 msgstr ""
 
+msgid "Choose a Single Field"
+msgstr ""
+
 msgid "Choose a form to edit"
 msgstr ""
 
 msgid "Choose a form to see its effective download naming rule and edit an optional independent override."
 msgstr ""
 
+msgid "Closed ZIP unreadable"
+msgstr ""
+
 msgid "Composite"
+msgstr ""
+
+msgid "Composite field no longer exists or is ineligible"
+msgstr ""
+
+msgid "Composite field order is invalid"
 msgstr ""
 
 msgid "Composite fields and order"
 msgstr ""
 
+msgid "Composite fields need unique consecutive order numbers"
+msgstr ""
+
+msgid "Composite order must start at 1 without gaps"
+msgstr ""
+
 msgid "Composite separator"
+msgstr ""
+
+msgid "Concurrent NEW coverage confirmation rejected"
 msgstr ""
 
 msgid "Configuration needs attention before renamed downloads can be expected."
@@ -108,6 +203,12 @@ msgstr ""
 msgid "Confirm receipt and advance NEW"
 msgstr ""
 
+msgid "Consistent Entry selection snapshot unavailable"
+msgstr ""
+
+msgid "Consistent NEW snapshot unavailable"
+msgstr ""
+
 msgid "Counter Field ID"
 msgstr ""
 
@@ -115,6 +216,9 @@ msgid "Counter Field ID %d does not exist on this form. Legacy cannot rename the
 msgstr ""
 
 msgid "Counting all active Entries and verifying source files…"
+msgstr ""
+
+msgid "Deleted URL not present in source Entry"
 msgstr ""
 
 msgid "Download ALL %1$d active Entries / %2$d eligible files / %3$d Entries without files? Filters and NEW history are ignored; NEW acknowledgment does not change."
@@ -132,10 +236,55 @@ msgstr ""
 msgid "Download eligible files from ALL %d Entries matching this form and its current filters/search, across every page? Individually checked rows do not limit this choice. Maximum 500 Entries per ZIP; the server rechecks the count before download."
 msgstr ""
 
+msgid "Download has not completed in the browser"
+msgstr ""
+
 msgid "Download verified ZIP"
 msgstr ""
 
 msgid "Downloaded ZIP SHA-256 mismatch"
+msgstr ""
+
+msgid "Downloaded ZIP identity differs from verified operation"
+msgstr ""
+
+msgid "Duplicate ZIP name"
+msgstr ""
+
+msgid "Duplicate acknowledgment COMMIT failed"
+msgstr ""
+
+msgid "Duplicate or invalid GFAPI Entry identity"
+msgstr ""
+
+msgid "Duplicate planned names"
+msgstr ""
+
+msgid "Effective Entry List filter criteria changed; reload the list"
+msgstr ""
+
+msgid "Entry List authorization context changed or expired"
+msgstr ""
+
+msgid "Entry selection incomplete or empty"
+msgstr ""
+
+msgid "Entry selection snapshot commit failed"
+msgstr ""
+
+msgid "Entry uploads changed before acknowledgment; retry NEW"
+msgstr ""
+
+msgid "Entry uploads changed before atomic acknowledgment"
+msgstr ""
+
+msgid "Exact NEW coverage exceeded safe storage budget"
+msgstr ""
+
+msgid "Explicit operator confirmation required"
+msgstr ""
+
+msgid "File URL outside configured upload directories"
 msgstr ""
 
 msgid "File downloads and naming"
@@ -144,10 +293,16 @@ msgstr ""
 msgid "File naming settings"
 msgstr ""
 
+msgid "File-free Entries require a separate explicit review"
+msgstr ""
+
 msgid "Filenames combine these fields in order: %1$s. Separator: %2$s. Missing or unsafe values stop ZIP preparation."
 msgstr ""
 
 msgid "Filenames use %1$s (field %2$d). An empty or unsafe Entry value stops ZIP preparation; it does not silently fall back to the original name."
+msgstr ""
+
+msgid "Files changed since NEW selection; prepare a fresh operation"
 msgstr ""
 
 msgid "First configure a Counter Field ID for Legacy downloads, or select a form below and save an independent Single Field / Composite rule. These are separate settings; saving one does not configure the other."
@@ -159,10 +314,43 @@ msgstr ""
 msgid "For Composite, check at least two eligible text/number fields and assign consecutive positions 1, 2, 3 … . Empty Entry values will block ZIP creation."
 msgstr ""
 
+msgid "Form has too many historical Entries for safe NEW enumeration"
+msgstr ""
+
+msgid "Form no longer exists"
+msgstr ""
+
+msgid "Form unavailable"
+msgstr ""
+
 msgid "Form unavailable."
 msgstr ""
 
 msgid "GF Bulk Rename"
+msgstr ""
+
+msgid "GF Entry ID enumeration failed"
+msgstr ""
+
+msgid "GF Entry identity storage unavailable"
+msgstr ""
+
+msgid "GF upload metadata index inventory unavailable"
+msgstr ""
+
+msgid "GF upload metadata requires a leading Entry identity index"
+msgstr ""
+
+msgid "GF upload metadata table unavailable"
+msgstr ""
+
+msgid "GFAPI Entry enumeration unavailable"
+msgstr ""
+
+msgid "GFAPI and stored active Entry snapshot differ"
+msgstr ""
+
+msgid "Generated filename is too long"
 msgstr ""
 
 msgid "Global Legacy Counter Field ID. 0 keeps original names. Set the target form above (or All forms); independent Single Field/Composite overrides are configured separately below."
@@ -177,7 +365,19 @@ msgstr ""
 msgid "Gravity Forms Bulk Rename Settings"
 msgstr ""
 
+msgid "Gravity Forms deletion metadata cache unavailable"
+msgstr ""
+
+msgid "Gravity Forms transactional Entry storage unavailable"
+msgstr ""
+
+msgid "Headers sent during output buffer cleanup"
+msgstr ""
+
 msgid "I saved and checked the ZIP (or reviewed the zero-file Entries)"
+msgstr ""
+
+msgid "Inconsistent deleted-file flag and URL list"
 msgstr ""
 
 msgid "Independent ZIP: Composite"
@@ -195,13 +395,49 @@ msgstr ""
 msgid "Initial batch; no automatic coverage update. "
 msgstr ""
 
+msgid "Installed GF Entry storage contract unavailable"
+msgstr ""
+
+msgid "Insufficient PHP execution-time budget for complete ALL"
+msgstr ""
+
+msgid "Insufficient PHP memory headroom for complete ALL; no ZIP generated"
+msgstr ""
+
+msgid "Insufficient temporary disk space for complete ALL ZIP"
+msgstr ""
+
+msgid "Invalid ALL form scope"
+msgstr ""
+
+msgid "Invalid ALL request nonce"
+msgstr ""
+
 msgid "Invalid Entry List filter"
 msgstr ""
 
 msgid "Invalid Entry List scope"
 msgstr ""
 
+msgid "Invalid Entry identity"
+msgstr ""
+
+msgid "Invalid GF Entry identity for upload lock"
+msgstr ""
+
+msgid "Invalid NEW operation identity"
+msgstr ""
+
 msgid "Invalid download request"
+msgstr ""
+
+msgid "Invalid file path"
+msgstr ""
+
+msgid "Invalid form"
+msgstr ""
+
+msgid "Invalid form rule submission"
 msgstr ""
 
 msgid "Invalid or duplicate Entry selection"
@@ -210,7 +446,40 @@ msgstr ""
 msgid "Invalid or forged Entry List scope"
 msgstr ""
 
+msgid "Invalid or overlapping coverage ranges"
+msgstr ""
+
+msgid "Invalid pending-operation schema"
+msgstr ""
+
+msgid "Invalid request nonce"
+msgstr ""
+
+msgid "Invalid saved Composite rule"
+msgstr ""
+
+msgid "Invalid saved naming rule"
+msgstr ""
+
+msgid "Invalid saved per-form rules"
+msgstr ""
+
 msgid "Invalid selection mode"
+msgstr ""
+
+msgid "Invalid separator"
+msgstr ""
+
+msgid "Invalid stored Entry identity"
+msgstr ""
+
+msgid "Invalid stored multi-file data"
+msgstr ""
+
+msgid "Invalid stored upload URL"
+msgstr ""
+
+msgid "Invalid stored upload reference"
 msgstr ""
 
 msgid "Legacy (existing counter configuration)"
@@ -231,16 +500,73 @@ msgstr ""
 msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."
 msgstr ""
 
+msgid "Locked NEW coverage record unavailable"
+msgstr ""
+
+msgid "Malformed deleted-file URL list"
+msgstr ""
+
+msgid "Malformed or duplicate deleted-file URL"
+msgstr ""
+
+msgid "Matching Entry count changed; reload the Entry List and retry"
+msgstr ""
+
+msgid "Missing or invalid signed native Entry List criteria"
+msgstr ""
+
 msgid "More than 500 Entries match. Narrow the current search or filters before downloading."
 msgstr ""
 
 msgid "NEW %1$s: %2$d Entries confirmed. Check NEW again for later Entries."
 msgstr ""
 
+msgid "NEW ZIP cannot be opened"
+msgstr ""
+
+msgid "NEW ZIP headers unavailable"
+msgstr ""
+
+msgid "NEW ZIP size or response cannot be validated"
+msgstr ""
+
+msgid "NEW ZIP stream failed"
+msgstr ""
+
+msgid "NEW coverage changed in another tab; prepare again"
+msgstr ""
+
+msgid "NEW coverage state missing or unreadable"
+msgstr ""
+
+msgid "NEW download generation COMMIT failed"
+msgstr ""
+
+msgid "NEW download generation is no longer active"
+msgstr ""
+
+msgid "NEW exceeds 500 eligible Entries; no partial coverage will be committed"
+msgstr ""
+
 msgid "NEW failed: %s — coverage is unchanged unless receipt confirmation already succeeded."
 msgstr ""
 
+msgid "NEW history exceeds bounded storage"
+msgstr ""
+
 msgid "NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action."
+msgstr ""
+
+msgid "NEW metadata range-lock isolation unavailable"
+msgstr ""
+
+msgid "NEW operation changed before atomic confirmation"
+msgstr ""
+
+msgid "NEW operation expired or superseded by a newer generation"
+msgstr ""
+
+msgid "NEW operation or coverage changed; reload and retry"
 msgstr ""
 
 msgid "NEW request did not return a valid response"
@@ -249,16 +575,46 @@ msgstr ""
 msgid "NEW request rejected"
 msgstr ""
 
+msgid "NEW requires transactional Gravity Forms Entry and field storage"
+msgstr ""
+
 msgid "NEW — newly created Entries"
 msgstr ""
 
 msgid "NEW: check for newly created Entries, download and inspect the verified ZIP, then explicitly acknowledge receipt. Browser verification does not prove the ZIP was retained locally. The first check establishes the initial batch; acknowledgment advances coverage."
 msgstr ""
 
+msgid "Naming field %1$d is empty or invalid for Entry %2$s"
+msgstr ""
+
+msgid "Naming field %1$d is missing or not scalar for Entry %2$s"
+msgstr ""
+
+msgid "Naming fields produce a Windows reserved device filename"
+msgstr ""
+
+msgid "Naming fields produce an unsafe filename"
+msgstr ""
+
 msgid "Naming method"
 msgstr ""
 
 msgid "Naming rule not saved: %s"
+msgstr ""
+
+msgid "Native Entry List base filter shape unavailable"
+msgstr ""
+
+msgid "Native Entry List capture exceeds safe size"
+msgstr ""
+
+msgid "Native Entry List count unavailable"
+msgstr ""
+
+msgid "Native Entry List effective filter boundary is unsupported"
+msgstr ""
+
+msgid "Native Gravity Forms query resolver unavailable"
 msgstr ""
 
 msgid "No Counter Field ID is configured. Original filenames are intentional for Legacy and inherited independent ZIP downloads."
@@ -273,13 +629,37 @@ msgstr ""
 msgid "No ZIP exists for this scope."
 msgstr ""
 
+msgid "No eligible files found"
+msgstr ""
+
+msgid "Non-unique or invalid Entry in selection"
+msgstr ""
+
 msgid "Not authorized"
 msgstr ""
 
 msgid "Open form rule"
 msgstr ""
 
+msgid "Operation no longer available"
+msgstr ""
+
+msgid "Output buffer cleanup failed to make progress"
+msgstr ""
+
 msgid "POST required"
+msgstr ""
+
+msgid "Pending NEW operation exceeds bounded storage"
+msgstr ""
+
+msgid "Pending NEW operation too large"
+msgstr ""
+
+msgid "Pending-operation COMMIT failed"
+msgstr ""
+
+msgid "Pending-operation generation transition did not persist"
 msgstr ""
 
 msgid "Per-form naming (independent flat ZIP only)"
@@ -297,6 +677,9 @@ msgstr ""
 msgid "Receiving and verifying the ZIP in this browser…"
 msgstr ""
 
+msgid "Referenced upload missing or unreadable"
+msgstr ""
+
 msgid "Review naming settings for this form"
 msgstr ""
 
@@ -309,16 +692,40 @@ msgstr ""
 msgid "Select a specific Gravity Form or leave as \"All forms\"."
 msgstr ""
 
+msgid "Select a valid Gravity Form"
+msgstr ""
+
 msgid "Select at least one Entry or choose all matching Entries."
 msgstr ""
 
+msgid "Select at least two Composite fields"
+msgstr ""
+
 msgid "Select between 1 and 500 Entries"
+msgstr ""
+
+msgid "Selected Entry status changed before atomic acknowledgment"
+msgstr ""
+
+msgid "Selected Entry status changed; retry NEW"
+msgstr ""
+
+msgid "Selected Single Field is no longer valid"
+msgstr ""
+
+msgid "Selected entry missing or belongs to a different form"
 msgstr ""
 
 msgid "Selected form unavailable"
 msgstr ""
 
 msgid "Selected: choose rows on this page, then use “Download Flat ZIP with Rename” in Bulk Actions. It includes eligible uploads only from those rows."
+msgstr ""
+
+msgid "Selection exceeds 500 Entries; no partial ZIP was generated"
+msgstr ""
+
+msgid "Separator must be valid text without slashes or control characters (max 32 bytes)"
 msgstr ""
 
 msgid "Settings"
@@ -333,22 +740,64 @@ msgstr ""
 msgid "Single Field source"
 msgstr ""
 
+msgid "Snapshot commit failed"
+msgstr ""
+
 msgid "Target Form"
+msgstr ""
+
+msgid "Temporary ZIP unavailable"
 msgstr ""
 
 msgid "The saved naming fields or order are no longer valid. Reopen and save this form rule before using independent ZIP downloads."
 msgstr ""
 
+msgid "This operation has no files; confirm the zero-file review explicitly"
+msgstr ""
+
 msgid "This search/filter URL is not supported for a safe global download."
 msgstr ""
 
+msgid "Transactional Gravity Forms storage unavailable"
+msgstr ""
+
+msgid "Unable to lock GF upload rows and insertion gap"
+msgstr ""
+
+msgid "Unable to lock selected GF Entry status"
+msgstr ""
+
 msgid "Unchanged filenames here reflect the current configuration, not proof of a download failure. Individual missing Entry values can also leave Legacy names unchanged."
+msgstr ""
+
+msgid "Unique output name unavailable"
+msgstr ""
+
+msgid "Unknown naming method"
+msgstr ""
+
+msgid "Unrecognized Gravity Forms Entry storage identifier"
+msgstr ""
+
+msgid "Unrecognized deleted-file flag"
+msgstr ""
+
+msgid "Unsafe output filename"
+msgstr ""
+
+msgid "Unsupported NEW coverage state"
+msgstr ""
+
+msgid "Unsupported file URL"
 msgstr ""
 
 msgid "Untitled field"
 msgstr ""
 
 msgid "Use existing Legacy defaults (remove override)"
+msgstr ""
+
+msgid "Validated ZIP response unavailable"
 msgstr ""
 
 msgid "Warning: This field ID does not exist in the selected form."
@@ -360,7 +809,37 @@ msgstr ""
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
+msgid "ZIP addFile failed"
+msgstr ""
+
+msgid "ZIP finalization failed"
+msgstr ""
+
+msgid "ZIP member count mismatch"
+msgstr ""
+
+msgid "ZIP member path mismatch"
+msgstr ""
+
+msgid "ZIP member source integrity mismatch"
+msgstr ""
+
+msgid "ZIP member unreadable"
+msgstr ""
+
+msgid "ZIP open failed"
+msgstr ""
+
 msgid "ZIP received and SHA-256 matched in this browser. Check your locally saved ZIP%1$s, then explicitly confirm receipt."
+msgstr ""
+
+msgid "ZIP response read failed"
+msgstr ""
+
+msgid "ZIP streaming read failed"
+msgstr ""
+
+msgid "ZIP support unavailable"
 msgstr ""
 
 msgid "— Apply to all forms —"

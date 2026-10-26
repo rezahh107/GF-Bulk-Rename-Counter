@@ -171,8 +171,36 @@ const {chromium}=require('playwright-core');
       if(!await page.locator('#gfbrc-new-prepare').evaluate(el=>document.activeElement===el))
         throw Error('fa_IR NEW control not keyboard focusable');
       console.log('PASS_REAL_FA_IR_WORDPRESS_RTL_NARROW_GUIDE_AND_KEYBOARD');
-      if(await page.getByRole('heading',{name:'File downloads and naming'}).count())
-        console.log('NOT_TRANSLATED_FA_IR_PLUGIN_COPY_USES_ENGLISH_FALLBACK');
+      // Actual installed gettext output, not simulated RTL or a POT-only fallback.
+      const heading=await page.locator('#gfbrc-guide-title').innerText();
+      if(heading!=='دانلود فایل‌ها و نام‌گذاری')
+        throw Error('Installed fa_IR Entries heading missing: '+heading);
+      const guideText=await guide.innerText();
+      if(!guideText.includes('از کدام روش دانلود استفاده کنم؟')||
+         !guideText.includes('ورودی‌های فعال'))
+        throw Error('Persian Entries guide and ALL scope missing');
+      const newText=JSON.parse(await page.locator('#gfbrc-new-config').textContent()).text;
+      const allText=JSON.parse(await page.locator('#gfbrc-all-config').textContent()).text;
+      if(newText.ack!=='تأیید دریافت و پیش‌برد پوشش NEW'||
+         !newText.guide.includes('برگشت‌ناپذیر')||
+         !newText.guide.includes('نسخهٔ ذخیره‌شدهٔ محلی')||
+         !newText.zip_ok.includes('ZIP ذخیره‌شده'))
+        throw Error('Persian NEW receipt acknowledgment semantics missing: '+JSON.stringify(newText));
+      if(allText.check!=='بررسی ALL'||!allText.guide.includes('پوشش NEW')||
+         !allText.confirm.includes('تأیید دریافت NEW تغییر نمی‌کند'))
+        throw Error('Persian ALL independence semantics missing: '+JSON.stringify(allText));
+      if(!(await page.locator('#gfbrc-new-ack').textContent()).includes('تأیید دریافت')||
+         !(await page.locator('#gfbrc-new-review-wrap').textContent()).includes('من ZIP را ذخیره'))
+        throw Error('Visible NEW controls not localized');
+      await open(settings(data.a.form_id));
+      if(!(await page.locator('.wrap h1').innerText()).includes('تنظیمات Gravity Forms Bulk Rename')||
+         !(await page.locator('.wrap').innerText()).includes('شناسهٔ فیلد شمارنده')||
+         !(await page.locator('.wrap').innerText()).includes('d[COUNTER].extension'))
+        throw Error('Persian Settings labels or literal file naming pattern missing');
+      const bdi=await page.locator('details bdi[dir="ltr"]').first().textContent();
+      if(!bdi.includes('ID:')||!/[0-9]/.test(bdi))
+        throw Error('Mixed RTL / technical field ID isolation missing: '+bdi);
+      console.log('PASS_REAL_FA_IR_SETTINGS_ENTRIES_NEW_ACK_ALL_MIXED_BIDI');
     } else {
       await state(data.b.form_id,'ready');
       if(!(await page.locator('#gfbrc-entries-guide').innerText()).includes('Single Field'))

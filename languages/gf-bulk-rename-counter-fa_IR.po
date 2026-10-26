@@ -1,0 +1,855 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: GF Bulk Rename Counter 2.2.0\n"
+"Language: fa_IR\n"
+"Language-Team: GFBRC Phase 1 review candidate\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid " and review %d Entries with no files"
+msgstr " و بررسی %d ورودی بدون فایل"
+
+msgid "%1$d Entries / %2$d eligible files / %3$d Entries with no files. "
+msgstr "%1$d ورودی / %2$d فایل واجد شرایط / %3$d ورودی بدون فایل. "
+
+msgid "%1$d active Entries / %2$d eligible files / %3$d Entries without files. Entire form; filters, pages, selection and NEW history are ignored."
+msgstr "%1$d ورودی فعال / %2$d فایل واجد شرایط / %3$d ورودی بدون فایل. کل فرم بررسی می‌شود و فیلترها، صفحه‌بندی، انتخاب‌ها و سابقهٔ NEW نادیده گرفته می‌شوند."
+
+msgid "%1$s (field %2$d)"
+msgstr "%1$s (فیلد %2$d)"
+
+msgid "(none)"
+msgstr "(بدون جداکننده)"
+
+msgid "0 newly created eligible Entries / 0 files. Nothing to acknowledge."
+msgstr "۰ ورودی جدید واجد شرایط / ۰ فایل. چیزی برای تأیید دریافت وجود ندارد."
+
+msgid "ALL Entries or eligible source files changed before ZIP delivery; check ALL again"
+msgstr "ورودی‌های ALL یا فایل‌های مبدأ واجد شرایط پیش از تحویل ZIP تغییر کردند؛ ALL را دوباره بررسی کنید"
+
+msgid "ALL Entries or source files changed; check ALL again"
+msgstr "ورودی‌ها یا فایل‌های مبدأ ALL تغییر کرده‌اند؛ ALL را دوباره بررسی کنید"
+
+msgid "ALL Entry enumeration count changed or failed"
+msgstr "تعداد ورودی‌های پیمایش‌شدهٔ ALL تغییر کرد یا شمارش ناموفق بود"
+
+msgid "ALL Entry enumeration overflow"
+msgstr "تعداد ورودی‌های ALL از محدودهٔ مجاز پیمایش فراتر رفت"
+
+msgid "ALL check failed"
+msgstr "بررسی ALL ناموفق بود"
+
+msgid "ALL consistent selection snapshot unavailable"
+msgstr "تصویر سازگار از انتخاب ALL در دسترس نیست"
+
+msgid "ALL failed: %s — no partial ZIP delivered."
+msgstr "عملیات ALL ناموفق بود: %s — هیچ ZIP ناقصی تحویل داده نشد."
+
+msgid "ALL form is unavailable"
+msgstr "فرم ALL در دسترس نیست"
+
+msgid "ALL form membership changed during preparation"
+msgstr "عضویت ورودی‌های فرم در حین آماده‌سازی ALL تغییر کرد"
+
+msgid "ALL has no eligible files; no empty ZIP was sent"
+msgstr "ALL فایل واجد شرایطی ندارد؛ ZIP خالی ارسال نشد"
+
+msgid "ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage."
+msgstr "ALL فایل‌های بارگذاری‌شدهٔ واجد شرایط همهٔ ورودی‌های فعال این فرم را، مستقل از فیلترها، ردیف‌های انتخاب‌شده و سابقهٔ تأیید دریافت NEW، شامل می‌شود. پیش از دانلود بررسی کنید؛ این کار پوشش NEW را جلو نمی‌برد."
+
+msgid "ALL preview cannot be encoded"
+msgstr "امکان رمزگذاری پیش‌نمایش ALL نیست"
+
+msgid "ALL preview expired or form/user changed"
+msgstr "پیش‌نمایش ALL منقضی شده یا فرم/کاربر تغییر کرده است"
+
+msgid "ALL preview seal missing or invalid"
+msgstr "امضای پیش‌نمایش ALL وجود ندارد یا نامعتبر است"
+
+msgid "ALL requires authenticated Entry viewing permission"
+msgstr "ALL به مجوز معتبر مشاهدهٔ ورودی‌ها نیاز دارد"
+
+msgid "ALL requires transactional InnoDB Entry and field storage"
+msgstr "ALL به ذخیره‌سازی تراکنشی InnoDB برای ورودی‌ها و فیلدها نیاز دارد"
+
+msgid "ALL selection has duplicate or unsorted Entry IDs"
+msgstr "انتخاب ALL شناسه‌های ورودی تکراری یا نامرتب دارد"
+
+msgid "ALL selection incomplete; no partial ZIP"
+msgstr "انتخاب ALL ناقص است؛ هیچ ZIP ناقصی ساخته نمی‌شود"
+
+msgid "ALL selection snapshot commit failed"
+msgstr "ثبت تراکنش تصویر انتخاب ALL ناموفق بود"
+
+msgid "ALL source size exceeds supported integer range"
+msgstr "اندازهٔ منبع ALL از محدودهٔ اعداد صحیح پشتیبانی‌شده فراتر رفت"
+
+msgid "ALL — Download all eligible files"
+msgstr "ALL — دانلود همهٔ فایل‌های واجد شرایط"
+
+msgid "ALL: independently check and download eligible files from every active Entry in this form, ignoring search, row selection and NEW history. ALL does not acknowledge NEW."
+msgstr "ALL: فایل‌های واجد شرایط همهٔ ورودی‌های فعال فرم را، بدون توجه به جستجو، انتخاب ردیف‌ها و سابقهٔ NEW بررسی و دانلود می‌کند. ALL دریافت NEW را تأیید نمی‌کند."
+
+msgid "All matching Entries (Flat ZIP only; maximum 500)"
+msgstr "همهٔ ورودی‌های مطابق فیلتر (فقط ZIP تخت؛ حداکثر ۵۰۰ ورودی)"
+
+msgid "All matching: choose the all-matching checkbox with the independent Bulk Action. It includes the current search and filters across pages (maximum 500 Entries), not just checked rows."
+msgstr "همهٔ موارد مطابق فیلتر: در «عملیات گروهی» مستقل، گزینهٔ همهٔ موارد مطابق را انتخاب کنید. جستجو و فیلتر فعلی در تمام صفحات لحاظ می‌شود (حداکثر ۵۰۰ ورودی)، نه فقط ردیف‌های تیک‌خورده."
+
+msgid "Ambiguous ALL form selection"
+msgstr "انتخاب فرم ALL مبهم است"
+
+msgid "Ambiguous Entry selection"
+msgstr "انتخاب ورودی‌ها مبهم است"
+
+msgid "Ask an administrator to review the naming settings."
+msgstr "از مدیر بخواهید تنظیمات نام‌گذاری را بررسی کند."
+
+msgid "Atomic NEW acknowledgment COMMIT failed"
+msgstr "ثبت تراکنش اتمی تأیید دریافت NEW ناموفق بود"
+
+msgid "Atomic pending-operation database unavailable"
+msgstr "پایگاه داده برای عملیات در انتظارِ اتمی در دسترس نیست"
+
+msgid "Authoritative pending NEW row unavailable"
+msgstr "ردیف معتبر عملیات NEW در پایگاه داده در دسترس نیست"
+
+msgid "Avoid personal data in selected fields; missing or unsafe values cause a visible ZIP preparation error."
+msgstr "در فیلدهای انتخابی از دادهٔ شخصی استفاده نکنید؛ مقدار ناموجود یا ناامن باعث خطای آشکار در آماده‌سازی ZIP می‌شود."
+
+msgid "Bulk Download Rename Settings"
+msgstr "تنظیمات تغییر نام دانلود گروهی"
+
+msgid "Bulk Download deletion metadata unavailable"
+msgstr "فرادادهٔ حذف Bulk Download در دسترس نیست"
+
+msgid "Cannot open ZIP for delivery"
+msgstr "بازکردن ZIP برای تحویل ممکن نیست"
+
+msgid "Cannot prepare flat ZIP: %s"
+msgstr "امکان آماده‌سازی ZIP تخت نیست: %s"
+
+msgid "Cannot read source"
+msgstr "امکان خواندن فایل مبدأ نیست"
+
+msgid "Cannot remove output buffer before ZIP response"
+msgstr "حذف بافر خروجی پیش از پاسخ ZIP ممکن نیست"
+
+msgid "Cannot resolve ALL: %s"
+msgstr "امکان تعیین محدودهٔ ALL نیست: %s"
+
+msgid "Cannot resolve all matching Entries: %s"
+msgstr "امکان تعیین همهٔ ورودی‌های مطابق فیلتر نیست: %s"
+
+msgid "Check ALL"
+msgstr "بررسی ALL"
+
+msgid "Check NEW"
+msgstr "بررسی NEW"
+
+msgid "Check your saved ZIP or explicitly review the zero-file Entries first."
+msgstr "ابتدا ZIP ذخیره‌شده را بررسی کنید یا ورودی‌های بدون فایل را صریحاً بازبینی کنید."
+
+msgid "Checking exact Entries and files…"
+msgstr "در حال بررسی دقیق ورودی‌ها و فایل‌ها…"
+
+msgid "Checking or downloading never assigns counter values. A missing Legacy counter may intentionally keep an original filename; invalid Single Field / Composite Entry values stop independent ZIP preparation instead."
+msgstr "بررسی یا دانلود هرگز شمارهٔ شمارنده اختصاص نمی‌دهد. نبود شمارندهٔ Legacy ممکن است عمداً نام اصلی فایل را حفظ کند؛ اما مقدار نامعتبر ورودی در Single Field یا Composite آماده‌سازی ZIP مستقل را متوقف می‌کند."
+
+msgid "Choose a Single Field"
+msgstr "یک فیلد Single Field انتخاب کنید"
+
+msgid "Choose a form to edit"
+msgstr "انتخاب فرم برای ویرایش"
+
+msgid "Choose a form to see its effective download naming rule and edit an optional independent override."
+msgstr "برای مشاهدهٔ قانون نام‌گذاری مؤثر در دانلود و ویرایش قانون مستقلِ اختیاری، یک فرم انتخاب کنید."
+
+msgid "Closed ZIP unreadable"
+msgstr "ZIP بسته‌شده قابل خواندن نیست"
+
+msgid "Composite"
+msgstr "Composite (ترکیبی)"
+
+msgid "Composite field no longer exists or is ineligible"
+msgstr "فیلد Composite دیگر وجود ندارد یا واجد شرایط نیست"
+
+msgid "Composite field order is invalid"
+msgstr "ترتیب فیلدهای Composite نامعتبر است"
+
+msgid "Composite fields and order"
+msgstr "فیلدهای Composite و ترتیب آن‌ها"
+
+msgid "Composite fields need unique consecutive order numbers"
+msgstr "فیلدهای Composite باید شمارهٔ ترتیب یکتا و پیاپی داشته باشند"
+
+msgid "Composite order must start at 1 without gaps"
+msgstr "ترتیب Composite باید بدون فاصله از ۱ شروع شود"
+
+msgid "Composite separator"
+msgstr "جداکنندهٔ Composite"
+
+msgid "Concurrent NEW coverage confirmation rejected"
+msgstr "تأیید هم‌زمان پوشش NEW رد شد"
+
+msgid "Configuration needs attention before renamed downloads can be expected."
+msgstr "تا اصلاح پیکربندی، نباید انتظار دانلود با نام تغییر‌یافته داشت."
+
+msgid "Configure GF Bulk Rename for this form"
+msgstr "پیکربندی GF Bulk Rename برای این فرم"
+
+msgid "Configure which form and which field holds the unique counter number. The downloaded files will be renamed to d[COUNTER].extension"
+msgstr "فرم و فیلد دارای شمارهٔ شمارندهٔ یکتا را تعیین کنید. نام فایل‌های دانلودی به الگوی d[COUNTER].extension تبدیل می‌شود."
+
+msgid "Confirm receipt and advance NEW"
+msgstr "تأیید دریافت و پیش‌برد پوشش NEW"
+
+msgid "Consistent Entry selection snapshot unavailable"
+msgstr "امکان تهیهٔ تصویر سازگار از انتخاب ورودی‌ها نیست"
+
+msgid "Consistent NEW snapshot unavailable"
+msgstr "امکان تهیهٔ تصویر سازگار از وضعیت NEW وجود ندارد"
+
+msgid "Counter Field ID"
+msgstr "شناسهٔ فیلد شمارنده (Counter Field ID)"
+
+msgid "Counter Field ID %d does not exist on this form. Legacy cannot rename these files; correct the global setting."
+msgstr "فیلد شمارنده با شناسهٔ %d در این فرم وجود ندارد. Legacy نمی‌تواند نام این فایل‌ها را تغییر دهد؛ تنظیم عمومی را اصلاح کنید."
+
+msgid "Counting all active Entries and verifying source files…"
+msgstr "در حال شمارش همهٔ ورودی‌های فعال و راستی‌آزمایی فایل‌های مبدأ…"
+
+msgid "Deleted URL not present in source Entry"
+msgstr "نشانی حذف‌شده در ورودی مبدأ وجود ندارد"
+
+msgid "Download ALL %1$d active Entries / %2$d eligible files / %3$d Entries without files? Filters and NEW history are ignored; NEW acknowledgment does not change."
+msgstr "ZIP مربوط به ALL را برای %1$d ورودی فعال، %2$d فایل واجد شرایط و %3$d ورودی بدون فایل دانلود می‌کنید؟ فیلترها و سابقهٔ NEW نادیده گرفته می‌شوند؛ تأیید دریافت NEW تغییر نمی‌کند."
+
+msgid "Download ALL ZIP"
+msgstr "دانلود ZIP عملیات ALL"
+
+msgid "Download Flat ZIP with Rename"
+msgstr "دانلود ZIP تخت با تغییر نام"
+
+msgid "Download eligible files from %d explicitly checked Entries on this page? File count may differ."
+msgstr "فایل‌های واجد شرایط %d ورودی که در همین صفحه صریحاً انتخاب شده‌اند دانلود شوند؟ تعداد فایل‌ها ممکن است متفاوت باشد."
+
+msgid "Download eligible files from ALL %d Entries matching this form and its current filters/search, across every page? Individually checked rows do not limit this choice. Maximum 500 Entries per ZIP; the server rechecks the count before download."
+msgstr "فایل‌های واجد شرایط همهٔ %d ورودی مطابق جستجو و فیلترهای فعلی این فرم، در تمام صفحات دانلود شوند؟ ردیف‌های تیک‌خورده این انتخاب را محدود نمی‌کنند. در هر ZIP حداکثر ۵۰۰ ورودی مجاز است و سرور پیش از دانلود تعداد را دوباره بررسی می‌کند."
+
+msgid "Download has not completed in the browser"
+msgstr "دانلود در مرورگر کامل نشده است"
+
+msgid "Download verified ZIP"
+msgstr "دانلود ZIP راستی‌آزمایی‌شده"
+
+msgid "Downloaded ZIP SHA-256 mismatch"
+msgstr "مقدار SHA-256 فایل ZIP دریافت‌شده مطابقت ندارد"
+
+msgid "Downloaded ZIP identity differs from verified operation"
+msgstr "هویت ZIP دانلودشده با عملیات راستی‌آزمایی‌شده مطابقت ندارد"
+
+msgid "Duplicate ZIP name"
+msgstr "نام تکراری در ZIP"
+
+msgid "Duplicate acknowledgment COMMIT failed"
+msgstr "ثبت تراکنش تأیید دریافت تکراری ناموفق بود"
+
+msgid "Duplicate or invalid GFAPI Entry identity"
+msgstr "شناسهٔ ورودی GFAPI تکراری یا نامعتبر است"
+
+msgid "Duplicate planned names"
+msgstr "نام‌های برنامه‌ریزی‌شده تکراری‌اند"
+
+msgid "Effective Entry List filter criteria changed; reload the list"
+msgstr "معیارهای مؤثر فیلتر فهرست ورودی‌ها تغییر کرده‌اند؛ فهرست را بازخوانی کنید"
+
+msgid "Entry List authorization context changed or expired"
+msgstr "زمینهٔ مجوز فهرست ورودی‌ها تغییر کرده یا منقضی شده است"
+
+msgid "Entry selection incomplete or empty"
+msgstr "انتخاب ورودی‌ها ناقص یا خالی است"
+
+msgid "Entry selection snapshot commit failed"
+msgstr "ثبت تراکنش تصویر انتخاب ورودی‌ها ناموفق بود"
+
+msgid "Entry uploads changed before acknowledgment; retry NEW"
+msgstr "فایل‌های بارگذاری‌شده پیش از تأیید دریافت تغییر کردند؛ NEW را تکرار کنید"
+
+msgid "Entry uploads changed before atomic acknowledgment"
+msgstr "فایل‌های بارگذاری‌شدهٔ ورودی پیش از تأیید اتمی تغییر کردند"
+
+msgid "Exact NEW coverage exceeded safe storage budget"
+msgstr "پوشش دقیق NEW از سقف امن ذخیره‌سازی فراتر رفت"
+
+msgid "Explicit operator confirmation required"
+msgstr "تأیید صریح کاربر لازم است"
+
+msgid "File URL outside configured upload directories"
+msgstr "نشانی فایل خارج از پوشه‌های آپلود پیکربندی‌شده است"
+
+msgid "File downloads and naming"
+msgstr "دانلود فایل‌ها و نام‌گذاری"
+
+msgid "File naming settings"
+msgstr "تنظیمات نام‌گذاری فایل"
+
+msgid "File-free Entries require a separate explicit review"
+msgstr "ورودی‌های بدون فایل به بازبینی صریح و جداگانه نیاز دارند"
+
+msgid "Filenames combine these fields in order: %1$s. Separator: %2$s. Missing or unsafe values stop ZIP preparation."
+msgstr "نام فایل‌ها با ترکیب این فیلدها به ترتیب ساخته می‌شود: %1$s. جداکننده: %2$s. مقدار ناموجود یا ناامن آماده‌سازی ZIP را متوقف می‌کند."
+
+msgid "Filenames use %1$s (field %2$d). An empty or unsafe Entry value stops ZIP preparation; it does not silently fall back to the original name."
+msgstr "نام فایل از %1$s (فیلد %2$d) گرفته می‌شود. مقدار خالی یا ناامنِ ورودی آماده‌سازی ZIP را متوقف می‌کند و نام اصلی به‌طور پنهانی جایگزین نمی‌شود."
+
+msgid "Files changed since NEW selection; prepare a fresh operation"
+msgstr "فایل‌ها پس از انتخاب NEW تغییر کرده‌اند؛ عملیات تازه‌ای آماده کنید"
+
+msgid "First configure a Counter Field ID for Legacy downloads, or select a form below and save an independent Single Field / Composite rule. These are separate settings; saving one does not configure the other."
+msgstr "ابتدا برای دانلودهای Legacy شناسهٔ فیلد شمارنده را تنظیم کنید، یا فرمی را در پایین انتخاب و یک قانون مستقل Single Field یا Composite ذخیره کنید. این تنظیمات جدا هستند؛ ذخیرهٔ یکی دیگری را پیکربندی نمی‌کند."
+
+msgid "Flat ZIP download not available"
+msgstr "دانلود ZIP تخت در دسترس نیست"
+
+msgid "For Composite, check at least two eligible text/number fields and assign consecutive positions 1, 2, 3 … . Empty Entry values will block ZIP creation."
+msgstr "برای Composite دست‌کم دو فیلد متنی/عددی واجد شرایط را انتخاب و جایگاه‌های پیاپی ۱، ۲، ۳ و … تعیین کنید. مقدار خالی در ورودی، ساخت ZIP را متوقف می‌کند."
+
+msgid "Form has too many historical Entries for safe NEW enumeration"
+msgstr "تعداد ورودی‌های تاریخی فرم برای پیمایش امن NEW بیش از حد است"
+
+msgid "Form no longer exists"
+msgstr "فرم دیگر وجود ندارد"
+
+msgid "Form unavailable"
+msgstr "فرم در دسترس نیست"
+
+msgid "Form unavailable."
+msgstr "فرم در دسترس نیست."
+
+msgid "GF Bulk Rename"
+msgstr "GF Bulk Rename"
+
+msgid "GF Entry ID enumeration failed"
+msgstr "پیمایش شناسه‌های ورودی GF ناموفق بود"
+
+msgid "GF Entry identity storage unavailable"
+msgstr "ذخیره‌سازی شناسهٔ ورودی GF در دسترس نیست"
+
+msgid "GF upload metadata index inventory unavailable"
+msgstr "فهرست ایندکس‌های فرادادهٔ آپلود GF در دسترس نیست"
+
+msgid "GF upload metadata requires a leading Entry identity index"
+msgstr "فرادادهٔ آپلود GF به ایندکسی با شناسهٔ ورودی در ابتدای آن نیاز دارد"
+
+msgid "GF upload metadata table unavailable"
+msgstr "جدول فرادادهٔ فایل‌های آپلودی GF در دسترس نیست"
+
+msgid "GFAPI Entry enumeration unavailable"
+msgstr "امکان فهرست‌کردن ورودی‌ها از طریق GFAPI وجود ندارد"
+
+msgid "GFAPI and stored active Entry snapshot differ"
+msgstr "فهرست GFAPI با وضعیت ذخیره‌شدهٔ ورودی‌های فعال تطابق ندارد"
+
+msgid "Generated filename is too long"
+msgstr "نام فایل تولیدشده بیش از حد طولانی است"
+
+msgid "Global Legacy Counter Field ID. 0 keeps original names. Set the target form above (or All forms); independent Single Field/Composite overrides are configured separately below."
+msgstr "شناسهٔ عمومی فیلد شمارندهٔ Legacy. مقدار ۰ نام اصلی فایل‌ها را حفظ می‌کند. فرم هدف را در بالا تعیین کنید (یا همهٔ فرم‌ها را انتخاب کنید)؛ قوانین مستقل Single Field/Composite جداگانه در پایین پیکربندی می‌شوند."
+
+msgid "Gravity Forms Bulk Rename Counter requires \"Bulk Download for Gravity Forms\" plugin to be installed and active."
+msgstr "افزونهٔ Gravity Forms Bulk Rename Counter به نصب و فعال‌بودن افزونهٔ «Bulk Download for Gravity Forms» نیاز دارد."
+
+msgid "Gravity Forms Bulk Rename Counter requires Gravity Forms to be installed and active."
+msgstr "افزونهٔ Gravity Forms Bulk Rename Counter به نصب و فعال‌بودن Gravity Forms نیاز دارد."
+
+msgid "Gravity Forms Bulk Rename Settings"
+msgstr "تنظیمات Gravity Forms Bulk Rename"
+
+msgid "Gravity Forms deletion metadata cache unavailable"
+msgstr "حافظهٔ موقت فرادادهٔ حذف Gravity Forms در دسترس نیست"
+
+msgid "Gravity Forms transactional Entry storage unavailable"
+msgstr "ذخیره‌سازی تراکنشی ورودی‌های Gravity Forms در دسترس نیست"
+
+msgid "Headers sent during output buffer cleanup"
+msgstr "سرآیندها هنگام پاک‌سازی بافر خروجی ارسال شدند"
+
+msgid "I saved and checked the ZIP (or reviewed the zero-file Entries)"
+msgstr "من ZIP را ذخیره و بررسی کرده‌ام (یا ورودی‌های بدون فایل را بازبینی کرده‌ام)"
+
+msgid "Inconsistent deleted-file flag and URL list"
+msgstr "پرچم حذف فایل با فهرست نشانی‌های آن سازگار نیست"
+
+msgid "Independent ZIP: Composite"
+msgstr "ZIP مستقل: Composite (ترکیبی)"
+
+msgid "Independent ZIP: Single Field"
+msgstr "ZIP مستقل: Single Field (تک‌فیلدی)"
+
+msgid "Independent ZIP: explicit Legacy rule"
+msgstr "ZIP مستقل: قانون صریح Legacy"
+
+msgid "Independent ZIP: inherited Legacy defaults"
+msgstr "ZIP مستقل: تنظیمات پیش‌فرض Legacy به‌ارث‌رسیده"
+
+msgid "Initial batch; no automatic coverage update. "
+msgstr "بستهٔ اولیه است؛ پوشش به‌طور خودکار پیش نمی‌رود. "
+
+msgid "Installed GF Entry storage contract unavailable"
+msgstr "قرارداد ذخیره‌سازی ورودی GF نصب‌شده در دسترس نیست"
+
+msgid "Insufficient PHP execution-time budget for complete ALL"
+msgstr "زمان اجرای مجاز PHP برای تکمیل ALL کافی نیست"
+
+msgid "Insufficient PHP memory headroom for complete ALL; no ZIP generated"
+msgstr "حافظهٔ PHP برای تکمیل ALL کافی نیست؛ هیچ ZIP ساخته نشد"
+
+msgid "Insufficient temporary disk space for complete ALL ZIP"
+msgstr "فضای موقت دیسک برای ZIP کامل ALL کافی نیست"
+
+msgid "Invalid ALL form scope"
+msgstr "محدودهٔ فرم ALL نامعتبر است"
+
+msgid "Invalid ALL request nonce"
+msgstr "کد امنیتی درخواست ALL نامعتبر است"
+
+msgid "Invalid Entry List filter"
+msgstr "فیلتر فهرست ورودی‌ها نامعتبر است"
+
+msgid "Invalid Entry List scope"
+msgstr "محدودهٔ فهرست ورودی‌ها نامعتبر است"
+
+msgid "Invalid Entry identity"
+msgstr "شناسهٔ ورودی نامعتبر است"
+
+msgid "Invalid GF Entry identity for upload lock"
+msgstr "شناسهٔ ورودی GF برای قفل آپلود نامعتبر است"
+
+msgid "Invalid NEW operation identity"
+msgstr "شناسهٔ عملیات NEW نامعتبر است"
+
+msgid "Invalid download request"
+msgstr "درخواست دانلود نامعتبر است"
+
+msgid "Invalid file path"
+msgstr "مسیر فایل نامعتبر است"
+
+msgid "Invalid form"
+msgstr "فرم نامعتبر است"
+
+msgid "Invalid form rule submission"
+msgstr "ارسال قانون فرم نامعتبر است"
+
+msgid "Invalid or duplicate Entry selection"
+msgstr "انتخاب ورودی نامعتبر یا تکراری است"
+
+msgid "Invalid or forged Entry List scope"
+msgstr "محدودهٔ فهرست ورودی‌ها نامعتبر یا جعل‌شده است"
+
+msgid "Invalid or overlapping coverage ranges"
+msgstr "بازه‌های پوشش نامعتبر یا دارای هم‌پوشانی‌اند"
+
+msgid "Invalid pending-operation schema"
+msgstr "ساختار دادهٔ عملیات در انتظار نامعتبر است"
+
+msgid "Invalid request nonce"
+msgstr "کد امنیتی درخواست (nonce) نامعتبر است"
+
+msgid "Invalid saved Composite rule"
+msgstr "قانون ذخیره‌شدهٔ Composite نامعتبر است"
+
+msgid "Invalid saved naming rule"
+msgstr "قانون نام‌گذاری ذخیره‌شده نامعتبر است"
+
+msgid "Invalid saved per-form rules"
+msgstr "قوانین نام‌گذاری ذخیره‌شدهٔ فرم‌ها نامعتبرند"
+
+msgid "Invalid selection mode"
+msgstr "حالت انتخاب نامعتبر است"
+
+msgid "Invalid separator"
+msgstr "جداکننده نامعتبر است"
+
+msgid "Invalid stored Entry identity"
+msgstr "شناسهٔ ذخیره‌شدهٔ ورودی نامعتبر است"
+
+msgid "Invalid stored multi-file data"
+msgstr "دادهٔ ذخیره‌شدهٔ چندفایلی نامعتبر است"
+
+msgid "Invalid stored upload URL"
+msgstr "نشانی ذخیره‌شدهٔ آپلود نامعتبر است"
+
+msgid "Invalid stored upload reference"
+msgstr "ارجاع ذخیره‌شده به فایل آپلودی نامعتبر است"
+
+msgid "Legacy (existing counter configuration)"
+msgstr "Legacy (پیکربندی موجود شمارنده)"
+
+msgid "Legacy applies through the original Bulk Download action. Selected, All matching, NEW and ALL use the independent ZIP rule for their form; without an override they inherit the Legacy counter and form scope."
+msgstr "Legacy از عملیات دانلود گروهی اصلی استفاده می‌کند. Selected، All matching، NEW و ALL از قانون ZIP مستقلِ فرم استفاده می‌کنند؛ اگر قانون جداگانه‌ای نباشد، شمارنده و محدودهٔ فرم Legacy را به ارث می‌برند."
+
+msgid "Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients."
+msgstr "تنظیمات Legacy در بالا همچنان بر مسیر اصلی Bulk Download حاکم است. قوانین Single Field و Composite فقط بر «دانلود ZIP تخت با تغییر نام» اثر می‌گذارند. مقادیر موجود در نام فایل ممکن است اطلاعات شخصی را برای دریافت‌کنندگان ZIP آشکار کنند."
+
+msgid "Legacy targets form %d, not this form. Original filenames here are expected."
+msgstr "Legacy فرم %d را هدف گرفته است، نه این فرم؛ باقی‌ماندن نام اصلی فایل‌ها در اینجا طبیعی است."
+
+msgid "Legacy uses %1$s (field %2$d) and generates d[COUNTER].extension. Entries with an empty or zero counter retain their original filename."
+msgstr "Legacy از %1$s (فیلد %2$d) استفاده می‌کند و نام d[COUNTER].extension می‌سازد. ورودی‌هایی با شمارندهٔ خالی یا صفر، نام اصلی فایل را حفظ می‌کنند."
+
+msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."
+msgstr "Legacy از شناسهٔ عمومی فیلد شمارنده و محدودهٔ فرم هدفِ فعلی، بدون تغییر استفاده می‌کند. قوانین فرم‌های دیگر مستقل می‌مانند."
+
+msgid "Locked NEW coverage record unavailable"
+msgstr "سابقهٔ قفل‌شدهٔ پوشش NEW در دسترس نیست"
+
+msgid "Malformed deleted-file URL list"
+msgstr "فهرست نشانی‌های فایل‌های حذف‌شده نامعتبر است"
+
+msgid "Malformed or duplicate deleted-file URL"
+msgstr "نشانی فایل حذف‌شده نامعتبر یا تکراری است"
+
+msgid "Matching Entry count changed; reload the Entry List and retry"
+msgstr "تعداد ورودی‌های مطابق فیلتر تغییر کرده است؛ فهرست ورودی‌ها را بازخوانی و دوباره تلاش کنید"
+
+msgid "Missing or invalid signed native Entry List criteria"
+msgstr "معیارهای امضاشدهٔ فهرست ورودی‌ها وجود ندارند یا نامعتبرند"
+
+msgid "More than 500 Entries match. Narrow the current search or filters before downloading."
+msgstr "بیش از ۵۰۰ ورودی مطابق هستند. پیش از دانلود، جستجو یا فیلترهای فعلی را محدود کنید."
+
+msgid "NEW %1$s: %2$d Entries confirmed. Check NEW again for later Entries."
+msgstr "NEW %1$s: دریافت %2$d ورودی تأیید شد. برای ورودی‌های بعدی دوباره NEW را بررسی کنید."
+
+msgid "NEW ZIP cannot be opened"
+msgstr "فایل ZIP مربوط به NEW باز نمی‌شود"
+
+msgid "NEW ZIP headers unavailable"
+msgstr "ارسال سرآیندهای ZIP مربوط به NEW ممکن نیست"
+
+msgid "NEW ZIP size or response cannot be validated"
+msgstr "امکان اعتبارسنجی اندازه یا پاسخ ZIP مربوط به NEW نیست"
+
+msgid "NEW ZIP stream failed"
+msgstr "جریان ارسال ZIP مربوط به NEW ناموفق بود"
+
+msgid "NEW coverage changed in another tab; prepare again"
+msgstr "پوشش NEW در برگهٔ دیگری تغییر کرده است؛ دوباره آماده کنید"
+
+msgid "NEW coverage state missing or unreadable"
+msgstr "وضعیت پوشش NEW وجود ندارد یا قابل خواندن نیست"
+
+msgid "NEW download generation COMMIT failed"
+msgstr "ثبت تراکنش نسل دانلود NEW ناموفق بود"
+
+msgid "NEW download generation is no longer active"
+msgstr "نسل دانلود NEW دیگر فعال نیست"
+
+msgid "NEW exceeds 500 eligible Entries; no partial coverage will be committed"
+msgstr "NEW بیش از ۵۰۰ ورودی واجد شرایط دارد؛ هیچ پوشش ناقصی ثبت نمی‌شود"
+
+msgid "NEW failed: %s — coverage is unchanged unless receipt confirmation already succeeded."
+msgstr "عملیات NEW ناموفق بود: %s — پوشش تغییر نکرده است، مگر آنکه تأیید دریافت پیش‌تر موفق شده باشد."
+
+msgid "NEW history exceeds bounded storage"
+msgstr "سابقهٔ NEW از سقف امن ذخیره‌سازی فراتر رفت"
+
+msgid "NEW includes newly created active Entries not yet acknowledged. Checking does not advance coverage. After downloading, verify your local copy before confirming receipt; confirmation is a separate irreversible coverage action."
+msgstr "NEW ورودی‌های فعالِ تازه‌ساخته‌شده‌ای را در بر می‌گیرد که دریافت آن‌ها هنوز تأیید نشده است. بررسی، پوشش را جلو نمی‌برد. پس از دانلود، پیش از تأیید دریافت، نسخهٔ ذخیره‌شدهٔ محلی را بررسی کنید؛ تأیید دریافت عملی جداگانه و برگشت‌ناپذیر برای پیش‌برد پوشش است."
+
+msgid "NEW metadata range-lock isolation unavailable"
+msgstr "امکان قفل‌گذاری محدودهٔ فرادادهٔ NEW وجود ندارد"
+
+msgid "NEW operation changed before atomic confirmation"
+msgstr "عملیات NEW پیش از تأیید اتمی تغییر کرد"
+
+msgid "NEW operation expired or superseded by a newer generation"
+msgstr "عملیات NEW منقضی شده یا نسل جدیدتری جایگزین آن شده است"
+
+msgid "NEW operation or coverage changed; reload and retry"
+msgstr "عملیات یا پوشش NEW تغییر کرده است؛ صفحه را بازخوانی و دوباره تلاش کنید"
+
+msgid "NEW request did not return a valid response"
+msgstr "پاسخ درخواست NEW معتبر نبود"
+
+msgid "NEW request rejected"
+msgstr "درخواست NEW رد شد"
+
+msgid "NEW requires transactional Gravity Forms Entry and field storage"
+msgstr "NEW به ذخیره‌سازی تراکنشی ورودی و فیلدهای Gravity Forms نیاز دارد"
+
+msgid "NEW — newly created Entries"
+msgstr "NEW — ورودی‌های تازه‌ساخته‌شده"
+
+msgid "NEW: check for newly created Entries, download and inspect the verified ZIP, then explicitly acknowledge receipt. Browser verification does not prove the ZIP was retained locally. The first check establishes the initial batch; acknowledgment advances coverage."
+msgstr "NEW: ورودی‌های تازه‌ساخته‌شده را بررسی کنید، ZIP را دانلود و بازبینی کنید، سپس دریافت را صریحاً تأیید کنید. راستی‌آزمایی در مرورگر اثبات نمی‌کند ZIP روی دستگاه ذخیره شده است. نخستین بررسی بستهٔ اولیه را مشخص می‌کند؛ تأیید دریافت پوشش را جلو می‌برد."
+
+msgid "Naming field %1$d is empty or invalid for Entry %2$s"
+msgstr "فیلد نام‌گذاری %1$d برای ورودی %2$s خالی یا نامعتبر است"
+
+msgid "Naming field %1$d is missing or not scalar for Entry %2$s"
+msgstr "فیلد نام‌گذاری %1$d برای ورودی %2$s وجود ندارد یا مقدار آن ساده نیست"
+
+msgid "Naming fields produce a Windows reserved device filename"
+msgstr "فیلدهای نام‌گذاری، نام رزروشدهٔ دستگاه ویندوز تولید کرده‌اند"
+
+msgid "Naming fields produce an unsafe filename"
+msgstr "فیلدهای نام‌گذاری، نام فایل ناامن تولید کرده‌اند"
+
+msgid "Naming method"
+msgstr "روش نام‌گذاری"
+
+msgid "Naming rule not saved: %s"
+msgstr "قانون نام‌گذاری ذخیره نشد: %s"
+
+msgid "Native Entry List base filter shape unavailable"
+msgstr "ساختار فیلتر پایهٔ فهرست ورودی‌ها در دسترس نیست"
+
+msgid "Native Entry List capture exceeds safe size"
+msgstr "دادهٔ ثبت‌شدهٔ فهرست ورودی‌ها از اندازهٔ امن فراتر رفت"
+
+msgid "Native Entry List count unavailable"
+msgstr "تعداد ورودی‌های فهرست در دسترس نیست"
+
+msgid "Native Entry List effective filter boundary is unsupported"
+msgstr "مرز فیلتر مؤثر فهرست ورودی‌ها پشتیبانی نمی‌شود"
+
+msgid "Native Gravity Forms query resolver unavailable"
+msgstr "ابزار پردازش جستجوی بومی Gravity Forms در دسترس نیست"
+
+msgid "No Counter Field ID is configured. Original filenames are intentional for Legacy and inherited independent ZIP downloads."
+msgstr "شناسهٔ فیلد شمارنده تنظیم نشده است. حفظ نام اصلی فایل‌ها برای Legacy و ZIP مستقلِ به‌ارث‌برندهٔ تنظیمات، عمدی است."
+
+msgid "No Entries match the current form and filters."
+msgstr "هیچ ورودی‌ای با فرم و فیلترهای فعلی مطابقت ندارد."
+
+msgid "No ZIP exists for this batch; explicitly review the file-free Entries."
+msgstr "برای این بسته ZIP وجود ندارد؛ ورودی‌های بدون فایل را صریحاً بازبینی کنید."
+
+msgid "No ZIP exists for this scope."
+msgstr "برای این محدوده فایل ZIP وجود ندارد."
+
+msgid "No eligible files found"
+msgstr "فایل واجد شرایطی پیدا نشد"
+
+msgid "Non-unique or invalid Entry in selection"
+msgstr "ورودی در انتخاب نامعتبر یا تکراری است"
+
+msgid "Not authorized"
+msgstr "مجوز دسترسی ندارید"
+
+msgid "Open form rule"
+msgstr "بازکردن قانون فرم"
+
+msgid "Operation no longer available"
+msgstr "عملیات دیگر در دسترس نیست"
+
+msgid "Output buffer cleanup failed to make progress"
+msgstr "پاک‌سازی بافر خروجی پیشرفتی نداشت"
+
+msgid "POST required"
+msgstr "درخواست باید از نوع POST باشد"
+
+msgid "Pending NEW operation exceeds bounded storage"
+msgstr "اندازهٔ عملیات در انتظار NEW از سقف امن ذخیره‌سازی فراتر رفت"
+
+msgid "Pending NEW operation too large"
+msgstr "عملیات در انتظار NEW بیش از حد بزرگ است"
+
+msgid "Pending-operation COMMIT failed"
+msgstr "ثبت تراکنش (COMMIT) عملیات در انتظار ناموفق بود"
+
+msgid "Pending-operation generation transition did not persist"
+msgstr "تغییر نسل عملیات در انتظار ذخیره نشد"
+
+msgid "Per-form naming (independent flat ZIP only)"
+msgstr "نام‌گذاری به‌ازای هر فرم (فقط ZIP تخت مستقل)"
+
+msgid "Per-form rule needs repair"
+msgstr "قانون فرم نیازمند اصلاح است"
+
+msgid "Per-form rules need attention"
+msgstr "قوانین فرم‌ها نیازمند بررسی‌اند"
+
+msgid "Position"
+msgstr "جایگاه"
+
+msgid "Receiving and verifying the ZIP in this browser…"
+msgstr "در حال دریافت و راستی‌آزمایی ZIP در این مرورگر…"
+
+msgid "Referenced upload missing or unreadable"
+msgstr "فایل آپلودی مرجع وجود ندارد یا قابل خواندن نیست"
+
+msgid "Review naming settings for this form"
+msgstr "بازبینی تنظیمات نام‌گذاری این فرم"
+
+msgid "Save this form rule"
+msgstr "ذخیرهٔ قانون این فرم"
+
+msgid "Saved per-form rules cannot be read. Ask an administrator to inspect the configuration before downloading."
+msgstr "قوانین ذخیره‌شدهٔ فرم قابل خواندن نیستند. پیش از دانلود از مدیر بخواهید پیکربندی را بررسی کند."
+
+msgid "Select a specific Gravity Form or leave as \"All forms\"."
+msgstr "یک فرم مشخص از Gravity Forms انتخاب کنید یا گزینهٔ «همهٔ فرم‌ها» را نگه دارید."
+
+msgid "Select a valid Gravity Form"
+msgstr "یک فرم معتبر Gravity Forms انتخاب کنید"
+
+msgid "Select at least one Entry or choose all matching Entries."
+msgstr "دست‌کم یک ورودی را انتخاب کنید یا همهٔ ورودی‌های مطابق فیلتر را برگزینید."
+
+msgid "Select at least two Composite fields"
+msgstr "دست‌کم دو فیلد Composite انتخاب کنید"
+
+msgid "Select between 1 and 500 Entries"
+msgstr "بین ۱ تا ۵۰۰ ورودی انتخاب کنید"
+
+msgid "Selected Entry status changed before atomic acknowledgment"
+msgstr "وضعیت ورودی انتخاب‌شده پیش از تأیید اتمی تغییر کرد"
+
+msgid "Selected Entry status changed; retry NEW"
+msgstr "وضعیت ورودی انتخاب‌شده تغییر کرده است؛ NEW را دوباره بررسی کنید"
+
+msgid "Selected Single Field is no longer valid"
+msgstr "فیلد انتخاب‌شدهٔ Single Field دیگر معتبر نیست"
+
+msgid "Selected entry missing or belongs to a different form"
+msgstr "ورودی انتخاب‌شده وجود ندارد یا متعلق به فرم دیگری است"
+
+msgid "Selected form unavailable"
+msgstr "فرم انتخاب‌شده در دسترس نیست"
+
+msgid "Selected: choose rows on this page, then use “Download Flat ZIP with Rename” in Bulk Actions. It includes eligible uploads only from those rows."
+msgstr "Selected: ردیف‌ها را در همین صفحه انتخاب کنید و در «عملیات گروهی»، «دانلود ZIP تخت با تغییر نام» را بزنید. فقط فایل‌های واجد شرایط همان ردیف‌ها شامل می‌شوند."
+
+msgid "Selection exceeds 500 Entries; no partial ZIP was generated"
+msgstr "انتخاب بیش از ۵۰۰ ورودی دارد؛ ZIP ناقص ساخته نشد"
+
+msgid "Separator must be valid text without slashes or control characters (max 32 bytes)"
+msgstr "جداکننده باید متن مجاز، بدون اسلش یا نویسهٔ کنترلی باشد (حداکثر ۳۲ بایت)"
+
+msgid "Settings"
+msgstr "تنظیمات"
+
+msgid "Show Global Legacy field labels and IDs for %1$s (form ID %2$d)"
+msgstr "نمایش برچسب و شناسهٔ فیلدهای Global Legacy برای %1$s (شناسهٔ فرم %2$d)"
+
+msgid "Single Field"
+msgstr "Single Field (تک‌فیلدی)"
+
+msgid "Single Field source"
+msgstr "فیلد مبدأ Single Field"
+
+msgid "Snapshot commit failed"
+msgstr "ثبت تراکنش تصویر وضعیت ناموفق بود"
+
+msgid "Target Form"
+msgstr "فرم هدف"
+
+msgid "Temporary ZIP unavailable"
+msgstr "فایل ZIP موقت در دسترس نیست"
+
+msgid "The saved naming fields or order are no longer valid. Reopen and save this form rule before using independent ZIP downloads."
+msgstr "فیلدهای نام‌گذاری یا ترتیب ذخیره‌شده دیگر معتبر نیستند. پیش از استفاده از ZIP مستقل، قانون این فرم را دوباره باز کنید و ذخیره کنید."
+
+msgid "This operation has no files; confirm the zero-file review explicitly"
+msgstr "این عملیات فایل ندارد؛ بازبینی ورودی‌های بدون فایل را صریحاً تأیید کنید"
+
+msgid "This search/filter URL is not supported for a safe global download."
+msgstr "این نشانی جستجو/فیلتر برای دانلود سراسریِ ایمن پشتیبانی نمی‌شود."
+
+msgid "Transactional Gravity Forms storage unavailable"
+msgstr "ذخیره‌سازی تراکنشی Gravity Forms در دسترس نیست"
+
+msgid "Unable to lock GF upload rows and insertion gap"
+msgstr "قفل‌کردن ردیف‌های آپلود GF و فاصلهٔ درج ممکن نشد"
+
+msgid "Unable to lock selected GF Entry status"
+msgstr "قفل‌کردن وضعیت ورودی انتخاب‌شده ممکن نشد"
+
+msgid "Unchanged filenames here reflect the current configuration, not proof of a download failure. Individual missing Entry values can also leave Legacy names unchanged."
+msgstr "حفظ نام اصلی فایل‌ها در اینجا نتیجهٔ پیکربندی فعلی است و به‌تنهایی شکست دانلود را ثابت نمی‌کند. مقدار ناموجود در ورودی‌های جداگانه نیز ممکن است نام Legacy را تغییر ندهد."
+
+msgid "Unique output name unavailable"
+msgstr "نام خروجی یکتا در دسترس نیست"
+
+msgid "Unknown naming method"
+msgstr "روش نام‌گذاری ناشناخته است"
+
+msgid "Unrecognized Gravity Forms Entry storage identifier"
+msgstr "شناسهٔ ذخیره‌سازی ورودی Gravity Forms ناشناخته است"
+
+msgid "Unrecognized deleted-file flag"
+msgstr "پرچم حذف فایل ناشناخته است"
+
+msgid "Unsafe output filename"
+msgstr "نام فایل خروجی ناامن است"
+
+msgid "Unsupported NEW coverage state"
+msgstr "ساختار وضعیت پوشش NEW پشتیبانی نمی‌شود"
+
+msgid "Unsupported file URL"
+msgstr "نشانی فایل پشتیبانی نمی‌شود"
+
+msgid "Untitled field"
+msgstr "فیلد بدون عنوان"
+
+msgid "Use existing Legacy defaults (remove override)"
+msgstr "استفاده از پیش‌فرض‌های موجود Legacy (حذف قانون مستقل)"
+
+msgid "Validated ZIP response unavailable"
+msgstr "پاسخ ZIP راستی‌آزمایی‌شده در دسترس نیست"
+
+msgid "Warning: This field ID does not exist in the selected form."
+msgstr "هشدار: این شناسهٔ فیلد در فرم انتخاب‌شده وجود ندارد."
+
+msgid "Which download should I use?"
+msgstr "از کدام روش دانلود استفاده کنم؟"
+
+msgid "You do not have sufficient permissions to access this page."
+msgstr "مجوز کافی برای دسترسی به این صفحه ندارید."
+
+msgid "ZIP addFile failed"
+msgstr "افزودن فایل با addFile به ZIP ناموفق بود"
+
+msgid "ZIP finalization failed"
+msgstr "نهایی‌کردن ZIP ناموفق بود"
+
+msgid "ZIP member count mismatch"
+msgstr "تعداد اعضای ZIP مطابقت ندارد"
+
+msgid "ZIP member path mismatch"
+msgstr "مسیر اعضای ZIP مطابقت ندارد"
+
+msgid "ZIP member source integrity mismatch"
+msgstr "محتوای عضو ZIP با فایل مبدأ مطابقت ندارد"
+
+msgid "ZIP member unreadable"
+msgstr "عضو ZIP قابل خواندن نیست"
+
+msgid "ZIP open failed"
+msgstr "بازکردن ZIP ناموفق بود"
+
+msgid "ZIP received and SHA-256 matched in this browser. Check your locally saved ZIP%1$s, then explicitly confirm receipt."
+msgstr "ZIP در این مرورگر دریافت شد و SHA-256 مطابقت داشت. ZIP ذخیره‌شده روی دستگاه خود را بررسی کنید%1$s و سپس دریافت را صریحاً تأیید کنید."
+
+msgid "ZIP response read failed"
+msgstr "خواندن پاسخ ZIP ناموفق بود"
+
+msgid "ZIP streaming read failed"
+msgstr "خواندن جریان عضو ZIP ناموفق بود"
+
+msgid "ZIP support unavailable"
+msgstr "پشتیبانی ZIP در دسترس نیست"
+
+msgid "— Apply to all forms —"
+msgstr "— اعمال برای همهٔ فرم‌ها —"
+
+msgid "— Choose a text or number field —"
+msgstr "— انتخاب یک فیلد متنی یا عددی —"
+
+msgid "— Select a form —"
+msgstr "— انتخاب فرم —"
