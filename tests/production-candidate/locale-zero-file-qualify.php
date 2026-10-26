@@ -7,7 +7,11 @@ if (!defined('ABSPATH') || !class_exists('GFAPI')) {
     throw new RuntimeException('Authentic WordPress/Gravity Forms required');
 }
 $domain = 'gf-bulk-rename-counter';
-$original_locale = determine_locale();
+$expected_locale = getenv('BRC_EXPECT_LOCALE');
+if (!in_array($expected_locale, ['en_US', 'fa_IR'], true) || get_locale() !== $expected_locale) {
+    throw new RuntimeException('Actual WordPress locale differs from expected: ' .
+        (string)$expected_locale . ' vs ' . get_locale());
+}
 $form_id = GFAPI::add_form([
     'title' => 'GFBRC synthetic zero-file i18n',
     'fields' => [['id' => 1, 'type' => 'fileupload', 'label' => 'Upload']],
@@ -22,15 +26,6 @@ if (is_wp_error($entry_id) || (int)$entry_id < 1) {
 }
 $plan_method = new ReflectionMethod(\GFBulkRename\New_Download::class, 'plan');
 $all_plan_method = new ReflectionMethod(\GFBulkRename\All_Download::class, 'plan');
-$checked = [];
-foreach (['en_US', 'fa_IR'] as $locale) {
-    if (!switch_to_locale($locale)) {
-        throw new RuntimeException('Required WordPress locale not available: ' . $locale);
-    }
-    try {
-        if (determine_locale() !== $locale && get_locale() !== $locale) {
-            throw new RuntimeException('WordPress locale switch was not effective');
-        }
         try {
             \GFBulkRename\Flat_Zip_Download::plan((int)$form_id, [(int)$entry_id]);
             throw new RuntimeException('Flat ZIP accepted a zero-file selection');
@@ -66,10 +61,4 @@ foreach (['en_US', 'fa_IR'] as $locale) {
                 throw $error;
             }
         }
-        $checked[] = $locale;
-    } finally {
-        restore_previous_locale();
-    }
-}
-echo 'PASS_REAL_WP_GF_NEW_ALL_ZERO_FILE_EXCEPTION_TYPE_AND_BOTH_LOCALES ' .
-    implode(',', $checked) . PHP_EOL;
+echo 'PASS_REAL_WP_GF_NEW_ALL_ZERO_FILE_TYPED_ERROR_LOCALE_' . $expected_locale . PHP_EOL;
