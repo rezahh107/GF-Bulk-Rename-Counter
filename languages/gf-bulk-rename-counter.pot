@@ -324,7 +324,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-msgid "Show field labels and IDs for this form"
+msgid "Show Global Legacy field labels and IDs for %1$s (form ID %2$d)"
 msgstr ""
 
 msgid "Single Field"
