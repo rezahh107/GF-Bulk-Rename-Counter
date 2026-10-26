@@ -81,6 +81,9 @@ const {chromium}=require('playwright-core');
     if(locale==='fa_IR'&&(!configInitial.text.ack_recorded.includes('سابقهٔ پوشش NEW')||
        !configInitial.text.ack_duplicate.includes('دوباره تغییر نکرد')))
       throw Error('Installed Persian gettext messages missing');
+    if(locale==='en_US'&&(!configInitial.text.ack_recorded.includes('Entry count: %d')||
+       !configInitial.text.ack_duplicate.includes('Entry count: %d')))
+      throw Error('Singular-safe English ACK count wording missing');
     const initial=await prepare();
     if(initial.files<1||initial.entries<1)throw Error('No real initial GF file workload');
     await receive();

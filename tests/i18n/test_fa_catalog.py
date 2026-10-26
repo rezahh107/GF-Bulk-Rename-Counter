@@ -86,9 +86,9 @@ class PersianCatalog(unittest.TestCase):
         translated = pairs(PO)
         self.assertEqual(translated["Field %d"], "فیلد %d")
         expected = {
-            "NEW: Receipt/review confirmation for %d Entries recorded in NEW coverage. Check NEW again for later Entries.": (
+            "NEW: Receipt/review confirmation recorded in NEW coverage (Entry count: %d). Check NEW again for later Entries.": (
                 "سابقهٔ پوشش NEW ثبت شد", "برای ورودی‌های بعدی"),
-            "NEW: Receipt/review for %d Entries was already confirmed. NEW coverage was not advanced again.": (
+            "NEW: Receipt/review for this batch was already confirmed (Entry count: %d). NEW coverage was not advanced again.": (
                 "پیش‌تر ثبت شده است", "دوباره تغییر نکرد"),
         }
         for english, required in expected.items():

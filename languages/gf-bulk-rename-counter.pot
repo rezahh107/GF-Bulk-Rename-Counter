@@ -581,10 +581,10 @@ msgstr ""
 msgid "NEW — newly created Entries"
 msgstr ""
 
-msgid "NEW: Receipt/review confirmation for %d Entries recorded in NEW coverage. Check NEW again for later Entries."
+msgid "NEW: Receipt/review confirmation recorded in NEW coverage (Entry count: %d). Check NEW again for later Entries."
 msgstr ""
 
-msgid "NEW: Receipt/review for %d Entries was already confirmed. NEW coverage was not advanced again."
+msgid "NEW: Receipt/review for this batch was already confirmed (Entry count: %d). NEW coverage was not advanced again."
 msgstr ""
 
 msgid "NEW: check for newly created Entries, download and inspect the verified ZIP, then explicitly acknowledge receipt. Browser verification does not prove the ZIP was retained locally. The first check establishes the initial batch; acknowledgment advances coverage."

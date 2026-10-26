@@ -724,8 +724,8 @@ final class New_Download {
                 'zip_ok' => __('ZIP received and SHA-256 matched in this browser. Check your locally saved ZIP%1$s, then explicitly confirm receipt.', 'gf-bulk-rename-counter'),
                 'zero_review' => __(' and review %d Entries with no files', 'gf-bulk-rename-counter'),
                 'ack_needed' => __('Check your saved ZIP or explicitly review the zero-file Entries first.', 'gf-bulk-rename-counter'),
-                'ack_recorded' => __('NEW: Receipt/review confirmation for %d Entries recorded in NEW coverage. Check NEW again for later Entries.', 'gf-bulk-rename-counter'),
-                'ack_duplicate' => __('NEW: Receipt/review for %d Entries was already confirmed. NEW coverage was not advanced again.', 'gf-bulk-rename-counter'),
+                'ack_recorded' => __('NEW: Receipt/review confirmation recorded in NEW coverage (Entry count: %d). Check NEW again for later Entries.', 'gf-bulk-rename-counter'),
+                'ack_duplicate' => __('NEW: Receipt/review for this batch was already confirmed (Entry count: %d). NEW coverage was not advanced again.', 'gf-bulk-rename-counter'),
             ],
         ]);
         echo '<script id="gfbrc-new-config" type="application/json">' .
