@@ -1,5 +1,7 @@
 # GFBRC — PPDM applicability and reported v2.2.0 installation (2026-10-25)
 
+**Current release update — 2026-10-26:** The historical v2.2.0 Owner-install report below remains valid as originally scoped. Since then, [PR #36](https://github.com/rezahh107/GF-Bulk-Rename-Counter/pull/36) delivered WordPress-native admin UX, download guidance and `fa_IR` localization; those changes are included in the Owner-authorized [public v2.3.0 release](https://github.com/rezahh107/GF-Bulk-Rename-Counter/releases/tag/v2.3.0), verified by [publication and consumer-install workflow](https://github.com/rezahh107/GF-Bulk-Rename-Counter/actions/runs/40390880447) (SUCCESS). This closes the **distribution** gap for this specific improvement, **not** the Owner production-site workflow acceptance, accessibility across screen readers, host-scale/remote-storage behavior, or historical ALL race-test stability. Earlier source observations remain dated v2.2.0 history, not present-day release-status claims.
+
 **Status:** documented engineering/UX applicability review and Owner-reported installation evidence; **not** a product redesign specification, automatic acceptance gate, new locked destination, or authorization to change the published v2.2.0 assets.
 
 ## 1. Evidence, truth boundary, destination
