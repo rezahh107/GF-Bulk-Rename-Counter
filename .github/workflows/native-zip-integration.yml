@@ -440,7 +440,7 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" language core install fa_IR --activate
           test "$(php "$BRC_WP_CLI" --path="$BRC_WP_PATH" option get WPLANG)" = "fa_IR"
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval 'if (get_locale() !== "fa_IR" || !is_rtl()) { throw new RuntimeException("Real fa_IR WordPress locale unavailable"); } echo "PASS_REAL_WP_FA_IR_LOCALE_ACTIVE\\n";'
-          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval 'if (__("File downloads and naming", "gf-bulk-rename-counter") !== "دانلود فایل‌ها و نام‌گذاری" || __("Confirm receipt and advance NEW", "gf-bulk-rename-counter") !== "تأیید دریافت و پیش‌برد پوشش NEW") { throw new RuntimeException("Installed GFBRC fa_IR MO not loaded"); } echo "PASS_REAL_FA_IR_INSTALLED_ZIP_GETTEXT_LOADED\n";'
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval 'if (__("File downloads and naming", "gf-bulk-rename-counter") !== "دانلود فایل‌ها و نام‌گذاری" || __("Confirm receipt and advance NEW", "gf-bulk-rename-counter") !== "تأیید دریافت و ثبت در سابقهٔ NEW") { throw new RuntimeException("Installed GFBRC fa_IR MO not loaded"); } echo "PASS_REAL_FA_IR_INSTALLED_ZIP_GETTEXT_LOADED\n";'
           php -l tests/production-candidate/locale-zero-file-qualify.php
           BRC_EXPECT_LOCALE=fa_IR php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/locale-zero-file-qualify.php
           BRC_UI_PHASE=fa_ir BRC_CHROME="$chrome" node tests/production-candidate/admin-guidance-browser.cjs
