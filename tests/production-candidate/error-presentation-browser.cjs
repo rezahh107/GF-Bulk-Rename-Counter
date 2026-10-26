@@ -73,8 +73,16 @@ const {chromium}=require('playwright-core');
         throw Error('Unknown interception');
       };
       await page.route('**/admin-ajax.php',handler);
-      try {await mutator();}
-      finally {await page.unroute('**/admin-ajax.php',handler);}
+      try {
+        await mutator();
+        // The previous ACK failure can leave the same status text on screen.
+        // Keep the route alive until the genuine server request finishes and
+        // the browser has handled the withheld response.
+        if(kind==='commit-lost') {
+          await page.waitForFunction(()=>
+            !document.getElementById('gfbrc-new-ack').disabled, null, {timeout:20000});
+        }
+      } finally {await page.unroute('**/admin-ajax.php',handler);}
       if(matched!==1)throw Error('Expected one actual request '+action+'/'+kind+' got '+matched);
       return payload;
     }
