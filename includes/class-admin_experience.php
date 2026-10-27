@@ -124,8 +124,8 @@ final class Admin_Experience {
     }
 
     public static function settings_intro(): void {
-        echo '<p>' . esc_html__('First configure a Counter Field ID for Legacy downloads, or select a form below and save an independent Single Field / Composite rule. These are separate settings; saving one does not configure the other.', 'gf-bulk-rename-counter') . '</p>';
-        echo '<p>' . esc_html__('Legacy applies through the original Bulk Download action. Selected, All matching, NEW and ALL use the independent ZIP rule for their form; without an override they inherit the Legacy counter and form scope.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<p>' . esc_html__('First choose how downloaded files should be named. The upper section sets the original Legacy counter. The lower section sets an optional rule for one form and independent ZIP downloads. Save each section separately.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<p>' . esc_html__('Legacy uses the original Bulk Download action. Selected, All matching, NEW and ALL use the form-specific independent ZIP rule when one is saved; otherwise they follow the existing Legacy defaults. These settings never assign counter values or rename stored uploads.', 'gf-bulk-rename-counter') . '</p>';
     }
 
     /** Compact, read-only orientation adjacent to the native GF Entry actions. */
@@ -140,6 +140,7 @@ final class Admin_Experience {
         echo '<section id="gfbrc-entries-guide" aria-labelledby="gfbrc-guide-title">';
         echo '<h2 id="gfbrc-guide-title">' .
             esc_html__('File downloads and naming', 'gf-bulk-rename-counter') . '</h2>';
+        echo '<p class="gfbrc-lead">' . esc_html__('First choose which Entries to include in the download. The naming rule is a separate setting: it changes filenames in the ZIP, not the original uploads.', 'gf-bulk-rename-counter') . '</p>';
         self::render_status($form);
         echo '<details><summary>' . esc_html__('Which download should I use?', 'gf-bulk-rename-counter') .
             '</summary><ul>';
@@ -156,21 +157,47 @@ final class Admin_Experience {
         echo '</section>';
         ?>
 <style id="gfbrc-guide-style">
-#gfbrc-entries-guide {box-sizing:border-box;max-width:840px;min-width:0;margin:12px 0;padding:12px 16px;border:1px solid #c3c4c7;background:#fff}
-#gfbrc-entries-guide h2 {margin:0 0 8px;font-size:1.1em}
-#gfbrc-entries-guide summary {cursor:pointer;padding:5px 0}
-#gfbrc-entries-guide ul {list-style:disc;padding-inline-start:1.6em;margin:8px 0}
-#gfbrc-entries-guide li {margin-bottom:6px}
-#gfbrc-entries-guide .notice {margin:8px 0}
-@media(max-width:782px){#gfbrc-entries-guide{max-width:100%;padding:10px}}
+/* GFBRC-only workspace; never restyle native GF tablenav or other wp-admin forms. */
+#gfbrc-entries-workspace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch;width:100%;max-width:980px;margin:16px 0}
+#gfbrc-entries-workspace>section{box-sizing:border-box;min-width:0;margin:0;padding:18px 20px;border:1px solid #c3c4c7;background:#fff;overflow-wrap:anywhere}
+#gfbrc-entries-guide{box-sizing:border-box;grid-column:1/-1;max-width:980px;margin:12px 0;padding:18px 20px;border:1px solid #c3c4c7;background:#fff;overflow-wrap:anywhere}
+#gfbrc-entries-workspace #gfbrc-entries-guide{margin:0}
+#gfbrc-entries-guide h2,#gfbrc-entries-workspace .gfbrc-panel-header h2{font-size:16px;font-weight:600;line-height:1.45;margin:0}
+#gfbrc-entries-guide h2{margin-bottom:8px}
+#gfbrc-entries-guide .gfbrc-lead{margin:0 0 14px;line-height:1.75}
+#gfbrc-entries-guide summary{cursor:pointer;padding:8px 0}
+#gfbrc-entries-guide ul{list-style:disc;padding-inline-start:1.6em;margin:8px 0}
+#gfbrc-entries-guide li{margin-bottom:8px;line-height:1.7}
+#gfbrc-entries-guide .notice{margin:12px 0;padding:8px 12px}
+#gfbrc-entries-guide .notice p{margin:4px 0;line-height:1.75}
+#gfbrc-entries-workspace .gfbrc-panel-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 12px}
+#gfbrc-entries-workspace .gfbrc-panel-header .button{flex-shrink:0;margin:0;min-height:32px;white-space:normal;line-height:1.4}
+#gfbrc-entries-workspace .description{color:#50575e;line-height:1.75;margin:10px 0}
+#gfbrc-entries-workspace .gfbrc-panel-result{margin:12px 0 0;line-height:1.7;min-height:0}
+#gfbrc-entries-workspace .gfbrc-panel-result:empty{display:none}
+#gfbrc-entries-workspace .gfbrc-panel-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0 0}
+#gfbrc-entries-workspace .gfbrc-panel-actions:has(>[hidden]:only-child){display:none}
+#gfbrc-entries-workspace #gfbrc-new-review-wrap{display:inline-flex;align-items:flex-start;gap:8px;line-height:1.7}
+#gfbrc-entries-workspace #gfbrc-new-review-wrap input{margin:4px 0 0;flex-shrink:0}
+#gfbrc-entries-workspace #gfbrc-new-guide{border-inline-start:3px solid #dba617;padding:10px 12px;background:#fff8e5;color:#3c434a}
+#gfbrc-entries-workspace .button:focus-visible,#gfbrc-entries-guide summary:focus-visible{outline:2px solid #2271b1;outline-offset:2px}
+#gfbrc-entries-workspace [hidden]{display:none!important}
+#gfbrc-entries-guide bdi,#gfbrc-entries-workspace bdi{unicode-bidi:isolate}
+@media(max-width:782px){#gfbrc-entries-workspace{grid-template-columns:minmax(0,1fr);gap:12px;max-width:100%}#gfbrc-entries-workspace>section,#gfbrc-entries-guide{padding:14px 12px;max-width:100%}}
 </style>
 <script id="gfbrc-guide-position">
 (function () {
   var guide = document.getElementById('gfbrc-entries-guide');
   var apply = document.getElementById('doaction');
-  if (guide && apply) {
-    (apply.closest('.tablenav') || apply).insertAdjacentElement('afterend', guide);
+  if (!guide || !apply) return;
+  var anchor = apply.closest('.tablenav') || apply;
+  var workspace = document.getElementById('gfbrc-entries-workspace');
+  if (!workspace) {
+    workspace = document.createElement('div');
+    workspace.id = 'gfbrc-entries-workspace';
+    anchor.insertAdjacentElement('afterend', workspace);
   }
+  workspace.insertAdjacentElement('afterbegin', guide);
 })();
 </script>
         <?php
