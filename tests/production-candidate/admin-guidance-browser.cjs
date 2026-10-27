@@ -84,7 +84,20 @@ const {chromium}=require('playwright-core');
       if(!captureEnabled())return;
       const dir=path.join(process.env.BRC_LAB_DIR,'reports','ui-polish');
       fs.mkdirSync(dir,{recursive:true});
-      await page.screenshot({path:path.join(dir,name+'.png'),fullPage:true});
+      const dest=path.join(dir,name+'.png');
+      const target=name.includes('entries')?'#gfbrc-entries-workspace':'.gfbrc-settings';
+      try {
+        // Native GF Entry List can be extremely tall; never request a full-page
+        // Chromium screenshot, which can exhaust the CI renderer surface.
+        await page.locator(target).screenshot({path:dest,timeout:12000,animations:'disabled'});
+      } catch (error) {
+        try {
+          await page.screenshot({path:dest,fullPage:false,timeout:12000,animations:'disabled'});
+        } catch (fallback) {
+          console.warn('GFBRC_VISUAL_CAPTURE_NOT_PROVEN',name,
+            String(error.message).slice(0,160),String(fallback.message).slice(0,160));
+        }
+      }
     }
     if(phase==='initial'){
       await open(base+'/wp-admin/plugins.php');
