@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: GF Bulk Rename Counter 2.2.0\n"
+"Project-Id-Version: GF Bulk Rename Counter 2.3.0\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -200,9 +200,6 @@ msgstr ""
 msgid "Configure GF Bulk Rename for this form"
 msgstr ""
 
-msgid "Configure which form and which field holds the unique counter number. The downloaded files will be renamed to d[COUNTER].extension"
-msgstr ""
-
 msgid "Confirm receipt and advance NEW"
 msgstr ""
 
@@ -266,6 +263,9 @@ msgstr ""
 msgid "Effective Entry List filter criteria changed; reload the list"
 msgstr ""
 
+msgid "Enter the ID of the field that already contains each Entry counter. For example, counter 1234 produces d1234.jpg in Legacy downloads. This plugin never creates counter values."
+msgstr ""
+
 msgid "Entry List authorization context changed or expired"
 msgstr ""
 
@@ -282,6 +282,12 @@ msgid "Entry uploads changed before atomic acknowledgment"
 msgstr ""
 
 msgid "Exact NEW coverage exceeded safe storage budget"
+msgstr ""
+
+msgid "Example: ClassA followed by 1234 with separator - produces ClassA-1234.jpg. These are examples, not a preview of saved Entry values."
+msgstr ""
+
+msgid "Example: a File number field containing 1234 produces 1234.jpg in an independent ZIP. A missing or unsafe value stops ZIP preparation."
 msgstr ""
 
 msgid "Explicit operator confirmation required"
@@ -311,7 +317,10 @@ msgstr ""
 msgid "Files changed since NEW selection; prepare a fresh operation"
 msgstr ""
 
-msgid "First configure a Counter Field ID for Legacy downloads, or select a form below and save an independent Single Field / Composite rule. These are separate settings; saving one does not configure the other."
+msgid "First choose how downloaded files should be named. The upper section sets the original Legacy counter. The lower section sets an optional rule for one form and independent ZIP downloads. Save each section separately."
+msgstr ""
+
+msgid "First choose which Entries to include in the download. The naming rule is a separate setting: it changes filenames in the ZIP, not the original uploads."
 msgstr ""
 
 msgid "Flat ZIP download not available"
@@ -491,9 +500,6 @@ msgstr ""
 msgid "Legacy (existing counter configuration)"
 msgstr ""
 
-msgid "Legacy applies through the original Bulk Download action. Selected, All matching, NEW and ALL use the independent ZIP rule for their form; without an override they inherit the Legacy counter and form scope."
-msgstr ""
-
 msgid "Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients."
 msgstr ""
 
@@ -501,6 +507,9 @@ msgid "Legacy targets form %d, not this form. Original filenames here are expect
 msgstr ""
 
 msgid "Legacy uses %1$s (field %2$d) and generates d[COUNTER].extension. Entries with an empty or zero counter retain their original filename."
+msgstr ""
+
+msgid "Legacy uses the original Bulk Download action. Selected, All matching, NEW and ALL use the form-specific independent ZIP rule when one is saved; otherwise they follow the existing Legacy defaults. These settings never assign counter values or rename stored uploads."
 msgstr ""
 
 msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."

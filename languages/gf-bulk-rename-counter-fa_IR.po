@@ -203,9 +203,6 @@ msgstr "تا اصلاح پیکربندی، نباید انتظار دانلود 
 msgid "Configure GF Bulk Rename for this form"
 msgstr "پیکربندی GF Bulk Rename برای این فرم"
 
-msgid "Configure which form and which field holds the unique counter number. The downloaded files will be renamed to d[COUNTER].extension"
-msgstr "فرم و فیلد دارای شمارهٔ شمارندهٔ یکتا را تعیین کنید. نام فایل‌های دانلودی به الگوی d[COUNTER].extension تبدیل می‌شود."
-
 msgid "Confirm receipt and advance NEW"
 msgstr "تأیید دریافت و ثبت در سابقهٔ NEW"
 
@@ -269,6 +266,9 @@ msgstr "نام‌های برنامه‌ریزی‌شده تکراری‌اند"
 msgid "Effective Entry List filter criteria changed; reload the list"
 msgstr "معیارهای مؤثر فیلتر فهرست ورودی‌ها تغییر کرده‌اند؛ فهرست را بازخوانی کنید"
 
+msgid "Enter the ID of the field that already contains each Entry counter. For example, counter 1234 produces d1234.jpg in Legacy downloads. This plugin never creates counter values."
+msgstr "شناسهٔ فیلدی را وارد کنید که از قبل شمارهٔ شمارندهٔ هر ورودی در آن ثبت می‌شود. مثال: شمارندهٔ 1234 در روش Legacy نام d1234.jpg را می‌سازد. افزونه خودش شمارهٔ شمارنده تولید نمی‌کند."
+
 msgid "Entry List authorization context changed or expired"
 msgstr "زمینهٔ مجوز فهرست ورودی‌ها تغییر کرده یا منقضی شده است"
 
@@ -286,6 +286,12 @@ msgstr "فایل‌های بارگذاری‌شدهٔ ورودی پیش از ت�
 
 msgid "Exact NEW coverage exceeded safe storage budget"
 msgstr "سابقهٔ دقیق پوشش NEW از سقف امن ذخیره‌سازی فراتر رفت"
+
+msgid "Example: ClassA followed by 1234 with separator - produces ClassA-1234.jpg. These are examples, not a preview of saved Entry values."
+msgstr "مثال: ترکیب ClassA و 1234 با جداکنندهٔ - نام ClassA-1234.jpg را می‌سازد. این فقط مثال آموزشی است، نه پیش‌نمایش مقادیر واقعی ورودی‌های ذخیره‌شده."
+
+msgid "Example: a File number field containing 1234 produces 1234.jpg in an independent ZIP. A missing or unsafe value stops ZIP preparation."
+msgstr "مثال: اگر فیلد «شماره فایل» مقدار 1234 داشته باشد، در ZIP مستقل نام 1234.jpg ساخته می‌شود. مقدار ناموجود یا ناامن، آماده‌سازی ZIP را متوقف می‌کند."
 
 msgid "Explicit operator confirmation required"
 msgstr "تأیید صریح کاربر لازم است"
@@ -314,8 +320,11 @@ msgstr "نام فایل از %1$s (فیلد %2$d) گرفته می‌شود. مق
 msgid "Files changed since NEW selection; prepare a fresh operation"
 msgstr "فایل‌ها پس از انتخاب NEW تغییر کرده‌اند؛ عملیات تازه‌ای آماده کنید"
 
-msgid "First configure a Counter Field ID for Legacy downloads, or select a form below and save an independent Single Field / Composite rule. These are separate settings; saving one does not configure the other."
-msgstr "ابتدا برای دانلودهای Legacy شناسهٔ فیلد شمارنده را تنظیم کنید، یا فرمی را در پایین انتخاب و یک قانون مستقل Single Field یا Composite ذخیره کنید. این تنظیمات جدا هستند؛ ذخیرهٔ یکی دیگری را پیکربندی نمی‌کند."
+msgid "First choose how downloaded files should be named. The upper section sets the original Legacy counter. The lower section sets an optional rule for one form and independent ZIP downloads. Save each section separately."
+msgstr "ابتدا مشخص کنید فایل‌های دانلودی چگونه نام‌گذاری شوند. بخش بالا شمارندهٔ روش اصلی Legacy را تنظیم می‌کند. در بخش پایین می‌توانید برای یک فرم، قانون مستقل دانلود ZIP تعیین کنید. تنظیمات هر بخش را جداگانه ذخیره کنید."
+
+msgid "First choose which Entries to include in the download. The naming rule is a separate setting: it changes filenames in the ZIP, not the original uploads."
+msgstr "ابتدا مشخص کنید فایل‌های کدام ورودی‌ها دانلود شوند. روش نام‌گذاری جداگانه تنظیم می‌شود و فقط نام فایل داخل ZIP را تغییر می‌دهد، نه فایل آپلودشدهٔ اصلی."
 
 msgid "Flat ZIP download not available"
 msgstr "دانلود ZIP بدون پوشه‌بندی در دسترس نیست"
@@ -494,9 +503,6 @@ msgstr "ارجاع ذخیره‌شده به فایل آپلودی نامعتبر
 msgid "Legacy (existing counter configuration)"
 msgstr "Legacy (پیکربندی موجود شمارنده)"
 
-msgid "Legacy applies through the original Bulk Download action. Selected, All matching, NEW and ALL use the independent ZIP rule for their form; without an override they inherit the Legacy counter and form scope."
-msgstr "Legacy از عملیات دانلود گروهی اصلی استفاده می‌کند. Selected، All matching، NEW و ALL از قانون ZIP مستقلِ فرم استفاده می‌کنند؛ اگر قانون جداگانه‌ای نباشد، شمارنده و محدودهٔ فرم Legacy را به ارث می‌برند."
-
 msgid "Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients."
 msgstr "تنظیمات Legacy در بالا همچنان بر مسیر اصلی Bulk Download حاکم است. قوانین Single Field و Composite فقط بر «دانلود ZIP بدون پوشه‌بندی با تغییر نام» اثر می‌گذارند. مقادیر موجود در نام فایل ممکن است اطلاعات شخصی را برای دریافت‌کنندگان ZIP آشکار کنند."
 
@@ -505,6 +511,9 @@ msgstr "Legacy فرم %d را هدف گرفته است، نه این فرم؛ ب
 
 msgid "Legacy uses %1$s (field %2$d) and generates d[COUNTER].extension. Entries with an empty or zero counter retain their original filename."
 msgstr "Legacy از %1$s (فیلد %2$d) استفاده می‌کند و نام d[COUNTER].extension می‌سازد. ورودی‌هایی با شمارندهٔ خالی یا صفر، نام اصلی فایل را حفظ می‌کنند."
+
+msgid "Legacy uses the original Bulk Download action. Selected, All matching, NEW and ALL use the form-specific independent ZIP rule when one is saved; otherwise they follow the existing Legacy defaults. These settings never assign counter values or rename stored uploads."
+msgstr "Legacy از همان دانلود گروهی اصلی استفاده می‌کند. Selected، All matching، NEW و ALL اگر قانون مستقلی برای فرم ذخیره شده باشد از آن استفاده می‌کنند؛ وگرنه از تنظیمات موجود Legacy پیروی می‌کنند. این تنظیمات نه شمارهٔ شمارنده می‌سازند و نه نام فایل‌های آپلودشدهٔ اصلی را تغییر می‌دهند."
 
 msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."
 msgstr "Legacy از شناسهٔ عمومی فیلد شمارنده و محدودهٔ فرم هدفِ فعلی، بدون تغییر استفاده می‌کند. قوانین فرم‌های دیگر مستقل می‌مانند."

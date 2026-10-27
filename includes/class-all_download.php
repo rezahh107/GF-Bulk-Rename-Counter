@@ -299,8 +299,7 @@ final class All_Download {
         ?>
 <style id="gfbrc-all-visibility">
 #gfbrc-all-panel [hidden] { display: none !important; }
-#gfbrc-all-panel .button {margin:4px;max-width:100%;white-space:normal}
-#gfbrc-all-panel .description {margin:8px 0}
+/* Layout is shared with NEW and the Entries guide in gfbrc-guide-style. */
 </style>
 <script id="gfbrc-all-workflow">
 (function () {
@@ -311,12 +310,13 @@ final class All_Download {
   var cfg = JSON.parse(source.textContent);
   var panel = document.createElement('section');
   panel.id = 'gfbrc-all-panel';
-  panel.style.cssText = 'display:block;box-sizing:border-box;margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
-  panel.innerHTML = '<strong id="gfbrc-all-title"></strong> ' +
-    '<button type="button" class="button" id="gfbrc-all-prepare"></button> ' +
+  // The shared plugin-scoped stylesheet owns card dimensions and spacing.
+  panel.setAttribute('aria-labelledby', 'gfbrc-all-title');
+  panel.innerHTML = '<div class="gfbrc-panel-header"><h2 id="gfbrc-all-title"></h2>' +
+    '<button type="button" class="button" id="gfbrc-all-prepare"></button></div>' +
     '<p class="description" id="gfbrc-all-guide"></p>' +
-    '<div><span id="gfbrc-all-result" role="status" aria-live="polite"></span></div>' +
-    '<div><button type="button" class="button button-primary" id="gfbrc-all-download" hidden></button></div>';
+    '<p class="gfbrc-panel-result" id="gfbrc-all-result" role="status" aria-live="polite"></p>' +
+    '<div class="gfbrc-panel-actions"><button type="button" class="button button-primary" id="gfbrc-all-download" hidden></button></div>';
   panel.querySelector('#gfbrc-all-title').textContent = cfg.text.title;
   panel.querySelector('#gfbrc-all-prepare').textContent = cfg.text.check;
   panel.querySelector('#gfbrc-all-guide').textContent = cfg.text.guide;
@@ -327,7 +327,14 @@ final class All_Download {
       return String(args[index ? Number(index) - 1 : next++]);
     });
   }
-  (apply.closest('.tablenav') || apply).insertAdjacentElement('afterend', panel);
+  var workspace = document.getElementById('gfbrc-entries-workspace');
+  if (!workspace) {
+    workspace = document.createElement('div');
+    workspace.id = 'gfbrc-entries-workspace';
+    (apply.closest('.tablenav') || apply).insertAdjacentElement('afterend', workspace);
+  }
+  // ALL precedes NEW in RTL reading order; both remain after native controls.
+  workspace.insertAdjacentElement('afterbegin', panel);
   var prepare = panel.querySelector('#gfbrc-all-prepare');
   var download = panel.querySelector('#gfbrc-all-download');
   var status = panel.querySelector('#gfbrc-all-result');

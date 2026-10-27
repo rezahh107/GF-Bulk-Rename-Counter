@@ -735,9 +735,7 @@ final class New_Download {
         ?>
 <style id="gfbrc-new-visibility">
 #gfbrc-new-panel [hidden] { display: none !important; }
-#gfbrc-new-panel .button {margin:4px;max-width:100%;white-space:normal}
-#gfbrc-new-panel .description {margin:8px 0}
-#gfbrc-new-panel > div {display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+/* Layout is shared with ALL and the Entries guide in gfbrc-guide-style. */
 </style>
 <script id="gfbrc-new-workflow">
 (function () {
@@ -751,14 +749,15 @@ final class New_Download {
   cfg.url = new URL('admin-ajax.php', window.location.href).href;
   var panel = document.createElement('section');
   panel.id = 'gfbrc-new-panel';
-  panel.style.cssText = 'display:block;box-sizing:border-box;margin:12px 0;padding:12px;border:1px solid #c3c4c7;background:#fff;max-width:540px';
-  panel.innerHTML = '<strong id="gfbrc-new-title"></strong> ' +
-    '<button type="button" class="button" id="gfbrc-new-prepare"></button> ' +
+  // The shared plugin-scoped stylesheet owns card dimensions and spacing.
+  panel.setAttribute('aria-labelledby', 'gfbrc-new-title');
+  panel.innerHTML = '<div class="gfbrc-panel-header"><h2 id="gfbrc-new-title"></h2>' +
+    '<button type="button" class="button" id="gfbrc-new-prepare"></button></div>' +
     '<p class="description" id="gfbrc-new-guide"></p>' +
-    '<div><span id="gfbrc-new-result" role="status" aria-live="polite"></span></div>' +
-    '<div><button type="button" class="button button-primary" id="gfbrc-new-download" hidden></button> ' +
+    '<p class="gfbrc-panel-result" id="gfbrc-new-result" role="status" aria-live="polite"></p>' +
+    '<div class="gfbrc-panel-actions"><button type="button" class="button button-primary" id="gfbrc-new-download" hidden></button>' +
     '<label id="gfbrc-new-review-wrap" hidden><input type="checkbox" id="gfbrc-new-review"> ' +
-    '<span id="gfbrc-new-review-text"></span></label> ' +
+    '<span id="gfbrc-new-review-text"></span></label>' +
     '<button type="button" class="button" id="gfbrc-new-ack" hidden></button></div>';
   panel.querySelector('#gfbrc-new-title').textContent = cfg.text.title;
   panel.querySelector('#gfbrc-new-prepare').textContent = cfg.text.check;
@@ -777,7 +776,13 @@ final class New_Download {
   // Keep NEW in normal document flow AFTER the complete toolbar so neither
   // native row links nor the toolbar overlap download/receipt controls.
   var toolbar = apply.closest('.tablenav');
-  (toolbar || apply).insertAdjacentElement('afterend', panel);
+  var workspace = document.getElementById('gfbrc-entries-workspace');
+  if (!workspace) {
+    workspace = document.createElement('div');
+    workspace.id = 'gfbrc-entries-workspace';
+    (toolbar || apply).insertAdjacentElement('afterend', workspace);
+  }
+  workspace.appendChild(panel);
   var prepare = panel.querySelector('#gfbrc-new-prepare'),
       download = panel.querySelector('#gfbrc-new-download'),
       ack = panel.querySelector('#gfbrc-new-ack'),
