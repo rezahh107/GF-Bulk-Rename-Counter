@@ -322,6 +322,25 @@ const {chromium}=require('playwright-core');
          !(await page.locator('.gfbrc-navigation-hint').innerText()).includes('چیزی ذخیره نمی‌کند'))
         throw Error('First-time Settings journey or load-vs-save clarity missing');
       console.log('PASS_REAL_FA_IR_SETTINGS_ENTRIES_NEW_ACK_ALL_MIXED_BIDI');
+      if(!Number.isInteger(data.stress_form_id)||data.stress_form_id<1)
+        throw Error('Genuine many-field Gravity Form fixture missing');
+      await open(settings(data.stress_form_id));
+      await page.locator('#gfbrc-method').selectOption('composite');
+      if(await page.locator('.gfbrc-composite-row').count()!==14)
+        throw Error('Authentic Composite long-field choices missing');
+      for(const width of [320,375,390,412,768,1024,1440]){
+        await page.setViewportSize({width,height:900});
+        const geometry=await page.locator('.gfbrc-settings-per-form').evaluate(el=>{
+          const card=el.getBoundingClientRect();
+          const rows=[...el.querySelectorAll('.gfbrc-composite-row')];
+          return {left:card.left,right:card.right,viewport:innerWidth,
+            rows:rows.length,overflow:rows.filter(row=>row.scrollWidth>row.clientWidth+3).length};
+        });
+        if(geometry.left< -5||geometry.right>width+5||geometry.overflow)
+          throw Error('Genuine long-label Composite UI clipped '+width+': '+JSON.stringify(geometry));
+        if(width===375||width===1440)await capture('fa-settings-many-composite-'+width);
+      }
+      console.log('PASS_REAL_GF_FA_IR_FOURTEEN_LONG_COMPOSITE_FIELDS_RESPONSIVE');
       console.log('PASS_REAL_FA_IR_POLISH_RESPONSIVE_AND_METHOD_VISIBILITY');
     } else {
       await state(data.b.form_id,'ready');
