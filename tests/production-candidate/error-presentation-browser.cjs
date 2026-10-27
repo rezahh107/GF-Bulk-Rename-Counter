@@ -29,7 +29,7 @@ const {chromium}=require('playwright-core');
   const browser=await chromium.launch({executablePath:process.env.BRC_CHROME,headless:true,
     args:['--no-sandbox','--disable-dev-shm-usage']});
   try {
-    const ctx=await browser.newContext({acceptDownloads:true});
+    const ctx=await browser.newContext({acceptDownloads:true,viewport:{width:375,height:800}});
     await ctx.addCookies(cookies);
     const page=await ctx.newPage();
     async function open(){
