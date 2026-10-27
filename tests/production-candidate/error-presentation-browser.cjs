@@ -43,6 +43,16 @@ const {chromium}=require('playwright-core');
     const cfg=async(name)=>page.locator('#gfbrc-'+name+'-config')
       .evaluate(el=>JSON.parse(el.textContent));
     const txt=async(name)=>page.locator('#gfbrc-'+name+'-result').innerText();
+    async function captureError(name){
+      if(locale!=='fa_IR')return;
+      const dir=path.join(lab,'reports','ui-polish');
+      fs.mkdirSync(dir,{recursive:true});
+      try{
+        await page.locator('#gfbrc-'+name+'-panel').screenshot({
+          path:path.join(dir,'fa-'+name+'-error-375.png'),animations:'disabled',timeout:12000
+        });
+      }catch(error){console.warn('GFBRC_VISUAL_CAPTURE_NOT_PROVEN',name,String(error.message).slice(0,200));}
+    }
     async function equals(name,expected){
       await page.locator('#gfbrc-'+name+'-result').filter({hasText:expected}).waitFor({timeout:12000});
       const actual=await txt(name);
@@ -123,6 +133,7 @@ const {chromium}=require('playwright-core');
     if(nerr?.success!==false||typeof nerr.data?.message!=='string')throw Error('Actual NEW server error missing');
     await equals('new',ncfg.text.failure.replace('%s',nerr.data.message));
     checkNoState(start,'NEW valid server error');
+    await captureError('new');
     console.log('PASS_REAL_'+locale+'_NEW_VALID_SERVER_ERROR',JSON.stringify(await txt('new')));
     const arun=async()=>{await page.locator('#gfbrc-all-prepare').click();};
     await intercept('gfbrc_all_prepare','abort',async()=>{
@@ -142,6 +153,7 @@ const {chromium}=require('playwright-core');
     if(aerr?.success!==false||typeof aerr.data?.message!=='string')throw Error('Actual ALL server error missing');
     await equals('all',acfg.text.failed.replace('%s',aerr.data.message));
     checkNoState(start,'ALL errors');
+    await captureError('all');
     console.log('PASS_REAL_'+locale+'_ALL_NETWORK_MALFORMED_AND_VALID_SERVER_ERROR',
       JSON.stringify({network:acfg.text.unexpected,server:await txt('all')}));
     // Prepare authentic batch; bad network on download must NOT manufacture ZIP/ACK.
