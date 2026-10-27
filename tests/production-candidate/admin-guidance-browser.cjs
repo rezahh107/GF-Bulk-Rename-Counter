@@ -34,7 +34,9 @@ const {chromium}=require('playwright-core');
       const placement=await box.evaluate(el=>{
         const apply=document.getElementById('doaction');
         const anchor=apply&&(apply.closest('.tablenav')||apply);
-        return {present:!!anchor,adjacent:!!anchor&&anchor.nextElementSibling===el,
+        const workspace=document.getElementById('gfbrc-entries-workspace');
+        return {present:!!anchor,adjacent:!!anchor&&!!workspace&&
+            anchor.nextElementSibling===workspace&&workspace.firstElementChild===el,
           visible:el.getClientRects().length>0};
       });
       if(placement.present&&!placement.adjacent)
@@ -54,6 +56,35 @@ const {chromium}=require('playwright-core');
       }
       const adminLink=box.locator('a[href*="gf-bulk-rename-settings"]');
       if(await adminLink.count()!==1)throw Error('Admin Entries correction link missing');
+    }
+    async function polishGeometry(url,width) {
+      await page.setViewportSize({width,height:900});
+      await open(url);
+      const state=await page.evaluate(()=>{
+        const ids=['gfbrc-entries-guide','gfbrc-new-panel','gfbrc-all-panel'];
+        return ids.map(id=>{
+          const el=document.getElementById(id);
+          if(!el)return {id,missing:true};
+          const r=el.getBoundingClientRect(),h=el.querySelector('.gfbrc-panel-header');
+          return {id,left:r.left,right:r.right,top:r.top,bottom:r.bottom,
+            width:r.width,heading:h?!!h.querySelector('h2'):true,
+            direction:getComputedStyle(el).direction};
+        });
+      });
+      if(state.some(x=>x.missing||x.left< -5||x.right>width+5||x.width<=0))
+        throw Error('GFBRC responsive geometry overflow '+width+' '+JSON.stringify(state));
+      if(state.slice(1).some(x=>!x.heading))
+        throw Error('NEW/ALL heading semantics missing');
+      if(width>=1024&&Math.abs(state[1].top-state[2].top)>4)
+        throw Error('NEW/ALL top edges diverge: '+JSON.stringify(state));
+      return state;
+    }
+    function captureEnabled(){return !!process.env.BRC_LAB_DIR;}
+    async function capture(name){
+      if(!captureEnabled())return;
+      const dir=path.join(process.env.BRC_LAB_DIR,'reports','ui-polish');
+      fs.mkdirSync(dir,{recursive:true});
+      await page.screenshot({path:path.join(dir,name+'.png'),fullPage:true});
     }
     if(phase==='initial'){
       await open(base+'/wp-admin/plugins.php');
@@ -140,6 +171,8 @@ const {chromium}=require('playwright-core');
       if(await opPage.locator('#gf_bulk_rename_counter_field_id').count())
         throw Error('Operator can edit protected settings');
       await operator.close();
+      await polishGeometry(entries(data.a.form_id),375);
+      await polishGeometry(entries(data.a.form_id),1440);
       console.log('PASS_BROWSER_UI_INITIAL_LEGACY_CONFIG_OPERATOR_NAV');
     } else if(phase==='fa_ir'){
       await open(entries(data.a.form_id));
@@ -171,6 +204,10 @@ const {chromium}=require('playwright-core');
       if(!await page.locator('#gfbrc-new-prepare').evaluate(el=>document.activeElement===el))
         throw Error('fa_IR NEW control not keyboard focusable');
       console.log('PASS_REAL_FA_IR_WORDPRESS_RTL_NARROW_GUIDE_AND_KEYBOARD');
+      for(const width of [320,375,390,412,768,1024,1440]){
+        await polishGeometry(entries(data.a.form_id),width);
+        if(width===375||width===1440)await capture('fa-entries-'+width);
+      }
       // Actual installed gettext output, not simulated RTL or a POT-only fallback.
       const heading=await page.locator('#gfbrc-guide-title').innerText();
       if(heading!=='دانلود فایل‌ها و نام‌گذاری')
@@ -212,7 +249,34 @@ const {chromium}=require('playwright-core');
       const bdi=await page.locator('details bdi[dir="ltr"]').first().textContent();
       if(!bdi.includes('ID:')||!/[0-9]/.test(bdi))
         throw Error('Mixed RTL / technical field ID isolation missing: '+bdi);
+      const naming=page.locator('#gfbrc-method');
+      const original=await naming.inputValue();
+      await naming.selectOption('single');
+      if(!await page.locator('[data-gfbrc-for="single"]').first().isVisible() ||
+        await page.locator('[data-gfbrc-for="composite"]').first().isVisible())
+        throw Error('Single method UI visibility invalid');
+      await naming.selectOption('composite');
+      if(!await page.locator('[data-gfbrc-for="composite"]').first().isVisible() ||
+        await page.locator('[data-gfbrc-for="single"]').first().isVisible())
+        throw Error('Composite method UI visibility invalid');
+      if(await page.locator('#gfbrc-single').isDisabled()||
+         await page.locator('#gfbrc-separator').isDisabled())
+        throw Error('Method presentation disabled Settings API controls');
+      for(const width of [320,375,390,412,768,1024,1440]){
+        await page.setViewportSize({width,height:900});
+        const a=await page.locator('.gfbrc-settings-card').evaluateAll(nodes=>
+          nodes.map(x=>{const r=x.getBoundingClientRect();
+            return {left:r.left,right:r.right,width:r.width,viewport:innerWidth};}));
+        if(a.some(x=>x.left< -5||x.right>x.viewport+5))
+          throw Error('Settings cards clipped at '+width+': '+JSON.stringify(a));
+        if(width===375||width===1440)await capture('fa-settings-composite-'+width);
+      }
+      await naming.selectOption(original);
+      await open(settings(data.a.form_id));
+      if(await page.locator('#gfbrc-method').inputValue()!==original)
+        throw Error('Switching methods without saving persisted changes');
       console.log('PASS_REAL_FA_IR_SETTINGS_ENTRIES_NEW_ACK_ALL_MIXED_BIDI');
+      console.log('PASS_REAL_FA_IR_POLISH_RESPONSIVE_AND_METHOD_VISIBILITY');
     } else {
       await state(data.b.form_id,'ready');
       if(!(await page.locator('#gfbrc-entries-guide').innerText()).includes('Single Field'))
