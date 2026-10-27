@@ -707,6 +707,7 @@ final class New_Download {
             'text' => [
                 'title' => __('NEW — newly created Entries', 'gf-bulk-rename-counter'),
                 'check' => __('Check NEW', 'gf-bulk-rename-counter'),
+                'intro' => __('Find Entries not yet covered by a confirmed receipt. The first batch may include existing Entries.', 'gf-bulk-rename-counter'),
                 'download' => __('Download verified ZIP', 'gf-bulk-rename-counter'),
                 'ack' => __('Confirm receipt and advance NEW', 'gf-bulk-rename-counter'),
                 'review' => __('I saved and checked the ZIP (or reviewed the zero-file Entries)', 'gf-bulk-rename-counter'),
@@ -753,6 +754,7 @@ final class New_Download {
   panel.setAttribute('aria-labelledby', 'gfbrc-new-title');
   panel.innerHTML = '<div class="gfbrc-panel-header"><h2 id="gfbrc-new-title"></h2>' +
     '<button type="button" class="button" id="gfbrc-new-prepare"></button></div>' +
+    '<p class="gfbrc-panel-intro" id="gfbrc-new-intro"></p>' +
     '<p class="description" id="gfbrc-new-guide"></p>' +
     '<p class="gfbrc-panel-result" id="gfbrc-new-result" role="status" aria-live="polite"></p>' +
     '<div class="gfbrc-panel-actions"><button type="button" class="button button-primary" id="gfbrc-new-download" hidden></button>' +
@@ -761,6 +763,8 @@ final class New_Download {
     '<button type="button" class="button" id="gfbrc-new-ack" hidden></button></div>';
   panel.querySelector('#gfbrc-new-title').textContent = cfg.text.title;
   panel.querySelector('#gfbrc-new-prepare').textContent = cfg.text.check;
+  panel.querySelector('#gfbrc-new-intro').textContent = cfg.text.intro;
+  // The complete Owner-approved irreversible receipt warning stays visible.
   panel.querySelector('#gfbrc-new-guide').textContent = cfg.text.guide;
   panel.querySelector('#gfbrc-new-download').textContent = cfg.text.download;
   panel.querySelector('#gfbrc-new-review-text').textContent = cfg.text.review;
