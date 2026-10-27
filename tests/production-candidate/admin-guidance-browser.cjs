@@ -225,6 +225,9 @@ const {chromium}=require('playwright-core');
       const heading=await page.locator('#gfbrc-guide-title').innerText();
       if(heading!=='دانلود فایل‌ها و نام‌گذاری')
         throw Error('Installed fa_IR Entries heading missing: '+heading);
+      // Viewport navigation reloads the page and closes native <details>.
+      // Open it again before asserting text hidden by the collapsed state.
+      await guide.locator('summary').click();
       const guideText=await guide.innerText();
       if(!guideText.includes('از کدام روش دانلود استفاده کنم؟')||
          !guideText.includes('ورودی‌های فعال'))
