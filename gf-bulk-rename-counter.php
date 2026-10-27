@@ -3,7 +3,7 @@
  * Plugin Name:     Gravity Forms Bulk Rename Counter
  * Plugin URI:      https://github.com/rezahh107/GF-Bulk-Rename-Counter
  * Description:     Preserves legacy counter filenames and adds an independent verified flat ZIP download with per-form naming rules.
- * Version:         2.3.0
+ * Version:         2.3.1
  * Author:          Reza Hashemi Hosseini
  * Text Domain:     gf-bulk-rename-counter
  * Domain Path:     /languages
@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Define constants
-define( 'GFBULKRENAME_VERSION', '2.3.0' );
+define( 'GFBULKRENAME_VERSION', '2.3.1' );
 define( 'GFBULKRENAME_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'GFBULKRENAME_INCLUDES_DIR', GFBULKRENAME_PLUGIN_DIR . 'includes/' );
 
