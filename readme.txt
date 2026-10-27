@@ -41,7 +41,10 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 == Changelog ==
 
 = 2.3.1 =
-* Release candidate; see reviewed GitHub changes for details.
+* Improve the WordPress Settings interface with clearer section hierarchy, tighter label/control alignment and responsive Single Field / Composite configuration.
+* Align the Gravity Forms Entries guide and independent NEW / ALL cards with consistent headings, action placement, spacing and RTL/mobile layout.
+* Add short English and Persian filename examples to explain Legacy counter, Single Field and ordered Composite naming to first-time operators.
+* Preserve existing settings persistence, host Bulk Download, Selected / All matching, NEW with separate irreversible receipt acknowledgment, ALL, ZIP integrity and original uploaded files / Entries.
 
 = 2.3.0 =
 * Improve WordPress-native administration with direct Settings and Gravity Forms navigation, clear effective per-form naming status, and guidance for inherited Legacy defaults versus Single Field / Composite rules.
