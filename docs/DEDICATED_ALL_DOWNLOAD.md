@@ -1,5 +1,6 @@
-# Dedicated ALL — whole-form flat ZIP (source candidate; not public v2.1.1)
+# Dedicated ALL — published whole-form flat ZIP
 
+**Current public status — 2026-10-27:** Independent ALL was first published in v2.2.0 and remains included in [latest public v2.3.1](https://github.com/rezahh107/GF-Bulk-Rename-Counter/releases/tag/v2.3.1), whose [publisher workflow](https://github.com/rezahh107/GF-Bulk-Rename-Counter/actions/runs/40482295693) reverified the ZIP and activated it in fresh authentic WordPress. ALL stays separate from NEW and never advances NEW history. F-01/F-02 integrity repairs passed their bounded authentic CI scenarios; these do not guarantee all real-host, remote-storage or historical race conditions. Older candidate/source-only descriptions below are dated history, not today's distribution state.
 ## Operator workflow
 
 On Forms → Entries, open the target Gravity Form. The independent **ALL — Download all eligible files** panel appears alongside NEW and the native bulk actions.
