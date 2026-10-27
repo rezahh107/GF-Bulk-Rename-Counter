@@ -606,6 +606,7 @@ jobs:
             /tmp/brc-lab/reports/qf-meta-lock-results.json
             /tmp/brc-lab/reports/qf-status-ack-cutoff.json
             /tmp/brc-lab/reports/package-identities.txt
+            /tmp/brc-lab/reports/ui-polish/*.png
 
       - name: Summarize qualification evidence
         if: always()
