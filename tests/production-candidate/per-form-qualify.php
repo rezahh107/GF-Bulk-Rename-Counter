@@ -187,10 +187,37 @@ foreach ($source_before as $path => $sha) {
 foreach ($entry_before as $id => $entry) {
     if (GFAPI::get_entry((int)$id) !== $entry) { throw new RuntimeException('GF Entry mutated by rule test'); }
 }
+// Presentation-only stress fixture: a genuine GF form with many eligible
+// fields and long labels. No saved rules or Entry data are created for it.
+$ui_stress_fields = [];
+for ($index = 1; $index <= 14; $index++) {
+    $ui_stress_fields[] = [
+        'id' => $index,
+        'type' => $index % 2 === 0 ? 'number' : 'text',
+        'label' => 'GFBRC visual long label for composite field ' . $index .
+            ' — یک عنوان طولانی برای بررسی شکست خط و مجاورت کادر انتخاب و ترتیب',
+    ];
+}
+$ui_stress_form = GFAPI::add_form([
+    'title' => 'GFBRC UI Composite many fields',
+    'fields' => $ui_stress_fields,
+    'button' => ['type' => 'text', 'text' => 'Submit'],
+]);
+if (is_wp_error($ui_stress_form) || (int)$ui_stress_form < 1) {
+    throw new RuntimeException('Cannot create genuine UI stress form');
+}
+$ui_stress_saved = GFAPI::get_form((int)$ui_stress_form);
+if (!is_array($ui_stress_saved) ||
+    count(Rules::eligible_fields($ui_stress_saved)) !== 14) {
+    throw new RuntimeException('Genuine GF Composite stress fields not persisted');
+}
+echo 'PASS_REAL_GF_UI_STRESS_FOURTEEN_LONG_FIELDS' . PHP_EOL;
+
 file_put_contents($root . '/per-form.json', wp_json_encode([
     'a' => ['form_id' => (int)$a['form_id'], 'entry_ids' => $a['entry_ids']],
     'b' => ['form_id' => (int)$b['form_id'], 'entry_ids' => $bids],
     'c' => ['form_id' => (int)$c['form_id'], 'entry_ids' => $cids],
+    'stress_form_id' => (int)$ui_stress_form,
     'invalid_id' => $invalid_id, 'entries_before' => $entry_before,
     'source_before' => $source_before,
     'expected_sources' => $expected_source_plans,
