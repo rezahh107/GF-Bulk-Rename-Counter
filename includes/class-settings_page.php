@@ -70,7 +70,10 @@ class Settings_Page {
     }
 
     public static function section_callback(): void {
-        echo '<p>' . esc_html__( 'Enter the ID of the field that already contains each Entry counter. For example, counter 1234 produces d1234.jpg in Legacy downloads. This plugin never creates counter values.', 'gf-bulk-rename-counter' ) . '</p>';
+        echo '<p>' . esc_html__('Use the original Bulk Download action? Choose the form and the field that already contains its counter.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<p class="gfbrc-example">' . esc_html__('Example, not an Entry preview: counter 1234 produces', 'gf-bulk-rename-counter') .
+            ' <code><bdi dir="ltr">d1234.jpg</bdi></code>. ' .
+            esc_html__('Missing or zero Legacy counters can keep the original filenames. This plugin does not create counters.', 'gf-bulk-rename-counter') . '</p>';
     }
 
     public static function form_id_field(): void {
@@ -140,7 +143,7 @@ class Settings_Page {
                 <?php
                 settings_fields( self::OPTION_GROUP );
                 do_settings_sections( 'gf-bulk-rename-settings' );
-                submit_button();
+                submit_button(__('Save Legacy settings', 'gf-bulk-rename-counter'));
                 ?>
             </form>
             </section>
@@ -151,8 +154,8 @@ class Settings_Page {
     }
     /** A second native Settings API form edits only the selected Gravity Form. */
     private static function render_per_form_rules(): void {
-        echo '<section class="gfbrc-settings-card gfbrc-settings-per-form" aria-labelledby="gfbrc-per-form-heading"><h2 id="gfbrc-per-form-heading">' . esc_html__('Per-form naming (independent flat ZIP only)', 'gf-bulk-rename-counter') . '</h2>';
-        echo '<p>' . esc_html__('Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<section class="gfbrc-settings-card gfbrc-settings-per-form" aria-labelledby="gfbrc-per-form-heading"><h2 id="gfbrc-per-form-heading">' . esc_html__('Name files in independent ZIP downloads (one form at a time)', 'gf-bulk-rename-counter') . '</h2>';
+        echo '<p>' . esc_html__('Selected, All matching, NEW and ALL use a saved rule for their form; without one, they inherit the existing Legacy defaults.', 'gf-bulk-rename-counter') . '</p>';
         $forms = class_exists('GFAPI') ? \GFAPI::get_forms() : [];
         if (!is_array($forms)) { $forms = []; }
         $selected = isset($_GET['gfbrc_form']) ? absint($_GET['gfbrc_form']) : 0;
@@ -166,8 +169,10 @@ class Settings_Page {
                 esc_html($f['title'] . ' (ID: ' . $f['id'] . ')') . '</option>';
         }
         echo '</select> ';
-        submit_button(__('Open form rule', 'gf-bulk-rename-counter'), 'secondary', '', false);
+        submit_button(__('Load form settings', 'gf-bulk-rename-counter'), 'secondary', '', false);
         echo '</form>';
+        echo '<p class="gfbrc-navigation-hint description">' .
+            esc_html__('Loading a form only opens its settings; it does not save anything. To keep changes, use Save this form rule below.', 'gf-bulk-rename-counter') . '</p>';
         if (!$selected || !class_exists('GFAPI')) {
             echo '<p class="description">' . esc_html__('Choose a form to see its effective download naming rule and edit an optional independent override.', 'gf-bulk-rename-counter') . '</p></section>';
             return;
@@ -195,8 +200,8 @@ class Settings_Page {
             esc_html__('Naming method', 'gf-bulk-rename-counter') . '</label></th><td>';
         echo '<select id="gfbrc-method" name="' . esc_attr($prefix) . '[_method]">';
         foreach ([
-            'inherit' => __('Use existing Legacy defaults (remove override)', 'gf-bulk-rename-counter'),
-            'legacy' => __('Legacy (existing counter configuration)', 'gf-bulk-rename-counter'),
+            'inherit' => __('Inherit Legacy defaults (no form-specific rule)', 'gf-bulk-rename-counter'),
+            'legacy' => __('Explicit Legacy rule (uses global counter)', 'gf-bulk-rename-counter'),
             'single' => __('Single Field', 'gf-bulk-rename-counter'),
             'composite' => __('Composite', 'gf-bulk-rename-counter'),
         ] as $key => $label) {
@@ -204,7 +209,7 @@ class Settings_Page {
                 esc_html($label) . '</option>';
         }
         echo '</select><p class="description">' .
-            esc_html__('Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules.', 'gf-bulk-rename-counter') .
+            esc_html__('Choose how this form names files. Inherit removes its override; explicit Legacy still uses the global counter and target scope.', 'gf-bulk-rename-counter') .
             '</p></td></tr>';
         echo '<tr class="gfbrc-method-row" data-gfbrc-for="single"><th scope="row"><label for="gfbrc-single">' .
             esc_html__('Single Field source', 'gf-bulk-rename-counter') . '</label></th><td>';
@@ -214,13 +219,18 @@ class Settings_Page {
             echo '<option value="' . esc_attr((string)$id) . '" ' . selected($single, $id, false) . '>' .
                 esc_html($label . ' (ID: ' . $id . ')') . '</option>';
         }
-        echo '</select><p class="description">' . esc_html__('Example: a File number field containing 1234 produces 1234.jpg in an independent ZIP. A missing or unsafe value stops ZIP preparation.', 'gf-bulk-rename-counter') . '</p></td></tr>';
+        echo '</select><p class="description gfbrc-example">' .
+            esc_html__('Example, not an Entry preview: file number 1234 produces', 'gf-bulk-rename-counter') .
+            ' <code><bdi dir="ltr">1234.jpg</bdi></code>. ' .
+            esc_html__('Missing or unsafe values stop independent ZIP preparation.', 'gf-bulk-rename-counter') . '</p></td></tr>';
         echo '<tr class="gfbrc-method-row" data-gfbrc-for="composite"><th scope="row">' . esc_html__('Composite fields and order', 'gf-bulk-rename-counter') .
             '</th><td><fieldset><legend class="screen-reader-text">' .
             esc_html__('Composite fields and order', 'gf-bulk-rename-counter') . '</legend>';
         echo '<p class="description">' .
             esc_html__('For Composite, check at least two eligible text/number fields and assign consecutive positions 1, 2, 3 … . Empty Entry values will block ZIP creation.', 'gf-bulk-rename-counter') . '</p>';
-        echo '<p class="description">' . esc_html__('Example: ClassA followed by 1234 with separator - produces ClassA-1234.jpg. These are examples, not a preview of saved Entry values.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<p class="description gfbrc-example">' .
+            esc_html__('Example, not an Entry preview: ClassA and 1234 with separator - produce', 'gf-bulk-rename-counter') .
+            ' <code><bdi dir="ltr">ClassA-1234.jpg</bdi></code>.</p>';
         foreach ($fields as $id => $label) {
             $rank = isset($ranks[$id]) ? $ranks[$id] + 1 : '';
             echo '<p class="gfbrc-composite-row"><label><input type="checkbox" name="' . esc_attr($prefix) . '[_include][' . esc_attr((string)$id) .
@@ -239,6 +249,8 @@ class Settings_Page {
         echo '<p class="description">' .
             esc_html__('Avoid personal data in selected fields; missing or unsafe values cause a visible ZIP preparation error.', 'gf-bulk-rename-counter') .
             '</p></td></tr></tbody></table>';
+        echo '<p class="description gfbrc-save-note">' .
+            esc_html__('This button saves only the selected form rule, not the separate Legacy settings above. Avoid personal data in filename fields.', 'gf-bulk-rename-counter') . '</p>';
         submit_button(__('Save this form rule', 'gf-bulk-rename-counter'));
         echo '</form></section>';
     }
@@ -247,18 +259,23 @@ class Settings_Page {
     private static function render_presentation(): void {
         ?>
 <style id="gfbrc-settings-presentation">
-.gfbrc-settings{max-width:1030px}
+.gfbrc-settings{max-width:860px}
 .gfbrc-settings *{box-sizing:border-box}
 .gfbrc-settings>h1{margin-bottom:12px}
-.gfbrc-settings-intro{max-width:76ch;margin:0 0 20px;color:#50575e;line-height:1.8}
+.gfbrc-settings-intro{max-width:66ch;margin:0 0 18px;color:#3c434a;line-height:1.65}
 .gfbrc-settings-intro p{margin:0 0 8px}
-.gfbrc-settings-card{background:#fff;border:1px solid #c3c4c7;padding:18px 24px 20px;margin:0 0 18px;min-width:0;overflow-wrap:anywhere}
+.gfbrc-settings-card{background:#fff;border:1px solid #c3c4c7;padding:16px 20px 18px;margin:0 0 16px;min-width:0;overflow-wrap:anywhere}
 .gfbrc-settings-card h2{font-size:17px;line-height:1.5;margin:0 0 10px;font-weight:600}
-.gfbrc-settings-card>p,.gfbrc-settings-card .description{max-width:76ch;color:#50575e;line-height:1.75}
-.gfbrc-settings-card form{margin-top:14px}
+.gfbrc-settings-card>p,.gfbrc-settings-card .description{max-width:62ch;color:#50575e;line-height:1.65}
+.gfbrc-settings-card .gfbrc-example{margin:8px 0}
+.gfbrc-settings-card .gfbrc-navigation-hint{margin:6px 0 14px;max-width:62ch}
+.gfbrc-settings-card .gfbrc-save-note{margin:18px 0 8px}
+.gfbrc-settings-card code{direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap}
+.gfbrc-settings-intro strong{color:#1d2327}
+.gfbrc-settings-card form{margin-top:12px}
 .gfbrc-settings-card .form-table{margin:6px 0 0;table-layout:fixed}
-.gfbrc-settings-card .form-table th{width:185px;line-height:1.65;padding:16px 0 14px 18px;text-align:start}
-.gfbrc-settings-card .form-table td{padding:14px 0;line-height:1.65;vertical-align:top}
+.gfbrc-settings-card .form-table th{width:175px;line-height:1.65;padding:12px 0 12px 14px;text-align:start}
+.gfbrc-settings-card .form-table td{padding:10px 0;line-height:1.65;vertical-align:top}
 .gfbrc-settings-card .form-table td>.description{margin:8px 0 0}
 .gfbrc-settings-card .form-table select{max-width:100%;width:min(370px,100%);min-height:32px}
 .gfbrc-settings-card .form-table input.small-text{min-height:32px}
@@ -269,8 +286,11 @@ class Settings_Page {
 .gfbrc-settings-per-form>form:first-of-type{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px}
 .gfbrc-settings-per-form>form:first-of-type .submit{margin:0}
 .gfbrc-settings-per-form>form:first-of-type select{width:min(330px,100%);max-width:100%}
-.gfbrc-settings-card .gfbrc-rule-status{margin:16px 0;padding:8px 12px}
-.gfbrc-settings-card .gfbrc-rule-status p{margin:6px 0;line-height:1.75}
+.gfbrc-settings-card .gfbrc-rule-status{margin:14px 0;padding:10px 12px;border:1px solid #dcdcde;border-inline-start:3px solid #8c8f94;background:#f6f7f7;max-width:100%}
+.gfbrc-settings-card .gfbrc-rule-status.gfbrc-status-warning{background:#fff9e5;border-inline-start-color:#dba617}
+.gfbrc-settings-card .gfbrc-rule-status p{margin:4px 0;line-height:1.65;max-width:62ch}
+.gfbrc-settings-card .gfbrc-status-heading{color:#1d2327}
+.gfbrc-settings-card .gfbrc-status-detail{color:#50575e}
 .gfbrc-settings-card .gfbrc-method-row[hidden]{display:none!important}
 .gfbrc-settings-card .gfbrc-composite-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(70px,90px);gap:10px;align-items:center;padding:10px 12px;margin:8px 0;border:1px solid #dcdcde;border-radius:3px}
 .gfbrc-settings-card .gfbrc-composite-row label:first-child{display:flex;gap:8px;align-items:center;min-width:0}
