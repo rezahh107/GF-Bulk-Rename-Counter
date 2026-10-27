@@ -300,13 +300,13 @@ msgid "Exact NEW coverage exceeded safe storage budget"
 msgstr "سابقهٔ دقیق پوشش NEW از سقف امن ذخیره‌سازی فراتر رفت"
 
 msgid "Example, not an Entry preview: ClassA and 1234 with separator - produce"
-msgstr "مثال آموزشی، نه پیش‌نمایش ورودی واقعی: ترکیب ClassA و 1234 با جداکنندهٔ - نام"
+msgstr "مثال آموزشی (نه دادهٔ واقعی)، ترکیب ClassA و 1234 با جداکنندهٔ - →"
 
 msgid "Example, not an Entry preview: counter 1234 produces"
-msgstr "مثال آموزشی، نه پیش‌نمایش ورودی واقعی: شمارندهٔ 1234 نام"
+msgstr "مثال آموزشی (نه پیش‌نمایش ورودی واقعی)، شمارندهٔ 1234 →"
 
 msgid "Example, not an Entry preview: file number 1234 produces"
-msgstr "مثال آموزشی، نه پیش‌نمایش ورودی واقعی: شمارهٔ فایل 1234 نام"
+msgstr "مثال آموزشی (نه دادهٔ واقعی)، شمارهٔ فایل 1234 →"
 
 msgid "Explicit Legacy rule (uses global counter)"
 msgstr "قانون صریح Legacy (با شمارندهٔ سراسری)"
@@ -555,10 +555,10 @@ msgid "Missing or invalid signed native Entry List criteria"
 msgstr "معیارهای امضاشدهٔ فهرست ورودی‌ها وجود ندارند یا نامعتبرند"
 
 msgid "Missing or unsafe values stop independent ZIP preparation."
-msgstr "را می‌سازد. مقادیر ناموجود یا ناامن، آماده‌سازی ZIP مستقل را متوقف می‌کنند."
+msgstr "مقدار ناموجود یا ناامن، آماده‌سازی ZIP مستقل را متوقف می‌کند."
 
 msgid "Missing or zero Legacy counters can keep the original filenames. This plugin does not create counters."
-msgstr "را می‌سازد. شمارندهٔ خالی یا صفر در Legacy می‌تواند نام اصلی فایل را نگه دارد. افزونه شمارهٔ شمارنده تولید نمی‌کند."
+msgstr "شمارندهٔ خالی یا صفر در Legacy می‌تواند نام اصلی فایل را نگه دارد. افزونه شمارهٔ شمارنده تولید نمی‌کند."
 
 msgid "More than 500 Entries match. Narrow the current search or filters before downloading."
 msgstr "بیش از ۵۰۰ ورودی مطابق هستند. پیش از دانلود، جستجو یا فیلترهای فعلی را محدود کنید."
