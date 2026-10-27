@@ -1,5 +1,6 @@
 # Independent Flat ZIP — selection across Gravity Forms pages
 
+**Current public status — 2026-10-27:** Filtered all-matching (maximum 500 matching Entries per request) first shipped in v2.1.1 and remains in [latest public v2.3.1](https://github.com/rezahh107/GF-Bulk-Rename-Counter/releases/tag/v2.3.1), consumer-verified by [publisher workflow](https://github.com/rezahh107/GF-Bulk-Rename-Counter/actions/runs/40482295693). Creation-only NEW with separate ACK and independent ALL also ship in v2.3.1; neither is identical to filtered all-matching. Any below text that calls NEW/ALL source-only or publisher fixes pending is an October 2026 historical checkpoint, superseded by this newer release. Owner-site behavior remains unverified.
 This correction applies only to the independent **Download Flat ZIP with Rename** bulk action. Gravity Forms, native Bulk Download, existing Legacy rename hooks, stored Entries/uploads, options, and the public v2.1.1 release remain independent.
 
 ## Operator flow
