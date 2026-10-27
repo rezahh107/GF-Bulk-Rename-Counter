@@ -104,10 +104,12 @@ final class Admin_Experience {
 
     public static function render_status(array $form): void {
         [$state, $title, $detail] = self::status($form);
-        $css = $state === 'warning' ? 'notice-warning' : 'notice-info';
-        echo '<div class="notice ' . esc_attr($css) . ' inline gfbrc-rule-status" data-gfbrc-status="' .
-            esc_attr($state) . '"><p><strong>' . esc_html($title) .
-            '</strong> — ' . esc_html($detail) . '</p>';
+        // Ordinary configuration state is a summary, not a WordPress warning.
+        $classes = $state === 'warning' ? 'notice notice-warning inline ' : '';
+        echo '<div class="' . $classes . 'gfbrc-rule-status gfbrc-status-' .
+            esc_attr($state) . '" data-gfbrc-status="' . esc_attr($state) .
+            '"><p class="gfbrc-status-heading"><strong>' . esc_html($title) .
+            '</strong></p><p class="gfbrc-status-detail">' . esc_html($detail) . '</p>';
         if ($state === 'unchanged') {
             echo '<p>' . esc_html__('Unchanged filenames here reflect the current configuration, not proof of a download failure. Individual missing Entry values can also leave Legacy names unchanged.', 'gf-bulk-rename-counter') . '</p>';
         }
@@ -124,8 +126,10 @@ final class Admin_Experience {
     }
 
     public static function settings_intro(): void {
-        echo '<p>' . esc_html__('First choose how downloaded files should be named. The upper section sets the original Legacy counter. The lower section sets an optional rule for one form and independent ZIP downloads. Save each section separately.', 'gf-bulk-rename-counter') . '</p>';
-        echo '<p>' . esc_html__('Legacy uses the original Bulk Download action. Selected, All matching, NEW and ALL use the form-specific independent ZIP rule when one is saved; otherwise they follow the existing Legacy defaults. These settings never assign counter values or rename stored uploads.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<p><strong>' . esc_html__('1. Which Entries should be downloaded?', 'gf-bulk-rename-counter') . '</strong> ' .
+            esc_html__('Choose the download scope on the Gravity Forms Entries page.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<p><strong>' . esc_html__('2. What names should the downloaded files have?', 'gf-bulk-rename-counter') . '</strong> ' .
+            esc_html__('Choose a naming rule below. Your original uploaded files are never renamed.', 'gf-bulk-rename-counter') . '</p>';
     }
 
     /** Compact, read-only orientation adjacent to the native GF Entry actions. */
@@ -140,30 +144,38 @@ final class Admin_Experience {
         echo '<section id="gfbrc-entries-guide" aria-labelledby="gfbrc-guide-title">';
         echo '<h2 id="gfbrc-guide-title">' .
             esc_html__('File downloads and naming', 'gf-bulk-rename-counter') . '</h2>';
-        echo '<p class="gfbrc-lead">' . esc_html__('First choose which Entries to include in the download. The naming rule is a separate setting: it changes filenames in the ZIP, not the original uploads.', 'gf-bulk-rename-counter') . '</p>';
-        self::render_status($form);
+        echo '<p class="gfbrc-lead">' . esc_html__('First select which Entries to download. Naming is configured separately and changes only filenames inside the ZIP.', 'gf-bulk-rename-counter') . '</p>';
         echo '<details><summary>' . esc_html__('Which download should I use?', 'gf-bulk-rename-counter') .
             '</summary><ul>';
         foreach ([
-            __('Selected: choose rows on this page, then use “Download Flat ZIP with Rename” in Bulk Actions. It includes eligible uploads only from those rows.', 'gf-bulk-rename-counter'),
-            __('All matching: choose the all-matching checkbox with the independent Bulk Action. It includes the current search and filters across pages (maximum 500 Entries), not just checked rows.', 'gf-bulk-rename-counter'),
-            __('NEW: check for newly created Entries, download and inspect the verified ZIP, then explicitly acknowledge receipt. Browser verification does not prove the ZIP was retained locally. The first check establishes the initial batch; acknowledgment advances coverage.', 'gf-bulk-rename-counter'),
-            __('ALL: independently check and download eligible files from every active Entry in this form, ignoring search, row selection and NEW history. ALL does not acknowledge NEW.', 'gf-bulk-rename-counter'),
+            __('Selected: tick rows on this page; choose Download Flat ZIP with Rename from Bulk Actions, then Apply.', 'gf-bulk-rename-counter'),
+            __('All matching: select all matching Entries with the checkbox near Bulk Actions; current filters apply across pages, up to 500 Entries.', 'gf-bulk-rename-counter'),
+            __('NEW: check for an unconfirmed batch (the first batch may include existing Entries). Download and review; only explicit receipt confirmation moves NEW coverage.', 'gf-bulk-rename-counter'),
+            __('ALL: check all active Entries in this form regardless of filters or selected rows. It does not change NEW coverage.', 'gf-bulk-rename-counter'),
         ] as $instruction) {
             echo '<li>' . esc_html($instruction) . '</li>';
         }
         echo '</ul></details>';
-        echo '<p class="description">' . esc_html__('Checking or downloading never assigns counter values. A missing Legacy counter may intentionally keep an original filename; invalid Single Field / Composite Entry values stop independent ZIP preparation instead.', 'gf-bulk-rename-counter') . '</p>';
+        echo '<h3 class="gfbrc-current-heading">' . esc_html__('How filenames will be generated for this form', 'gf-bulk-rename-counter') . '</h3>';
+        self::render_status($form);
+        echo '<p class="description">' . esc_html__('Legacy may keep original names for missing or zero counters. Invalid Single Field or Composite values stop independent ZIP preparation.', 'gf-bulk-rename-counter') . '</p>';
         echo '</section>';
         ?>
 <style id="gfbrc-guide-style">
 /* GFBRC-only workspace; never restyle native GF tablenav or other wp-admin forms. */
-#gfbrc-entries-workspace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch;width:100%;max-width:980px;margin:16px 0}
+#gfbrc-entries-workspace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;width:100%;max-width:980px;margin:16px 0}
 #gfbrc-entries-workspace>section{box-sizing:border-box;min-width:0;margin:0;padding:18px 20px;border:1px solid #c3c4c7;background:#fff;overflow-wrap:anywhere}
 #gfbrc-entries-guide{box-sizing:border-box;grid-column:1/-1;max-width:980px;margin:12px 0;padding:18px 20px;border:1px solid #c3c4c7;background:#fff;overflow-wrap:anywhere}
 #gfbrc-entries-workspace #gfbrc-entries-guide{margin:0}
 #gfbrc-entries-guide h2,#gfbrc-entries-workspace .gfbrc-panel-header h2{font-size:16px;font-weight:600;line-height:1.45;margin:0}
 #gfbrc-entries-guide h2{margin-bottom:8px}
+#gfbrc-entries-guide .gfbrc-current-heading{font-size:14px;font-weight:600;margin:16px 0 8px}
+#gfbrc-entries-guide .gfbrc-rule-status{background:#f6f7f7;border:1px solid #dcdcde;border-inline-start:3px solid #8c8f94;margin:8px 0;padding:10px 14px;max-width:72ch}
+#gfbrc-entries-guide .gfbrc-rule-status.gfbrc-status-warning{border-inline-start-color:#dba617;background:#fff9e5}
+#gfbrc-entries-guide .gfbrc-rule-status p{line-height:1.65;margin:4px 0}
+#gfbrc-entries-guide .gfbrc-status-heading{font-size:13px}
+#gfbrc-entries-guide .gfbrc-status-detail{color:#50575e}
+#gfbrc-entries-guide .gfbrc-lead,#gfbrc-entries-guide .description{max-width:72ch}
 #gfbrc-entries-guide .gfbrc-lead{margin:0 0 14px;line-height:1.75}
 #gfbrc-entries-guide summary{cursor:pointer;padding:8px 0}
 #gfbrc-entries-guide ul{list-style:disc;padding-inline-start:1.6em;margin:8px 0}
@@ -173,6 +185,8 @@ final class Admin_Experience {
 #gfbrc-entries-workspace .gfbrc-panel-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:0 0 12px}
 #gfbrc-entries-workspace .gfbrc-panel-header .button{flex-shrink:0;margin:0;min-height:32px;white-space:normal;line-height:1.4}
 #gfbrc-entries-workspace .description{color:#50575e;line-height:1.75;margin:10px 0}
+#gfbrc-entries-workspace .gfbrc-panel-intro{font-weight:500;line-height:1.6;margin:0 0 10px;max-width:68ch}
+#gfbrc-entries-workspace #gfbrc-all-guide{max-width:68ch}
 #gfbrc-entries-workspace .gfbrc-panel-result{margin:12px 0 0;line-height:1.7;min-height:0}
 #gfbrc-entries-workspace .gfbrc-panel-result:empty{display:none}
 #gfbrc-entries-workspace .gfbrc-panel-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0 0}
