@@ -2,7 +2,7 @@
 Tags: gravity forms, bulk download, rename files, counter
 Requires at least: 5.8
 Tested up to: 6.8
-Stable tag: 2.3.1
+Stable tag: 2.3.2
 Requires PHP: 8.0
 License: GPL-2.0-or-later
 
@@ -39,6 +39,12 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 **Privacy:** Values selected for Single Field / Composite naming appear in ZIP filenames. Do not choose personal or sensitive fields unless sharing those values with recipients is intended. Invalid or missing naming values stop the independent ZIP with an error.
 
 == Changelog ==
+
+= 2.3.2 =
+* Make the WordPress Settings page more compact and beginner-friendly, with clear separate actions to load a form's settings, save Legacy settings, and save a per-form naming rule.
+* Present the two practical download/naming decisions first; clarify normal naming status and add short, illustrative Legacy, Single Field and Composite filename examples in Persian and English.
+* Improve the responsive Gravity Forms Entries guide and NEW/ALL panels with clearer first-use descriptions and balanced card sizing, while keeping the complete irreversible NEW receipt warning visible.
+* Preserve all existing download scopes, original uploads/Entries, filename generation, ZIP verification, independent Settings persistence, NEW coverage/ACK and ALL isolation; extend authentic browser tests for RTL, keyboard use and a 14-field Composite form.
 
 = 2.3.1 =
 * Improve the WordPress Settings interface with clearer section hierarchy, tighter label/control alignment and responsive Single Field / Composite configuration.

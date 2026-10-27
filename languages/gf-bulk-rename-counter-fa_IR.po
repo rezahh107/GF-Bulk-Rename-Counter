@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: GF Bulk Rename Counter 2.3.1\n"
+"Project-Id-Version: GF Bulk Rename Counter 2.3.2\n"
 "Language: fa_IR\n"
 "Language-Team: GFBRC Phase 1 review candidate\n"
 "MIME-Version: 1.0\n"
