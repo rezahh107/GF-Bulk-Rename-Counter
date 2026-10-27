@@ -23,6 +23,12 @@ msgstr ""
 msgid "0 newly created eligible Entries / 0 files. Nothing to acknowledge."
 msgstr ""
 
+msgid "1. Which Entries should be downloaded?"
+msgstr ""
+
+msgid "2. What names should the downloaded files have?"
+msgstr ""
+
 msgid "ALL Entries or eligible source files changed before ZIP delivery; check ALL again"
 msgstr ""
 
@@ -89,13 +95,13 @@ msgstr ""
 msgid "ALL — Download all eligible files"
 msgstr ""
 
-msgid "ALL: independently check and download eligible files from every active Entry in this form, ignoring search, row selection and NEW history. ALL does not acknowledge NEW."
+msgid "ALL: check all active Entries in this form regardless of filters or selected rows. It does not change NEW coverage."
 msgstr ""
 
 msgid "All matching Entries (Flat ZIP only; maximum 500)"
 msgstr ""
 
-msgid "All matching: choose the all-matching checkbox with the independent Bulk Action. It includes the current search and filters across pages (maximum 500 Entries), not just checked rows."
+msgid "All matching: select all matching Entries with the checkbox near Bulk Actions; current filters apply across pages, up to 500 Entries."
 msgstr ""
 
 msgid "Ambiguous ALL form selection"
@@ -155,9 +161,6 @@ msgstr ""
 msgid "Checking exact Entries and files…"
 msgstr ""
 
-msgid "Checking or downloading never assigns counter values. A missing Legacy counter may intentionally keep an original filename; invalid Single Field / Composite Entry values stop independent ZIP preparation instead."
-msgstr ""
-
 msgid "Choose a Single Field"
 msgstr ""
 
@@ -165,6 +168,15 @@ msgid "Choose a form to edit"
 msgstr ""
 
 msgid "Choose a form to see its effective download naming rule and edit an optional independent override."
+msgstr ""
+
+msgid "Choose a naming rule below. Your original uploaded files are never renamed."
+msgstr ""
+
+msgid "Choose how this form names files. Inherit removes its override; explicit Legacy still uses the global counter and target scope."
+msgstr ""
+
+msgid "Choose the download scope on the Gravity Forms Entries page."
 msgstr ""
 
 msgid "Closed ZIP unreadable"
@@ -236,6 +248,9 @@ msgstr ""
 msgid "Download eligible files from ALL %d Entries matching this form and its current filters/search, across every page? Individually checked rows do not limit this choice. Maximum 500 Entries per ZIP; the server rechecks the count before download."
 msgstr ""
 
+msgid "Download eligible uploads from all active Entries in this form, even if the list is filtered."
+msgstr ""
+
 msgid "Download has not completed in the browser"
 msgstr ""
 
@@ -263,9 +278,6 @@ msgstr ""
 msgid "Effective Entry List filter criteria changed; reload the list"
 msgstr ""
 
-msgid "Enter the ID of the field that already contains each Entry counter. For example, counter 1234 produces d1234.jpg in Legacy downloads. This plugin never creates counter values."
-msgstr ""
-
 msgid "Entry List authorization context changed or expired"
 msgstr ""
 
@@ -284,10 +296,16 @@ msgstr ""
 msgid "Exact NEW coverage exceeded safe storage budget"
 msgstr ""
 
-msgid "Example: ClassA followed by 1234 with separator - produces ClassA-1234.jpg. These are examples, not a preview of saved Entry values."
+msgid "Example, not an Entry preview: ClassA and 1234 with separator - produce"
 msgstr ""
 
-msgid "Example: a File number field containing 1234 produces 1234.jpg in an independent ZIP. A missing or unsafe value stops ZIP preparation."
+msgid "Example, not an Entry preview: counter 1234 produces"
+msgstr ""
+
+msgid "Example, not an Entry preview: file number 1234 produces"
+msgstr ""
+
+msgid "Explicit Legacy rule (uses global counter)"
 msgstr ""
 
 msgid "Explicit operator confirmation required"
@@ -317,10 +335,10 @@ msgstr ""
 msgid "Files changed since NEW selection; prepare a fresh operation"
 msgstr ""
 
-msgid "First choose how downloaded files should be named. The upper section sets the original Legacy counter. The lower section sets an optional rule for one form and independent ZIP downloads. Save each section separately."
+msgid "Find Entries not yet covered by a confirmed receipt. The first batch may include existing Entries."
 msgstr ""
 
-msgid "First choose which Entries to include in the download. The naming rule is a separate setting: it changes filenames in the ZIP, not the original uploads."
+msgid "First select which Entries to download. Naming is configured separately and changes only filenames inside the ZIP."
 msgstr ""
 
 msgid "Flat ZIP download not available"
@@ -389,6 +407,9 @@ msgstr ""
 msgid "Headers sent during output buffer cleanup"
 msgstr ""
 
+msgid "How filenames will be generated for this form"
+msgstr ""
+
 msgid "I saved and checked the ZIP (or reviewed the zero-file Entries)"
 msgstr ""
 
@@ -405,6 +426,9 @@ msgid "Independent ZIP: explicit Legacy rule"
 msgstr ""
 
 msgid "Independent ZIP: inherited Legacy defaults"
+msgstr ""
+
+msgid "Inherit Legacy defaults (no form-specific rule)"
 msgstr ""
 
 msgid "Initial batch; no automatic coverage update. "
@@ -497,10 +521,7 @@ msgstr ""
 msgid "Invalid stored upload reference"
 msgstr ""
 
-msgid "Legacy (existing counter configuration)"
-msgstr ""
-
-msgid "Legacy settings above still control the original Bulk Download hook. Single Field and Composite rules affect ONLY Download Flat ZIP with Rename. Values in filenames may expose personal information to ZIP recipients."
+msgid "Legacy may keep original names for missing or zero counters. Invalid Single Field or Composite values stop independent ZIP preparation."
 msgstr ""
 
 msgid "Legacy targets form %d, not this form. Original filenames here are expected."
@@ -509,10 +530,10 @@ msgstr ""
 msgid "Legacy uses %1$s (field %2$d) and generates d[COUNTER].extension. Entries with an empty or zero counter retain their original filename."
 msgstr ""
 
-msgid "Legacy uses the original Bulk Download action. Selected, All matching, NEW and ALL use the form-specific independent ZIP rule when one is saved; otherwise they follow the existing Legacy defaults. These settings never assign counter values or rename stored uploads."
+msgid "Load form settings"
 msgstr ""
 
-msgid "Legacy uses the unchanged global Counter Field ID and Target Form scope. Other forms keep their own rules."
+msgid "Loading a form only opens its settings; it does not save anything. To keep changes, use Save this form rule below."
 msgstr ""
 
 msgid "Locked NEW coverage record unavailable"
@@ -528,6 +549,12 @@ msgid "Matching Entry count changed; reload the Entry List and retry"
 msgstr ""
 
 msgid "Missing or invalid signed native Entry List criteria"
+msgstr ""
+
+msgid "Missing or unsafe values stop independent ZIP preparation."
+msgstr ""
+
+msgid "Missing or zero Legacy counters can keep the original filenames. This plugin does not create counters."
 msgstr ""
 
 msgid "More than 500 Entries match. Narrow the current search or filters before downloading."
@@ -605,7 +632,10 @@ msgstr ""
 msgid "NEW: Receipt/review for this batch was already confirmed (Entry count: %d). NEW coverage was not advanced again."
 msgstr ""
 
-msgid "NEW: check for newly created Entries, download and inspect the verified ZIP, then explicitly acknowledge receipt. Browser verification does not prove the ZIP was retained locally. The first check establishes the initial batch; acknowledgment advances coverage."
+msgid "NEW: check for an unconfirmed batch (the first batch may include existing Entries). Download and review; only explicit receipt confirmation moves NEW coverage."
+msgstr ""
+
+msgid "Name files in independent ZIP downloads (one form at a time)"
 msgstr ""
 
 msgid "Naming field %1$d is empty or invalid for Entry %2$s"
@@ -662,9 +692,6 @@ msgstr ""
 msgid "Not authorized"
 msgstr ""
 
-msgid "Open form rule"
-msgstr ""
-
 msgid "Operation no longer available"
 msgstr ""
 
@@ -686,9 +713,6 @@ msgstr ""
 msgid "Pending-operation generation transition did not persist"
 msgstr ""
 
-msgid "Per-form naming (independent flat ZIP only)"
-msgstr ""
-
 msgid "Per-form rule needs repair"
 msgstr ""
 
@@ -705,6 +729,9 @@ msgid "Referenced upload missing or unreadable"
 msgstr ""
 
 msgid "Review naming settings for this form"
+msgstr ""
+
+msgid "Save Legacy settings"
 msgstr ""
 
 msgid "Save this form rule"
@@ -743,7 +770,10 @@ msgstr ""
 msgid "Selected form unavailable"
 msgstr ""
 
-msgid "Selected: choose rows on this page, then use “Download Flat ZIP with Rename” in Bulk Actions. It includes eligible uploads only from those rows."
+msgid "Selected, All matching, NEW and ALL use a saved rule for their form; without one, they inherit the existing Legacy defaults."
+msgstr ""
+
+msgid "Selected: tick rows on this page; choose Download Flat ZIP with Rename from Bulk Actions, then Apply."
 msgstr ""
 
 msgid "Selection exceeds 500 Entries; no partial ZIP was generated"
@@ -774,6 +804,9 @@ msgid "Temporary ZIP unavailable"
 msgstr ""
 
 msgid "The saved naming fields or order are no longer valid. Reopen and save this form rule before using independent ZIP downloads."
+msgstr ""
+
+msgid "This button saves only the selected form rule, not the separate Legacy settings above. Avoid personal data in filename fields."
 msgstr ""
 
 msgid "This operation has no files; confirm the zero-file review explicitly"
@@ -818,7 +851,7 @@ msgstr ""
 msgid "Untitled field"
 msgstr ""
 
-msgid "Use existing Legacy defaults (remove override)"
+msgid "Use the original Bulk Download action? Choose the form and the field that already contains its counter."
 msgstr ""
 
 msgid "Validated ZIP response unavailable"
