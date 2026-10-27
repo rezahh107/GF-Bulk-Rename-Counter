@@ -284,6 +284,7 @@ final class All_Download {
             'text' => [
                 'title' => __('ALL — Download all eligible files', 'gf-bulk-rename-counter'),
                 'check' => __('Check ALL', 'gf-bulk-rename-counter'),
+                'intro' => __('Download eligible uploads from all active Entries in this form, even if the list is filtered.', 'gf-bulk-rename-counter'),
                 'download' => __('Download ALL ZIP', 'gf-bulk-rename-counter'),
                 'guide' => __('ALL includes eligible uploads from every active Entry in this form, regardless of filters, selected rows or NEW acknowledgment history. Check before downloading; this does not advance NEW coverage.', 'gf-bulk-rename-counter'),
                 'checking' => __('Counting all active Entries and verifying source files…', 'gf-bulk-rename-counter'),
@@ -314,11 +315,13 @@ final class All_Download {
   panel.setAttribute('aria-labelledby', 'gfbrc-all-title');
   panel.innerHTML = '<div class="gfbrc-panel-header"><h2 id="gfbrc-all-title"></h2>' +
     '<button type="button" class="button" id="gfbrc-all-prepare"></button></div>' +
+    '<p class="gfbrc-panel-intro" id="gfbrc-all-intro"></p>' +
     '<p class="description" id="gfbrc-all-guide"></p>' +
     '<p class="gfbrc-panel-result" id="gfbrc-all-result" role="status" aria-live="polite"></p>' +
     '<div class="gfbrc-panel-actions"><button type="button" class="button button-primary" id="gfbrc-all-download" hidden></button></div>';
   panel.querySelector('#gfbrc-all-title').textContent = cfg.text.title;
   panel.querySelector('#gfbrc-all-prepare').textContent = cfg.text.check;
+  panel.querySelector('#gfbrc-all-intro').textContent = cfg.text.intro;
   panel.querySelector('#gfbrc-all-guide').textContent = cfg.text.guide;
   panel.querySelector('#gfbrc-all-download').textContent = cfg.text.download;
   function tr(key) {
