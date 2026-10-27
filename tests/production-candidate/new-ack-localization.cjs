@@ -63,6 +63,16 @@ const {chromium}=require('playwright-core');
         throw Error('Downloaded actual ZIP integrity mismatch');
       return hash;
     }
+    async function capture(step){
+      if(locale!=='fa_IR')return;
+      const dir=path.join(lab,'reports','ui-polish');
+      fs.mkdirSync(dir,{recursive:true});
+      try{
+        await page.locator('#gfbrc-new-panel').screenshot({
+          path:path.join(dir,'fa-new-'+step+'-375.png'),animations:'disabled',timeout:12000
+        });
+      }catch(e){console.warn('GFBRC_VISUAL_CAPTURE_NOT_PROVEN',step,String(e.message).slice(0,200));}
+    }
     const config=async()=>page.locator('#gfbrc-new-config').evaluate(el=>JSON.parse(el.textContent));
     const rendered=()=>page.locator('#gfbrc-new-result').innerText();
     function expected(text,count){return text.replace('%d',String(count));}
@@ -86,7 +96,17 @@ const {chromium}=require('playwright-core');
       throw Error('Singular-safe English ACK count wording missing');
     const initial=await prepare();
     if(initial.files<1||initial.entries<1)throw Error('No real initial GF file workload');
+    await page.locator('#gfbrc-new-download').waitFor({state:'visible'});
+    if(!await page.locator('#gfbrc-new-guide').isVisible()||
+       await page.locator('#gfbrc-new-ack').isVisible())
+      throw Error('NEW warning missing or ACK offered before verified ZIP');
+    await capture('checked-before-download');
     await receive();
+    await page.locator('#gfbrc-new-ack').waitFor({state:'visible'});
+    if(!await page.locator('#gfbrc-new-guide').isVisible()||
+       await page.locator('#gfbrc-new-review').isChecked())
+      throw Error('NEW irreversible warning hidden or receipt review prechecked');
+    await capture('downloaded-before-ack');
     const before=mutate('read_coverage').state.rev;
     await confirm('acknowledged',initial.entries);
     const after=mutate('read_coverage').state.rev;
@@ -100,6 +120,10 @@ const {chromium}=require('playwright-core');
     const zero=await prepare();
     if(!zero.zero||zero.files!==0||zero.entries!==1||await page.locator('#gfbrc-new-download').isVisible())
       throw Error('File-free batch incorrectly offered ZIP');
+    await page.locator('#gfbrc-new-ack').waitFor({state:'visible'});
+    if(!await page.locator('#gfbrc-new-guide').isVisible())
+      throw Error('File-free NEW missing irreversible warning');
+    await capture('zero-files-before-ack');
     const zBefore=mutate('read_coverage').state.rev;
     await confirm('acknowledged',1);
     const zText=await rendered();
