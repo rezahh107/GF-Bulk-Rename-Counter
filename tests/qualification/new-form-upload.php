@@ -169,7 +169,12 @@ if ($action === 'read_multi' || $action === 'partial_zip') {
     if (!is_array($options)) { $options = []; }
     $counter_id = (int)($options['counter_field_id'] ?? 0);
     $counter_form = (int)($options['form_id'] ?? 0);
-    if ($rules !== null || ($counter_id > 0 && (!$counter_form || $counter_form === $form))) {
+    $counter_value = $counter_id > 0 ? ($entry[(string)$counter_id] ?? null) : null;
+    // Existing lab has a global Legacy counter field 5. This synthetic form
+    // does not contain field 5; absent/empty values retain original names.
+    if ($rules !== null ||
+        ($counter_id > 0 && (!$counter_form || $counter_form === $form) &&
+         is_scalar($counter_value) && trim((string)$counter_value) !== '')) {
         throw new RuntimeException('Multifield oracle requires a default-name synthetic form');
     }
     $files = [];
