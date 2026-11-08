@@ -80,6 +80,20 @@ function brc_reconcile_source(int $form, string $url): array {
 
 $before = brc_reconcile_rows($form_id);
 $coverage = brc_reconcile_state($form_id);
+// Read the ACTUAL authoritative NEW operation, not a second planner-created
+// candidate list. This is diagnostic inspection only, never a seed or ACK.
+global $wpdb;
+$pending_raw = $wpdb->get_var($wpdb->prepare(
+    "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
+    'gfbrc_new_pending_' . $form_id
+));
+$pending = is_string($pending_raw) ? json_decode($pending_raw, true) : null;
+$active_pending = is_array($pending) &&
+    in_array($pending['status'] ?? '', ['prepared', 'ready'], true);
+$pending_ids = $active_pending && is_array($pending['ids'] ?? null) ? $pending['ids'] : [];
+$pending_coherent = !$active_pending || (is_string($coverage['raw']) &&
+    hash_equals((string)($pending['base'] ?? ''), hash('sha256', $coverage['raw'])) &&
+    is_int($pending['expires'] ?? null) && $pending['expires'] >= time());
 if ($before === null) {
     echo wp_json_encode(['form_id' => $form_id, 'scope' => ['complete' => false,
         'consistent' => false, 'total' => 0, 'entry_limit' => BRC_RECONCILE_LIMIT]]);
@@ -133,9 +147,9 @@ foreach ($before as $entry) {
 }
 $selected = [];
 $planner_error = null;
-if ($candidate_ids) {
+if ($pending_ids) {
     try {
-        $plan = \GFBulkRename\Flat_Zip_Download::plan($form_id, $candidate_ids);
+        $plan = \GFBulkRename\Flat_Zip_Download::plan($form_id, $pending_ids);
         foreach ($plan as $item) {
             $selected[] = ['entry_id' => (int)$item['entry_id'],
                 'field_id' => (string)$item['field_id'], 'url' => (string)$item['url'],
@@ -150,11 +164,18 @@ if ($candidate_ids) {
 }
 $after = brc_reconcile_rows($form_id);
 $coverage_after = brc_reconcile_state($form_id);
+$pending_after = $wpdb->get_var($wpdb->prepare(
+    "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
+    'gfbrc_new_pending_' . $form_id
+));
 echo wp_json_encode(['form_id' => $form_id, 'entries' => $entries,
     'state' => $coverage['decoded'], 'selected' => $selected,
+    'candidate_ids' => $candidate_ids,
+    'pending' => ['status' => is_array($pending) ? ($pending['status'] ?? 'invalid') : 'absent',
+        'ids' => $pending_ids, 'active' => $active_pending, 'coherent' => $pending_coherent],
     'planner_error' => $planner_error,
     'scope' => ['complete' => true, 'consistent' => $after === $before &&
-        $coverage_after['raw'] === $coverage['raw'],
+        $coverage_after['raw'] === $coverage['raw'] && $pending_after === $pending_raw,
         'entry_limit' => BRC_RECONCILE_LIMIT, 'total' => count($before),
         'basis' => 'GFAPI active/spam/trash bounded read; physical local bytes',
         'atomic' => false]]);
