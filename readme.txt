@@ -41,7 +41,7 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 == Changelog ==
 
 = 2.3.3 =
-* Release candidate; see reviewed GitHub changes for details.
+* Fix NEW ZIP download filenames: use the operation's UTC creation timestamp and a short hash of its random operation ID so independent operations have distinct filenames even with the same Entry/file counts and timestamp, while retries of the same operation keep a stable filename.
 
 = 2.3.2 =
 * Make the WordPress Settings page more compact and beginner-friendly, with clear separate actions to load a form's settings, save Legacy settings, and save a per-form naming rule.
