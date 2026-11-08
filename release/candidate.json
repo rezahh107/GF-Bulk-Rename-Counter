@@ -1,0 +1,10 @@
+{
+  "base": {
+    "commit": "25269893418e6ae20343ad84da9085f46540c60a",
+    "tree": "c6a2f4dc7d61e5da198a5862addfdb827f1b7290"
+  },
+  "branch": "release-candidate/v2.3.3-from-25269893418e6ae20343ad84da9085f46540c60a",
+  "intent": "patch",
+  "schema": 1,
+  "version": "2.3.3"
+}
