@@ -30,21 +30,31 @@ function brc_p0_entries(int $form): array {
 }
 function brc_p0_source(int $form, string $url): array {
     if ($url === '') { throw new RuntimeException('No persisted upload URL'); }
-    $baseurl = rtrim((string) GFFormsModel::get_upload_url($form), '/') . '/';
-    $basedir = (string) GFFormsModel::get_upload_path($form);
+    $wp = wp_upload_dir();
+    $roots = [
+        [(string) GFFormsModel::get_upload_url($form), (string) GFFormsModel::get_upload_path($form)],
+        [(string) $wp['baseurl'], (string) $wp['basedir']],
+    ];
     $url = rawurldecode($url);
-    if (!str_starts_with($url, $baseurl)) {
-        throw new RuntimeException('Submitted URL outside configured GF upload root');
+    $file = false;
+    foreach ($roots as [$baseurl, $basedir]) {
+        $prefix = rtrim($baseurl, '/') . '/';
+        if (!str_starts_with($url, $prefix)) { continue; }
+        $relative = substr($url, strlen($prefix));
+        if ($relative === '' || str_contains($relative, '..') ||
+            str_contains($relative, chr(92))) {
+            throw new RuntimeException('Invalid GF stored upload path');
+        }
+        $root = realpath($basedir);
+        $candidate = $root ? realpath($root . '/' . $relative) : false;
+        if ($root && $candidate && str_starts_with($candidate, $root . DIRECTORY_SEPARATOR) &&
+            is_file($candidate) && is_readable($candidate)) {
+            $file = $candidate;
+            break;
+        }
     }
-    $relative = substr($url, strlen($baseurl));
-    if ($relative === '' || str_contains($relative, '..') || str_contains($relative, '\\')) {
-        throw new RuntimeException('Invalid GF stored upload path');
-    }
-    $root = realpath($basedir);
-    $file = $root ? realpath($root . '/' . $relative) : false;
-    if (!$root || !$file || !str_starts_with($file, $root . DIRECTORY_SEPARATOR) ||
-        !is_file($file) || !is_readable($file)) {
-        throw new RuntimeException('GF persisted URL has no readable source file');
+    if (!$file) {
+        throw new RuntimeException('Persisted GF upload unavailable in permitted local roots');
     }
     return ['url' => $url, 'sha256' => hash_file('sha256', $file),
         'size' => filesize($file), 'basename' => basename($file)];
