@@ -390,5 +390,11 @@ const {chromium} = require('playwright-core');
       [path.join(__dirname, 'new-browser.cjs')], {
         stdio:'inherit', env:process.env, timeout:240000
       });
+    // P0 source-to-ZIP conservation: genuine anonymous front-end multipart
+    // submissions, not GFAPI-prepared uploads. Test code remains out of ZIP.
+    require('node:child_process').execFileSync(process.execPath,
+      [path.join(__dirname, '..', 'qualification', 'new-form-upload-browser.cjs')], {
+        stdio:'inherit', env:process.env, timeout:240000
+      });
   } finally {await browser.close();}
 })().catch(e=>{console.error(e.stack||e);process.exit(1);});
