@@ -49,6 +49,35 @@ def compare(doc, archive=None, omit_one=False):
                 'scope': scope, 'zip_checked': False}
     if doc.get('planner_error'):
         problems.append('planner_unavailable')
+    # NEW's actual pending operation is read separately from the authoritative
+    # coverage row. Never build the expectation from its own IDs/plan.
+    pending = doc.get('pending')
+    if pending is not None:
+        if pending.get('active') and not pending.get('coherent'):
+            return {'classification': UNKNOWN, 'checks': [],
+                    'problems': ['pending_generation_or_base_unstable'],
+                    'scope': scope, 'zip_checked': False}
+        if pending.get('active'):
+            independent_ids = {int(e['entry_id']) for e in entries
+                               if e['status'] == 'active' and
+                               not in_ranges(state['known'], int(e['entry_id']))}
+            try:
+                actual_ids = {int(i) for i in pending['ids']}
+                if len(actual_ids) != len(pending['ids']):
+                    raise ValueError('duplicate pending IDs')
+            except (TypeError, KeyError, ValueError):
+                return {'classification': UNKNOWN, 'checks': [],
+                        'problems': ['invalid_pending_entry_identities'],
+                        'scope': scope, 'zip_checked': False}
+            for omitted in sorted(independent_ids - actual_ids):
+                checks.append({'form_id': form, 'entry_id': omitted,
+                               'classification': MISMATCH,
+                               'reason': 'eligible_entry_missing_from_actual_NEW_pending'})
+            if actual_ids - independent_ids:
+                problems.append('pending_contains_out_of_scope_or_excluded_entries')
+        elif any(e['status'] == 'active' and
+                 not in_ranges(state['known'], int(e['entry_id'])) for e in entries):
+            problems.append('no_live_NEW_operation_to_compare')
     selected = list(doc.get('selected', []))
     if omit_one:
         if len(selected) < 2:
