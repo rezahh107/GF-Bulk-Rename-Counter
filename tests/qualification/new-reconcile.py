@@ -24,6 +24,17 @@ def in_ranges(ranges, entry_id):
                r[0] <= entry_id <= r[1] for r in ranges)
 
 
+def valid_ranges(ranges):
+    last = 0
+    for item in ranges:
+        if not isinstance(item, list) or len(item) != 2 or any(
+            type(x) is not int for x in item
+        ) or item[0] <= last or item[0] < 1 or item[1] < item[0]:
+            return False
+        last = item[1]
+    return True
+
+
 def identity(form_id, entry_id, item):
     return (form_id, entry_id, str(item['field_id']), str(item['url']))
 
@@ -41,6 +52,12 @@ def compare(doc, archive=None, omit_one=False):
     if state.get('schema') != 1 or not isinstance(state.get('known'), list) or not isinstance(state.get('covered'), list):
         return {'classification': UNKNOWN, 'checks': [],
                 'problems': ['invalid_or_unknown_coverage_state'],
+                'scope': scope, 'zip_checked': False}
+    if not valid_ranges(state['known']) or not valid_ranges(state['covered']) or (
+        type(state.get('rev')) is not int or state['rev'] < 0
+    ):
+        return {'classification': UNKNOWN, 'checks': [],
+                'problems': ['malformed_coverage_ranges_or_revision'],
                 'scope': scope, 'zip_checked': False}
     entries = doc['entries']
     if len(entries) != scope.get('total') or len(entries) > scope.get('entry_limit', 0):
@@ -87,6 +104,7 @@ def compare(doc, archive=None, omit_one=False):
     for p in selected:
         actual[identity(form, int(p['entry_id']), p)].append(p)
     seen_ids = set()
+    initial_selected_counts = Counter(identity(form, int(p['entry_id']), p) for p in selected)
     refs_in_entries = Counter(identity(form, int(e['entry_id']), o)
                               for e in entries if e['status'] == 'active'
                               for o in e['occurrences'])
@@ -132,6 +150,13 @@ def compare(doc, archive=None, omit_one=False):
                         kind, reason = CLEAR, 'independent_occurrence_selected'
                 else:
                     kind, reason = MISMATCH, 'eligible_occurrence_missing_from_NEW_plan'
+                    if refs_in_entries[ident] > 1:
+                        # Multiplicity is missing, but no planner slot exists
+                        # to determine which identical-reference slot it was.
+                        who['slot'] = None
+                        reason = 'duplicate_reference_multiplicity_missing_slot_ambiguous'
+                        who['expected_count'] = refs_in_entries[ident]
+                        who['selected_count'] = initial_selected_counts[ident]
             checks.append({**who, 'classification': kind, 'reason': reason})
     if any(v for v in actual.values()):
         problems.append('selected_occurrence_not_in_independent_eligible_population')
