@@ -20,19 +20,29 @@ const BRC_RECONCILE_LIMIT = 40;
 function brc_reconcile_rows(int $form): ?array {
     $out = [];
     foreach (['active', 'spam', 'trash'] as $status) {
-        $count = 0;
-        $part = GFAPI::get_entries($form, ['status' => $status],
-            ['key' => 'id', 'direction' => 'ASC', 'is_numeric' => true],
-            ['offset' => 0, 'page_size' => BRC_RECONCILE_LIMIT + 1], $count);
-        if (!is_array($part) || count($part) !== (int)$count ||
-            count($part) + count($out) > BRC_RECONCILE_LIMIT) {
-            return null;
-        }
-        foreach ($part as $entry) {
-            if ((int)$entry['form_id'] !== $form || ($entry['status'] ?? '') !== $status) {
+        $total = null;
+        for ($offset = 0; $offset <= BRC_RECONCILE_LIMIT; $offset += 10) {
+            $count = 0;
+            $part = GFAPI::get_entries($form, ['status' => $status],
+                ['key' => 'id', 'direction' => 'ASC', 'is_numeric' => true],
+                ['offset' => $offset, 'page_size' => 10], $count);
+            if (!is_array($part) || (int)$count > BRC_RECONCILE_LIMIT - count($out) ||
+                ($total !== null && $total !== (int)$count)) {
                 return null;
             }
-            $out[(int)$entry['id']] = $entry;
+            $total = (int)$count;
+            foreach ($part as $entry) {
+                $id = (int)$entry['id'];
+                if ($id < 1 || isset($out[$id]) || (int)$entry['form_id'] !== $form ||
+                    ($entry['status'] ?? '') !== $status) {
+                    return null;
+                }
+                $out[$id] = $entry;
+            }
+            if (count($part) < 10) {
+                if ($offset + count($part) !== $total) { return null; }
+                break;
+            }
         }
     }
     ksort($out, SORT_NUMERIC);
