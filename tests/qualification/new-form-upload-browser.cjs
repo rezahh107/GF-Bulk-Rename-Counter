@@ -21,6 +21,25 @@ const {chromium} = require('playwright-core');
     catch(e) { throw Error('GF oracle JSON unavailable: '+action+' output='+raw.slice(-600)); }
   }
   const spec = probe('setup');
+  // Reuse PR #50's real submissions, ZIPs and synthetic-only coverage state.
+  // The expectation reader is independent GFAPI + local bytes, not NEW's plan.
+  function reconcile(name, archive, expected, omitOne=false) {
+    const raw=cp.execFileSync('php',[cli,'--path='+wp,'--user=bootstrap_admin',
+      'eval-file','tests/qualification/new-reconcile-snapshot.php'],{
+        encoding:'utf8',env:{...process.env,BRC_RECONCILE_FORM:name},timeout:30000
+      });
+    const snapshot=JSON.parse(raw.trim());
+    if(snapshot.form_id!==spec[name].form)throw Error('Wrong independent GF scope');
+    const file=path.join(lab,'new-reconcile-'+name+'.json');
+    fs.writeFileSync(file,JSON.stringify(snapshot),'utf8');
+    const args=['tests/qualification/new-reconcile.py',file,'--expect',expected];
+    if(archive)args.push('--zip',archive);
+    if(omitOne)args.push('--omit-one-selected');
+    cp.execFileSync('python3',args,{stdio:'inherit',timeout:30000});
+    return snapshot;
+  }
+  cp.execFileSync('python3',['tests/qualification/test_new_reconcile.py'],
+    {stdio:'inherit',timeout:30000});
   const browser = await chromium.launch({executablePath:process.env.BRC_CHROME,
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   try {
@@ -178,6 +197,7 @@ const {chromium} = require('playwright-core');
     await open(spec.optional.form);
     const notNew=await check(0,0,0);
     if(notNew.op)throw Error('Creation-only contract unexpectedly changed');
+    reconcile('optional',null,'EXPECTED_EXCLUSION');
     console.log('PASS_P0_REAL_FORM_NO_FILE_ACK_THEN_FIXTURE_LATE_UPLOAD_EXCLUDED_BY_CONTRACT');
 
     // Independent source-derived expected set is never obtained from the NEW
@@ -210,6 +230,7 @@ const {chromium} = require('playwright-core');
     await received.saveAs(multiZip);
     await page.locator('#gfbrc-new-result').filter({hasText:'SHA-256 matched'}).waitFor();
     oracleVerify(multiZip,true,'');
+    reconcile('multi',multiZip,'NO_OBSERVED_MISMATCH');
 
     function mutate(mode,filename) {
       const dest=path.join(lab,filename);
@@ -229,6 +250,9 @@ const {chromium} = require('playwright-core');
        reduced.internally_verified!==true)
       throw Error('Fault-injected reduced planner did not verify against itself');
     oracleVerify(reduced.archive,false,'occurrence missing');
+    // The reduced production writer plan/ZIP agrees with itself; the separate
+    // full GF source snapshot still names the missing field/slot/reference.
+    reconcile('multi',reduced.archive,'CONFIRMED_MISMATCH',true);
     // Test the original again after fault injection; mutation never touched it.
     oracleVerify(multiZip,true,'');
     console.log('PASS_P0_VALID_ZIP_REAL_OMISSION_CORRUPTION_AND_REDUCED_PLAN_NEGATIVE_CONTROLS');
@@ -242,6 +266,7 @@ const {chromium} = require('playwright-core');
     await open(spec.multi.form);
     const afterMulti=await check(0,0,0);
     if(afterMulti.op)throw Error('Acknowledged multifield Entry appeared NEW again');
+    reconcile('multi',null,'EXPECTED_EXCLUSION');
     console.log('PASS_P0_REAL_MULTIFIELD_ZIP_EXPLICIT_ACK_AND_DURABLE_COVERAGE');
   } finally {await browser.close();}
 })().catch(e=>{console.error('P0_REAL_FORM_FAILURE',e.stack||String(e));process.exit(1);});
