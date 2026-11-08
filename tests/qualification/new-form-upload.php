@@ -85,6 +85,34 @@ if ($action === 'setup') {
         $result[$name] = ['form' => (int)$id, 'page' => get_permalink($page)];
     }
     file_put_contents($meta_file, wp_json_encode($result));
+    // Genuine browser submission with three independently persisted upload
+    // fields. Two files intentionally share original name and byte content.
+    $multi = GFAPI::add_form([
+        'title' => 'GFBRC P0 REAL MULTIFIELD SUBMISSION',
+        'fields' => [
+            ['id' => 1, 'type' => 'fileupload', 'label' => 'Unique document',
+                'isRequired' => true, 'allowedExtensions' => 'txt'],
+            ['id' => 2, 'type' => 'fileupload', 'label' => 'Equal document A',
+                'isRequired' => true, 'allowedExtensions' => 'txt'],
+            ['id' => 3, 'type' => 'fileupload', 'label' => 'Equal document B',
+                'isRequired' => true, 'allowedExtensions' => 'txt'],
+            ['id' => 4, 'type' => 'text', 'label' => 'Synthetic code', 'isRequired' => true],
+        ],
+        'button' => ['type' => 'text', 'text' => 'Submit'],
+    ]);
+    if (is_wp_error($multi) || (int)$multi < 1) {
+        throw new RuntimeException('Could not create genuine multifield form');
+    }
+    $multi_page = wp_insert_post([
+        'post_type' => 'page', 'post_status' => 'publish',
+        'post_title' => 'GFBRC isolated multi-occurrence uploads',
+        'post_content' => '[gravityform id="' . (int)$multi . '" title="false" description="false" ajax="false"]'
+    ], true);
+    if (is_wp_error($multi_page) || (int)$multi_page < 1) {
+        throw new RuntimeException('Could not publish genuine multifield page');
+    }
+    $result['multi'] = ['form' => (int)$multi, 'page' => get_permalink($multi_page)];
+    file_put_contents($meta_file, wp_json_encode($result));
     echo wp_json_encode($result);
     return;
 }
@@ -127,10 +155,80 @@ if ($action === 'attach') {
         'source' => brc_p0_source($optional, $url)]);
     return;
 }
+if ($action === 'read_multi' || $action === 'partial_zip') {
+    $form = (int)$meta['multi']['form'];
+    $entries = brc_p0_entries($form);
+    if (count($entries) !== 1) {
+        throw new RuntimeException('Expected one real multifield browser submission');
+    }
+    $entry = $entries[0];
+    // Test precondition: no form-specific or legacy naming changes this form.
+    // The independent oracle derives expected names from GF source basenames.
+    $rules = \GFBulkRename\Form_Naming_Rules::for_form(GFAPI::get_form($form));
+    $options = get_option('gf_bulk_rename_options', []);
+    if (!is_array($options)) { $options = []; }
+    $counter_id = (int)($options['counter_field_id'] ?? 0);
+    $counter_form = (int)($options['form_id'] ?? 0);
+    if ($rules !== null || ($counter_id > 0 && (!$counter_form || $counter_form === $form))) {
+        throw new RuntimeException('Multifield oracle requires a default-name synthetic form');
+    }
+    $files = [];
+    foreach ([1, 2, 3] as $field) {
+        $value = $entry[(string)$field] ?? '';
+        if (!is_string($value) || $value === '') {
+            throw new RuntimeException('Missing real browser upload field ' . $field);
+        }
+        $decoded = json_decode($value, true);
+        if (json_last_error() !== JSON_ERROR_NONE) { $decoded = [$value]; }
+        if (!is_array($decoded) || array_values($decoded) !== $decoded || count($decoded) !== 1) {
+            throw new RuntimeException('Unexpected single-file GF metadata shape');
+        }
+        foreach ($decoded as $slot => $url) {
+            if (!is_string($url) || $url === '') {
+                throw new RuntimeException('Invalid stored upload occurrence');
+            }
+            $source = brc_p0_source($form, $url);
+            $files[] = [
+                'form_id' => $form, 'entry_id' => (int)$entry['id'],
+                'field_id' => (string)$field, 'slot' => $slot, 'url' => $url,
+                'basename' => $source['basename'], 'size' => $source['size'],
+                'sha256' => $source['sha256'],
+            ];
+        }
+    }
+    if (count($files) !== 3 || $files[0]['sha256'] === $files[1]['sha256'] ||
+        $files[1]['sha256'] !== $files[2]['sha256']) {
+        throw new RuntimeException('Independent equal-content source population is invalid');
+    }
+    if ($action === 'read_multi') {
+        echo wp_json_encode(['form_id' => $form, 'entry_id' => (int)$entry['id'], 'files' => $files]);
+        return;
+    }
+    // Deliberately faulty *reduced planner* is independently verified against
+    // itself, proving why comparing ZIP only to the planner is insufficient.
+    $full_plan = \GFBulkRename\Flat_Zip_Download::plan($form, [(int)$entry['id']]);
+    if (count($full_plan) !== 3) {
+        throw new RuntimeException('Full plugin plan differs from real GF source occurrences');
+    }
+    $reduced = array_slice($full_plan, 0, 2);
+    $temp = \GFBulkRename\Flat_Zip_Download::write_verified_zip($reduced);
+    try {
+        \GFBulkRename\Flat_Zip_Download::verify_closed_zip($temp, $reduced);
+        $destination = $lab . '/new-real-incomplete-planner.zip';
+        if (!copy($temp, $destination)) {
+            throw new RuntimeException('Unable to stage deliberately reduced ZIP');
+        }
+    } finally {
+        @unlink($temp);
+    }
+    echo wp_json_encode(['archive' => $destination, 'reduced_count' => 2,
+        'full_source_count' => count($files), 'internally_verified' => true]);
+    return;
+}
 if ($action === 'state') {
     global $wpdb;
     $result = [];
-    foreach (['required' => $required, 'optional' => $optional] as $name => $form) {
+    foreach (['required' => $required, 'optional' => $optional, 'multi' => (int)$meta['multi']['form']] as $name => $form) {
         $raw = $wpdb->get_var($wpdb->prepare(
             "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s",
             'gfbrc_new_coverage_' . $form));
