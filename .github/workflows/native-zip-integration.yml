@@ -352,6 +352,11 @@ jobs:
           php -l tests/production-candidate/verify-sources.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/production-candidate/verify-sources.php
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
+          # Real GF/WordPress AJAX -> Content-Disposition -> Chromium Blob save,
+          # repeated/superseded operations, explicit ACK, and failed upload.
+          node --check tests/production-candidate/new-browser.cjs
+          BRC_CHROME="$chrome" node tests/production-candidate/new-browser.cjs
+          php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Native Bulk Download unchanged; independent production implementation loaded from installable GFBRC ZIP.'
 
       - name: Falsify F-01 repaired ALL manifest against real GF file metadata and races

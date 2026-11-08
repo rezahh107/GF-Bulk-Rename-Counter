@@ -90,6 +90,19 @@ const {chromium} = require('playwright-core');
       ]);
       const received=await response;
       if(received.status()!==200)throw Error('ZIP response HTTP '+received.status());
+      const disposition=received.headers()['content-disposition'] || '';
+      const match=disposition.match(/^attachment; filename="([^"]+\.zip)"$/i);
+      if(!match || download.suggestedFilename()!==match[1]) {
+        throw Error('Browser-saved filename differs from HTTP Content-Disposition: '+
+          JSON.stringify({disposition,suggested:download.suggestedFilename()}));
+      }
+      const name=match[1];
+      const parts=name.match(/^gfbrc-new-(\d+)-(\d{8}T\d{6}Z)-(\d+)-entries-(\d+)-files-([0-9a-f]{24})\.zip$/);
+      if(!parts || Number(parts[1])!==form ||
+         Number(parts[3])!==Number(received.headers()['x-gfbrc-selected-entries']) ||
+         Number(parts[4])!==Number(received.headers()['x-gfbrc-zip-files'])) {
+        throw Error('Invalid NEW ZIP name or incorrect form/counts: '+name);
+      }
       const dest=path.join(lab,'new-'+label+'.zip');
       await download.saveAs(dest);
       const body=fs.readFileSync(dest);
@@ -97,7 +110,7 @@ const {chromium} = require('playwright-core');
       const header=received.headers()['x-gfbrc-zip-sha256'];
       if(sha!==header||body[0]!==0x50||body[1]!==0x4b)throw Error('Browser downloaded mismatching ZIP');
       await page.locator('#gfbrc-new-result').filter({hasText:'ZIP received and SHA-256 matched'}).waitFor();
-      return {dest,sha,bytes:body.length};
+      return {dest,sha,bytes:body.length,name,utc:parts[2]};
     }
     async function confirm() {
       await page.locator('#gfbrc-new-review').check();
@@ -194,13 +207,20 @@ const {chromium} = require('playwright-core');
     mutate('add_backdated');
     await open();
     await pending(1,1);
-    await receive('unacknowledged');
+    const firstUnacked = await receive('unacknowledged');
+    const sameOpAgain = await receive('same-op-retry');
+    if(sameOpAgain.name!==firstUnacked.name)
+      throw Error('Repeated download of identical NEW operation changed filename');
     const rev=mutate('read_coverage').state.rev;
     await open();
-    await pending(1,1); // no confirmation => safe retry
+    await pending(1,1); // independent operation; no ACK => same counts
     if(mutate('read_coverage').state.rev!==rev)throw Error('Unacknowledged ZIP changed coverage');
-    await receive('retry');
+    const separateOp = await receive('retry');
+    if(separateOp.name===firstUnacked.name)
+      throw Error('Independent NEW operation with equal form/counts reused filename');
     await confirm();
+    console.log('PASS_NEW_BROWSER_SAME_OP_STABLE_AND_SEPARATE_EQUAL_COUNTS_DISTINCT'+
+      ' first='+firstUnacked.name+' second='+separateOp.name);
     console.log('PASS_NEW_BROWSER_UNACKNOWLEDGED_RETRY_NO_SILENT_SKIP');
 
     // Genuine late-commit counterexample: the lower allocated GF Entry ID

@@ -503,6 +503,18 @@ final class New_Download {
         }
     }
 
+    /**
+     * Stable for retries of one generation; distinct for independently prepared
+     * generations. The timestamp is the operation's creation time in UTC.
+     * Hashing the 128-bit random operation ID avoids exposing the live token.
+     */
+    private static function zip_filename(int $form, array $op, int $files): string {
+        $created_utc = gmdate('Ymd\THis\Z', $op['expires'] - self::TTL);
+        $suffix = substr(hash('sha256', $op['id']), 0, 24);
+        return 'gfbrc-new-' . $form . '-' . $created_utc . '-' .
+            count($op['ids']) . '-entries-' . $files . '-files-' . $suffix . '.zip';
+    }
+
     public static function download(): void {
         $tmp = null;
         try {
@@ -540,8 +552,8 @@ final class New_Download {
             nocache_headers();
             header('Cache-Control: private, no-store, max-age=0');
             header('Content-Type: application/zip');
-            header('Content-Disposition: attachment; filename="gfbrc-new-' . $form . '-' .
-                count($op['ids']) . '-entries-' . count($plan) . '-files.zip"');
+            header('Content-Disposition: attachment; filename="' .
+                self::zip_filename($form, $op, count($plan)) . '"');
             header('X-GFBRC-Selected-Entries: ' . count($op['ids']));
             header('X-GFBRC-ZIP-Files: ' . count($plan));
             header('X-GFBRC-ZIP-SHA256: ' . $sha);
