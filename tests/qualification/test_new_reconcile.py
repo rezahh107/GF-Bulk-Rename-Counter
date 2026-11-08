@@ -40,6 +40,23 @@ class ReconcileControls(unittest.TestCase):
         self.assertEqual(result['checks'][1]['slot'], 1)
         self.assertEqual(result['checks'][1]['reason'], 'eligible_occurrence_missing_from_NEW_plan')
 
+    def test_actual_pending_membership_fails_even_without_a_file(self):
+        doc = fixture()
+        doc['entries'][0]['occurrences'] = []
+        doc['selected'] = []
+        doc['pending'] = {'active': True, 'coherent': True, 'ids': []}
+        result = mod.compare(doc)
+        self.assertEqual(result['classification'], mod.MISMATCH)
+        self.assertEqual(result['checks'][0]['reason'],
+                         'eligible_entry_missing_from_actual_NEW_pending')
+        doc['pending']['ids'] = [7]
+        self.assertEqual(mod.compare(doc)['classification'], mod.CLEAR)
+
+    def test_unstable_pending_cannot_establish_mismatch(self):
+        doc = fixture()
+        doc['pending'] = {'active': True, 'coherent': False, 'ids': []}
+        self.assertEqual(mod.compare(doc)['classification'], mod.UNKNOWN)
+
     def test_later_upload_after_ack_not_a_defect(self):
         self.assertEqual(mod.compare(fixture(known=True))['classification'], mod.EXCLUDED)
         self.assertFalse(mod.compare(fixture(known=True))['historical_receipt_proven'])
