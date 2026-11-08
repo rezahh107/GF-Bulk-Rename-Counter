@@ -89,6 +89,27 @@ class ReconcileControls(unittest.TestCase):
         doc['selected'][1]['url'] = doc['selected'][0]['url']
         self.assertEqual(mod.compare(doc)['classification'], mod.UNKNOWN)
 
+    def test_invalid_coverage_does_not_assert_missing_file(self):
+        doc = fixture()
+        doc['state']['known'] = [[9, 3]]
+        self.assertEqual(mod.compare(doc)['classification'], mod.UNKNOWN)
+        doc['state']['known'] = [[7, 7], [7, 8]]
+        self.assertEqual(mod.compare(doc)['classification'], mod.UNKNOWN)
+
+    def test_duplicate_reference_omission_has_no_invented_slot(self):
+        doc = fixture(slots=2)
+        ref = doc['entries'][0]['occurrences'][0]['url']
+        doc['entries'][0]['occurrences'][1]['url'] = ref
+        doc['selected'][1]['url'] = ref
+        doc['selected'] = doc['selected'][:1]
+        result = mod.compare(doc)
+        self.assertEqual(result['classification'], mod.MISMATCH)
+        missing = [c for c in result['checks'] if c['classification'] == mod.MISMATCH]
+        self.assertEqual(len(missing), 1)
+        self.assertIsNone(missing[0]['slot'])
+        self.assertEqual(missing[0]['reason'],
+                         'duplicate_reference_multiplicity_missing_slot_ambiguous')
+
     def test_corrupt_zip_does_not_claim_receipt(self):
         doc = fixture()
         with tempfile.TemporaryDirectory() as tmp:
