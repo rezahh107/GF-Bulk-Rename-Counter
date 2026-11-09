@@ -364,11 +364,8 @@ jobs:
           test ! -e "$mu"
           mkdir -p "$(dirname "$mu")"
           cp tests/production-candidate/recent-mu.php "$mu"
-          trap 'if test -e "$BRC_LAB_DIR/recent-zero-original.php"; then python3 tests/production-candidate/recent-zero-instrument.py restore; fi; rm -f "$mu"' EXIT
+          trap 'rm -f "$mu"' EXIT
           BRC_CHROME="$chrome" node tests/production-candidate/recent-browser.cjs | tee "$BRC_LAB_DIR/reports/recent-browser.txt"
-          python3 -m py_compile tests/production-candidate/recent-zero-instrument.py
-          node --check tests/production-candidate/recent-zero-browser.cjs
-          BRC_CHROME="$chrome" node tests/production-candidate/recent-zero-browser.cjs | tee "$BRC_LAB_DIR/reports/recent-zero-browser.txt"
           python3 tests/production-candidate/recent-assert.py "$BRC_LAB_DIR" | tee "$BRC_LAB_DIR/reports/recent-zip.txt"
 
       - name: Falsify F-01 repaired ALL manifest against real GF file metadata and races
@@ -567,6 +564,25 @@ jobs:
           python3 -m py_compile tests/qualification/qf-status-race.py
           python3 tests/qualification/qf-status-race.py
           echo 'PASS_REAL_PRODUCTION_ACK_STATUS_ROW_LOCK_BARRIER'
+
+      - name: Qualify zero-active Recent N and observe GF cache boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Run after existing runtime instrumented regressions to avoid affecting
+          # their OPcache revalidation timing. No product file is committed.
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          mu="$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-recent-lab.php"
+          test ! -e "$mu"
+          cp tests/production-candidate/recent-mu.php "$mu"
+          trap 'if test -e "$BRC_LAB_DIR/recent-zero-original.php"; then python3 tests/production-candidate/recent-zero-instrument.py restore; fi; rm -f "$mu"' EXIT
+          php -l tests/production-candidate/recent-mu.php
+          python3 -m py_compile tests/production-candidate/recent-zero-instrument.py
+          node --check tests/production-candidate/recent-zero-browser.cjs
+          BRC_CHROME="$chrome" node tests/production-candidate/recent-zero-browser.cjs | tee "$BRC_LAB_DIR/reports/recent-zero-browser.txt"
+          cmp includes/class-recent_download.php "$BRC_WP_PATH/wp-content/plugins/gf-bulk-rename-counter/includes/class-recent_download.php"
+          test ! -e "$BRC_LAB_DIR/recent-zero-original.php"
 
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
