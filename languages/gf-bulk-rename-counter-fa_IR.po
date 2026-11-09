@@ -281,6 +281,12 @@ msgstr "نام‌های برنامه‌ریزی‌شده تکراری‌اند"
 msgid "Effective Entry List filter criteria changed; reload the list"
 msgstr "معیارهای مؤثر فیلتر فهرست ورودی‌ها تغییر کرده‌اند؛ فهرست را بازخوانی کنید"
 
+msgid "Entry %1$d, field %2$s, slot %3$d: eligible file occurrence missing from NEW plan"
+msgstr "ورودی %1$d، فیلد %2$s، جایگاه %3$d: رخداد فایل واجدشرایط از برنامه NEW جا افتاده است"
+
+msgid "Entry %1$d: eligible Entry missing from NEW selection"
+msgstr "ورودی %1$d: ورودی واجدشرایط از انتخاب NEW جا افتاده است"
+
 msgid "Entry List authorization context changed or expired"
 msgstr "زمینهٔ مجوز فهرست ورودی‌ها تغییر کرده یا منقضی شده است"
 
@@ -410,6 +416,9 @@ msgstr "ذخیره‌سازی تراکنشی ورودی‌های Gravity Forms �
 msgid "Headers sent during output buffer cleanup"
 msgstr "سرآیندها هنگام پاک‌سازی بافر خروجی ارسال شدند"
 
+msgid "Highest Entry ID in this Form: %1$s; highest cumulatively ACK-covered Entry ID: %2$s (ID difference is not a NEW count)."
+msgstr "بالاترین شناسه Entry در این فرم: %1$s؛ بالاترین شناسه Entry تحت پوشش انباشتی ACK: %2$s (اختلاف شناسه‌ها شمار NEW نیست)."
+
 msgid "How filenames will be generated for this form"
 msgstr "روش فعلی نام‌گذاری فایل‌های این فرم"
 
@@ -418,6 +427,9 @@ msgstr "من ZIP را ذخیره و بررسی کرده‌ام (یا ورودی�
 
 msgid "Inconsistent deleted-file flag and URL list"
 msgstr "پرچم حذف فایل با فهرست نشانی‌های آن سازگار نیست"
+
+msgid "Independent NEW check: %1$s — Form %2$d / eligible Entries %3$d / file occurrences %4$s / expected excluded Entries %5$d."
+msgstr "کنترل مستقل NEW: %1$s — فرم %2$d / ورودی‌های واجدشرایط %3$d / رخدادهای فایل %4$s / ورودی‌های مستثنا %5$d."
 
 msgid "Independent ZIP: Composite"
 msgstr "ZIP مستقل: Composite (ترکیبی)"
@@ -430,6 +442,9 @@ msgstr "ZIP مستقل: قانون صریح Legacy"
 
 msgid "Independent ZIP: inherited Legacy defaults"
 msgstr "ZIP مستقل: تنظیمات پیش‌فرض Legacy به‌ارث‌رسیده"
+
+msgid "Independent identity/file check INCONCLUSIVE; no complete receipt claim can be made."
+msgstr "کنترل مستقل هویت و فایل نامشخص است (INCONCLUSIVE)؛ دریافت کامل قابل تأیید نیست."
 
 msgid "Inherit Legacy defaults (no form-specific rule)"
 msgstr "استفاده از پیش‌فرض Legacy (بدون قانون اختصاصی فرم)"
@@ -695,6 +710,9 @@ msgstr "ورودی در انتخاب نامعتبر یا تکراری است"
 msgid "Not authorized"
 msgstr "مجوز دسترسی ندارید"
 
+msgid "Observed omissions: %d; details (up to 10): "
+msgstr "موارد جاافتادگی مشاهده‌شده: %d؛ جزئیات (حداکثر ۱۰ مورد): "
+
 msgid "Operation no longer available"
 msgstr "عملیات دیگر در دسترس نیست"
 
@@ -724,6 +742,9 @@ msgstr "قوانین فرم‌ها نیازمند بررسی‌اند"
 
 msgid "Position"
 msgstr "جایگاه"
+
+msgid "Read-only, time-bounded diagnostic; not proof of saved ZIP or receipt. ACK remains a separate explicit decision."
+msgstr "این گزارش فقط خواندنی و محدود به زمان بررسی است؛ ذخیره ZIP یا دریافت معتبر را ثابت نمی‌کند. ACK همچنان تصمیمی صریح و جداگانه است."
 
 msgid "Receiving and verifying the ZIP in this browser…"
 msgstr "در حال دریافت و راستی‌آزمایی ZIP در این مرورگر…"
