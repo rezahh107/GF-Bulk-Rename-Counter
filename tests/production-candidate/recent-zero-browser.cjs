@@ -88,7 +88,7 @@ const {chromium} = require('playwright-core');
       assert.equal(await page.locator('#gfbrc-recent-download').isVisible(), false);
       assert.equal(zipRequests, beforeZip, 'A ZIP endpoint was requested');
       assert.equal(downloads, beforeDownloads, 'A browser download was offered');
-      const diagnostics = fs.readFileSync(httpLog, 'utf8').slice(start);
+      const diagnostics = fs.readFileSync(httpLog).subarray(start).toString('utf8');
       assert.doesNotMatch(diagnostics, /PHP (?:Warning|Fatal error|Notice|Deprecated)|Uncaught|Stack trace/i,
         phase + ' ' + spec.name + ': PHP diagnostics appeared');
       console.log('PASS_RECENT_ZERO_CASE', phase, spec.name, JSON.stringify(spec.counts));
