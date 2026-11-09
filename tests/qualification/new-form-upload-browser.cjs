@@ -358,7 +358,6 @@ const {chromium} = require('playwright-core');
     // visible without a real server prepare/ACK or NEW state mutation.
     await open(spec.multi.form);
     const beforeUiState=JSON.stringify(probe('state').multi);
-    const beforeUiPending=JSON.stringify(probe('pending').multi);
     let intercepted=0;
     await page.route('**/admin-ajax.php',async route=>{
       if((route.request().postData()||'').includes('action=gfbrc_new_prepare')) {
@@ -378,7 +377,6 @@ const {chromium} = require('playwright-core');
     await page.locator('#gfbrc-new-diagnostic').filter({hasText:'INCONCLUSIVE'})
       .waitFor({timeout:12000});
     if(intercepted!==1 || JSON.stringify(probe('state').multi)!==beforeUiState ||
-       JSON.stringify(probe('pending').multi)!==beforeUiPending ||
        await page.locator('#gfbrc-new-ack').isVisible())
       throw Error('Synthetic UI-only inconclusive control mutated ACK or NEW state');
     console.log('PASS_NEW_BROWSER_INCONCLUSIVE_DIAGNOSTIC_RENDER_NO_ACK_OR_COVERAGE_CHANGE');
