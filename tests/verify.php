@@ -41,4 +41,7 @@ if ($status !== 0) { exit($status); }
 $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/new-zip-filename-test.php');
 passthru($cmd, $status);
 if ($status !== 0) { exit($status); }
+$cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/new-identity-crosscheck-test.php');
+passthru($cmd, $status);
+if ($status !== 0) { exit($status); }
 echo "Source verification PASS; WordPress integration NOT PROVEN.\\n";
