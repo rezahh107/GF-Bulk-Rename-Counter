@@ -278,6 +278,12 @@ msgstr ""
 msgid "Effective Entry List filter criteria changed; reload the list"
 msgstr ""
 
+msgid "Entry %1$d, field %2$s, slot %3$d: eligible file occurrence missing from NEW plan"
+msgstr ""
+
+msgid "Entry %1$d: eligible Entry missing from NEW selection"
+msgstr ""
+
 msgid "Entry List authorization context changed or expired"
 msgstr ""
 
@@ -407,6 +413,9 @@ msgstr ""
 msgid "Headers sent during output buffer cleanup"
 msgstr ""
 
+msgid "Highest Entry ID in this Form: %1$s; highest cumulatively ACK-covered Entry ID: %2$s (ID difference is not a NEW count)."
+msgstr ""
+
 msgid "How filenames will be generated for this form"
 msgstr ""
 
@@ -414,6 +423,9 @@ msgid "I saved and checked the ZIP (or reviewed the zero-file Entries)"
 msgstr ""
 
 msgid "Inconsistent deleted-file flag and URL list"
+msgstr ""
+
+msgid "Independent NEW check: %1$s — Form %2$d / eligible Entries %3$d / file occurrences %4$s / expected excluded Entries %5$d."
 msgstr ""
 
 msgid "Independent ZIP: Composite"
@@ -426,6 +438,9 @@ msgid "Independent ZIP: explicit Legacy rule"
 msgstr ""
 
 msgid "Independent ZIP: inherited Legacy defaults"
+msgstr ""
+
+msgid "Independent identity/file check INCONCLUSIVE; no complete receipt claim can be made."
 msgstr ""
 
 msgid "Inherit Legacy defaults (no form-specific rule)"
@@ -692,6 +707,9 @@ msgstr ""
 msgid "Not authorized"
 msgstr ""
 
+msgid "Observed omissions: %d; details (up to 10): "
+msgstr ""
+
 msgid "Operation no longer available"
 msgstr ""
 
@@ -720,6 +738,9 @@ msgid "Per-form rules need attention"
 msgstr ""
 
 msgid "Position"
+msgstr ""
+
+msgid "Read-only, time-bounded diagnostic; not proof of saved ZIP or receipt. ACK remains a separate explicit decision."
 msgstr ""
 
 msgid "Receiving and verifying the ZIP in this browser…"
