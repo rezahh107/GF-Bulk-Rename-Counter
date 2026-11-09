@@ -27,6 +27,8 @@ if ($action === 'setup') {
     $form = (int)require_recent(GFAPI::add_form($definition + ['title' => 'Recent N boundary']));
     $small = (int)require_recent(GFAPI::add_form($definition + ['title' => 'Recent N small and ACK']));
     $empty = (int)require_recent(GFAPI::add_form($definition + ['title' => 'Recent N file-free']));
+    $zero = (int)require_recent(GFAPI::add_form($definition + ['title' => 'Recent N genuinely zero Entries']));
+    $trashed = (int)require_recent(GFAPI::add_form($definition + ['title' => 'Recent N sole Entry trashed']));
     $upload = wp_upload_dir();
     $dir = $upload['basedir'] . '/gfbrc-recent-fixture';
     if (!wp_mkdir_p($dir)) { throw new RuntimeException('Cannot create test uploads'); }
@@ -71,11 +73,14 @@ if ($action === 'setup') {
         require_recent($status === 'deleted' ? GFAPI::delete_entry($id) : GFAPI::update_entry_property($id, 'status', $status));
     }
     require_recent(GFAPI::add_entry(['form_id' => $empty]));
+    $trashed_entry = (int)require_recent(GFAPI::add_entry(['form_id' => $trashed, '3' => 'only Entry']));
+    require_recent(GFAPI::update_entry_property($trashed_entry, 'status', 'trash'));
     $rules = get_option('gf_bulk_rename_per_form_rules', []);
     $rules[$form] = ['method' => 'single', 'field_id' => 3];
     require_recent(update_option('gf_bulk_rename_per_form_rules', $rules));
     $data = [
         'form' => $form, 'small' => $small, 'empty' => $empty,
+        'zero' => $zero, 'trashed' => $trashed, 'trashed_entry' => $trashed_entry,
         'entries' => array_reverse($entries), 'small_source' => $source[1], 'race_source' => $extra,
         'missing_source' => $source[501],
     ];
@@ -133,6 +138,20 @@ if ($action === 'setup') {
                 $late->query('ROLLBACK');
                 $late->close();
             }
+            break;
+        case 'zero-membership':
+            $active = [];
+            foreach (['zero' => $data['zero'], 'trashed' => $data['trashed'],
+                      'file_free' => $data['empty']] as $label => $form_id) {
+                $ids = GFAPI::get_entry_ids($form_id, ['status' => 'active'],
+                    ['key' => 'id', 'direction' => 'DESC', 'is_numeric' => true],
+                    ['offset' => 0, 'page_size' => 50]);
+                if (!is_array($ids)) { throw new RuntimeException('Could not read native active Entry membership'); }
+                $active[$label] = count($ids);
+            }
+            $one = GFAPI::get_entry((int)$data['trashed_entry']);
+            if (!is_array($one)) { throw new RuntimeException('Could not read trashed synthetic Entry'); }
+            $data = ['active' => $active, 'trashed_status' => $one['status'] ?? null];
             break;
         case 'state':
             $sql = $wpdb->prepare("SELECT option_name, option_value FROM {$wpdb->options}
