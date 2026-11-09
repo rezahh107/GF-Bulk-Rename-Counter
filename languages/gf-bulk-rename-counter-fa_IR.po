@@ -931,3 +931,48 @@ msgstr "— انتخاب یک فیلد متنی یا عددی —"
 
 msgid "— Select a form —"
 msgstr "— انتخاب فرم —"
+
+msgid "Invalid Recent N request"
+msgstr "درخواست دانلود ورودی‌های اخیر معتبر نیست."
+
+msgid "Recent N exceeds available memory, time or temporary space. Try fewer Entries."
+msgstr "حافظه، زمان یا فضای موقت برای دانلود کامل ورودی‌های اخیر کافی نیست. تعداد کمتری انتخاب کنید."
+
+msgid "Could not verify the complete Recent N selection"
+msgstr "بررسی کامل ورودی‌های اخیر ممکن نشد."
+
+msgid "Recent N requires transactional Gravity Forms storage"
+msgstr "دانلود ورودی‌های اخیر به پایگاه دادهٔ تراکنشی گرویتی فرم (InnoDB) نیاز دارد."
+
+msgid "Recent N changed, expired or was already used. Check again before downloading."
+msgstr "نتیجهٔ بررسی تغییر کرده، منقضی شده یا قبلاً استفاده شده است. پیش از دانلود دوباره بررسی کنید."
+
+msgid "Checking Recent N Entries and files…"
+msgstr "در حال بررسی ورودی‌های اخیر و فایل‌ها…"
+
+msgid "Requested: %1$d. Active Entries: %2$d. Eligible files: %3$d. Entries without files: %4$d."
+msgstr "تعداد درخواستی: %1$d. ورودی‌های فعال: %2$d. فایل‌های واجد شرایط: %3$d. ورودی‌های بدون فایل: %4$d."
+
+msgid "Recent N could not be checked. Check again before downloading."
+msgstr "بررسی ورودی‌های اخیر کامل نشد. پیش از دانلود دوباره بررسی کنید."
+
+msgid "Download requested. Check your browser for the ZIP or an error. To download again, check Recent N first."
+msgstr "درخواست دانلود ارسال شد. نتیجهٔ دانلود یا خطا را در مرورگر بررسی کنید. برای دانلود دوباره، ورودی‌های اخیر را دوباره بررسی کنید."
+
+msgid "Recent N — Download files from recent Entries"
+msgstr "ورودی‌های اخیر — دانلود فایل‌ها"
+
+msgid "Uses the whole form, starting with the highest Entry ID. Search, filters, pages, checked rows and NEW history do not limit this download."
+msgstr "همهٔ ورودی‌های فعال این فرم از بزرگ‌ترین شناسهٔ ورودی به پایین بررسی می‌شوند. جست‌وجو، فیلترها، صفحه‌ها، ردیف‌های علامت‌خورده و سابقهٔ NEW دامنهٔ این دانلود را محدود نمی‌کنند."
+
+msgid "Number of active Entries"
+msgstr "تعداد ورودی‌های فعال"
+
+msgid "Check Recent N"
+msgstr "بررسی ورودی‌های اخیر"
+
+msgid "Confirm and download Recent N ZIP"
+msgstr "تأیید و دانلود ZIP ورودی‌های اخیر"
+
+msgid "Recent N: check the last 50, 100, 200 or 500 active Entries in this form by Entry ID. It does not change NEW coverage."
+msgstr "ورودی‌های اخیر: ۵۰، ۱۰۰، ۲۰۰ یا ۵۰۰ ورودی فعال آخر همین فرم را بر اساس شناسهٔ ورودی بررسی کنید. سابقهٔ پوشش NEW تغییر نمی‌کند."

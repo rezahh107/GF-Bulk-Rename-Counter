@@ -354,13 +354,27 @@ jobs:
           php "$BRC_WP_CLI" --path="$BRC_WP_PATH" --user=bootstrap_admin eval-file tests/integration/verify-sources.php
           echo 'Native Bulk Download unchanged; independent production implementation loaded from installable GFBRC ZIP.'
 
+      - name: Verify Recent N in real Gravity Forms and Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          mu="$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-recent-lab.php"
+          test ! -e "$mu"
+          mkdir -p "$(dirname "$mu")"
+          cp tests/production-candidate/recent-mu.php "$mu"
+          trap 'rm -f "$mu"' EXIT
+          BRC_CHROME="$chrome" node tests/production-candidate/recent-browser.cjs | tee "$BRC_LAB_DIR/reports/recent-browser.txt"
+          python3 tests/production-candidate/recent-assert.py "$BRC_LAB_DIR" | tee "$BRC_LAB_DIR/reports/recent-zip.txt"
+
       - name: Falsify F-01 repaired ALL manifest against real GF file metadata and races
         shell: bash
         run: |
           set -euo pipefail
           # Canonical shipped ZIP and repository source remain uninstrumented.
-          test "$(git hash-object includes/class-all_download.php)" = "29326805bb6fb44a01c30f9903ff9a6bdb567cee"
-          test "$(git hash-object includes/class-flat_zip_download.php)" = "df0dabb8b950361c09e5329f2222ee1db76e8947"
+          test "$(git hash-object includes/class-all_download.php)" = "4ca9969f7239bb6bbee6a9702a2c77a967045875"
+          test "$(git hash-object includes/class-flat_zip_download.php)" = "d9cdfa2d565c0379884cf1061c3f1b2ee0a6d3dd"
           if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
             echo 'Qualification harness was included in installable ZIP' >&2
             exit 1
@@ -396,8 +410,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git hash-object includes/class-all_download.php)" = "29326805bb6fb44a01c30f9903ff9a6bdb567cee"
-          test "$(git hash-object includes/class-flat_zip_download.php)" = "df0dabb8b950361c09e5329f2222ee1db76e8947"
+          test "$(git hash-object includes/class-all_download.php)" = "4ca9969f7239bb6bbee6a9702a2c77a967045875"
+          test "$(git hash-object includes/class-flat_zip_download.php)" = "d9cdfa2d565c0379884cf1061c3f1b2ee0a6d3dd"
           if unzip -Z1 "$BRC_TARGET_ZIP" | grep -Eq '(^|/)tests/qualification/'; then
             echo 'Test-only F-02 capacity harness leaked into canonical package' >&2
             exit 1
@@ -606,6 +620,8 @@ jobs:
             /tmp/brc-lab/reports/qf-meta-lock-results.json
             /tmp/brc-lab/reports/qf-status-ack-cutoff.json
             /tmp/brc-lab/reports/package-identities.txt
+            /tmp/brc-lab/reports/recent-browser.txt
+            /tmp/brc-lab/reports/recent-zip.txt
             /tmp/brc-lab/reports/ui-polish/*.png
 
       - name: Summarize qualification evidence

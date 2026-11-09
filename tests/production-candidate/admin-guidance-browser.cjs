@@ -61,7 +61,7 @@ const {chromium}=require('playwright-core');
       await page.setViewportSize({width,height:900});
       await open(url);
       const state=await page.evaluate(()=>{
-        const ids=['gfbrc-entries-guide','gfbrc-new-panel','gfbrc-all-panel'];
+        const ids=['gfbrc-entries-guide','gfbrc-new-panel','gfbrc-all-panel','gfbrc-recent-panel'];
         return ids.map(id=>{
           const el=document.getElementById(id);
           if(!el)return {id,missing:true};
@@ -74,7 +74,7 @@ const {chromium}=require('playwright-core');
       if(state.some(x=>x.missing||x.left< -5||x.right>width+5||x.width<=0))
         throw Error('GFBRC responsive geometry overflow '+width+' '+JSON.stringify(state));
       if(state.slice(1).some(x=>!x.heading))
-        throw Error('NEW/ALL heading semantics missing');
+        throw Error('Download panel heading semantics missing');
       if(width>=1024&&Math.abs(state[1].top-state[2].top)>4)
         throw Error('NEW/ALL top edges diverge: '+JSON.stringify(state));
       return state;
@@ -216,6 +216,14 @@ const {chromium}=require('playwright-core');
       await page.locator('#gfbrc-new-prepare').focus();
       if(!await page.locator('#gfbrc-new-prepare').evaluate(el=>document.activeElement===el))
         throw Error('fa_IR NEW control not keyboard focusable');
+      const recent=page.locator('#gfbrc-recent-panel');
+      if(await recent.locator('h2').innerText()!=='ورودی‌های اخیر — دانلود فایل‌ها'||
+         await recent.evaluate(el=>getComputedStyle(el).direction)!=='rtl')
+        throw Error('Recent N Persian panel or direction missing');
+      const recentCount=recent.getByLabel('تعداد ورودی‌های فعال');
+      await recentCount.focus();
+      if(!await recentCount.evaluate(el=>document.activeElement===el))
+        throw Error('Recent N labelled select not keyboard focusable');
       console.log('PASS_REAL_FA_IR_WORDPRESS_RTL_NARROW_GUIDE_AND_KEYBOARD');
       for(const width of [320,375,390,412,768,1024,1440]){
         await polishGeometry(entries(data.a.form_id),width);

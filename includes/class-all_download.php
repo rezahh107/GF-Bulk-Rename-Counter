@@ -256,17 +256,7 @@ final class All_Download {
         // writes its ZIP. Evict ONLY the two host deletion keys for this form's
         // accepted Entries before reusing the exact same authoritative planner.
         // Do not flush unrelated GF caches or change NEW/Selected behavior.
-        global $_gform_lead_meta;
-        if (!is_array($_gform_lead_meta)) {
-            throw new RuntimeException(__('Gravity Forms deletion metadata cache unavailable', 'gf-bulk-rename-counter'));
-        }
-        $prefix = get_current_blog_id() . '_';
-        foreach ($expected_ids as $entry_id) {
-            unset(
-                $_gform_lead_meta[$prefix . $entry_id . '_bdfgf_deleted_file_urls'],
-                $_gform_lead_meta[$prefix . $entry_id . '_bdfgf_files_deleted']
-            );
-        }
+        Flat_Zip_Download::clear_deletion_meta_cache($expected_ids);
         $actual = self::manifest($form, false);
         if ($actual['ids'] !== $expected_ids || $actual['plan'] !== $expected_plan) {
             throw new RuntimeException(__('ALL Entries or eligible source files changed before ZIP delivery; check ALL again', 'gf-bulk-rename-counter'));

@@ -152,6 +152,7 @@ final class Admin_Experience {
             __('All matching: select all matching Entries with the checkbox near Bulk Actions; current filters apply across pages, up to 500 Entries.', 'gf-bulk-rename-counter'),
             __('NEW: check for an unconfirmed batch (the first batch may include existing Entries). Download and review; only explicit receipt confirmation moves NEW coverage.', 'gf-bulk-rename-counter'),
             __('ALL: check all active Entries in this form regardless of filters or selected rows. It does not change NEW coverage.', 'gf-bulk-rename-counter'),
+            __('Recent N: check the last 50, 100, 200 or 500 active Entries in this form by Entry ID. It does not change NEW coverage.', 'gf-bulk-rename-counter'),
         ] as $instruction) {
             echo '<li>' . esc_html($instruction) . '</li>';
         }
@@ -165,6 +166,7 @@ final class Admin_Experience {
 /* GFBRC-only workspace; never restyle native GF tablenav or other wp-admin forms. */
 #gfbrc-entries-workspace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;width:100%;max-width:980px;margin:16px 0}
 #gfbrc-entries-workspace>section{box-sizing:border-box;min-width:0;margin:0;padding:18px 20px;border:1px solid #c3c4c7;background:#fff;overflow-wrap:anywhere}
+#gfbrc-entries-workspace>#gfbrc-recent-panel{grid-column:1/-1}
 #gfbrc-entries-guide{box-sizing:border-box;grid-column:1/-1;max-width:980px;margin:12px 0;padding:18px 20px;border:1px solid #c3c4c7;background:#fff;overflow-wrap:anywhere}
 #gfbrc-entries-workspace #gfbrc-entries-guide{margin:0}
 #gfbrc-entries-guide h2,#gfbrc-entries-workspace .gfbrc-panel-header h2{font-size:16px;font-weight:600;line-height:1.45;margin:0}
