@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) { exit; }
 
 final class New_Identity_Crosscheck {
     private const MAX_OCCURRENCES = 10000;
+    private const MAX_SCHEMA_FIELDS = 10000;
     private const MAX_SOURCE_BYTES = 134217728;
 
     /** Called inside NEW's existing REPEATABLE READ snapshot, not from its plan. */
@@ -29,12 +30,9 @@ final class New_Identity_Crosscheck {
             }
             $previous = $covered ? $covered[count($covered) - 1][1] : null;
             if (count($expected) > 500) { throw new \RuntimeException('bounded_candidate_limit'); }
-            $form_data = \GFAPI::get_form($form);
-            if (!is_array($form_data)) { throw new \RuntimeException('form_unavailable'); }
-            $upload_fields = [];
-            foreach ($form_data['fields'] as $field) {
-                if (($field->type ?? null) === 'fileupload') { $upload_fields[] = (string)$field->id; }
-            }
+            $upload_schema = self::upload_schema($form);
+            if ($upload_schema === null) { throw new \RuntimeException('upload_schema_unavailable'); }
+            $upload_fields = array_map(static fn($field) => (string)$field['id'], $upload_schema);
             $occurrences = [];
             $values = [];
             foreach ($expected as $id) {
@@ -77,7 +75,8 @@ final class New_Identity_Crosscheck {
                 $values[$id]['__deleted'] = array_keys($deleted);
             }
             return ['complete' => true, 'ids' => $expected, 'occurrences' => $occurrences,
-                'values' => $values, 'excluded' => $excluded, 'highest' => $highest,
+                'values' => $values, 'upload_schema' => $upload_schema,
+                'excluded' => $excluded, 'highest' => $highest,
                 'previous_covered_highest' => $previous];
         } catch (\Throwable $e) {
             // Source failures must not change original NEW selection or ACK.
@@ -90,6 +89,39 @@ final class New_Identity_Crosscheck {
         if (!is_string($raw) || !preg_match('/\A[1-9][0-9]*\z/D', $raw)) { return null; }
         $id = (int)$raw;
         return $id > 0 && (string)$id === $raw ? $id : null;
+    }
+
+    /** Canonical upload-field IDs/types from real GF metadata, never from NEW's plan. */
+    private static function upload_schema(int $form): ?array {
+        $definition = \GFAPI::get_form($form);
+        if (!is_array($definition) || !isset($definition['fields']) ||
+            !is_array($definition['fields']) ||
+            count($definition['fields']) > self::MAX_SCHEMA_FIELDS) { return null; }
+        $seen = [];
+        $uploads = [];
+        foreach ($definition['fields'] as $field) {
+            if (!is_object($field) || !is_string($field->type ?? null) || $field->type === '') {
+                return null;
+            }
+            $id = self::identity($field->id ?? null);
+            if ($id === null || isset($seen[$id])) { return null; }
+            $seen[$id] = true;
+            if ($field->type === 'fileupload') {
+                $uploads[] = ['id' => $id, 'type' => 'fileupload'];
+            }
+        }
+        usort($uploads, static fn($a, $b) => $a['id'] <=> $b['id']);
+        return $uploads;
+    }
+
+    /** Read again before/after the planner; invalid or changed metadata is unknown. */
+    public static function stable_upload_schema(int $form, array $observation): bool {
+        if (($observation['complete'] ?? false) !== true ||
+            !is_array($observation['upload_schema'] ?? null)) { return false; }
+        try {
+            $current = self::upload_schema($form);
+            return $current !== null && $current === $observation['upload_schema'];
+        } catch (\Throwable $e) { return false; }
     }
 
     private static function in_ranges(array $ranges, int $id): bool {
@@ -188,7 +220,7 @@ final class New_Identity_Crosscheck {
                     } elseif (($entry[$field] ?? '') !== $raw) { return false; }
                 }
             }
-            return true;
+            return self::stable_upload_schema($form, $observation);
         } catch (\Throwable $e) { return false; }
     }
 
