@@ -6,8 +6,10 @@ function maybe_unserialize($value) { return $value; }
 function gform_get_meta($id, $key) { return false; }
 class GFAPI {
     public static array $entries = [];
+    public static ?array $formFields = null;
     public static function get_form($id) {
-        return ['fields' => [(object)['id' => 1, 'type' => 'fileupload']]];
+        return ['fields' => self::$formFields ??
+            [(object)['id' => 1, 'type' => 'fileupload']]];
     }
     public static function get_entry($id) { return self::$entries[$id] ?? false; }
 }
@@ -103,4 +105,61 @@ eq(Check::observe(9,[['id'=>'11','status'=>'active']],[],[])['complete'],false,
     'status changed across observation');
 $rows=array_map(static fn($id)=>['id'=>$id,'status'=>'active'],range(1,501));
 eq(Check::observe(9,$rows,[],[])['complete'],false,'bounded 500 candidate scan');
+// PRI-FND-001 discriminator: Entry and source values remain unchanged while
+// the authentic GF-shaped metadata upload field set changes.
+GFAPI::$entries = [11 => ['id'=>'11', 'form_id'=>'9', 'status'=>'active',
+    '1'=>'https://example.test/a.txt']];
+GFAPI::$formFields = [(object)['id'=>1, 'type'=>'fileupload']];
+$schemaObs = Check::observe(9, [['id'=>'11', 'status'=>'active']], [], []);
+eq($schemaObs['complete'], true, 'valid schema observation');
+eq($schemaObs['upload_schema'], [['id'=>1, 'type'=>'fileupload']],
+    'canonical observed upload identity and type');
+eq(Check::stable_upload_schema(9, $schemaObs), true, 'unchanged schema before plan');
+eq(Check::stable_entries(9, $schemaObs), true, 'unchanged schema after plan');
+$oneSource = [0 => ['size'=>4,'sha256'=>str_repeat('a',64)]];
+$onePlan = [['entry_id'=>11, 'field_id'=>'1',
+    'url'=>'https://example.test/a.txt', 'size'=>4, 'sha256'=>str_repeat('a',64)]];
+eq(result($schemaObs, [11], $onePlan, $oneSource, $oneSource,
+    Check::stable_entries(9, $schemaObs))['classification'],
+    'NO_OBSERVED_MISMATCH', 'stable schema clean result');
+eq(result($schemaObs, [], [], $oneSource, $oneSource,
+    Check::stable_entries(9, $schemaObs))['classification'],
+    'CONFIRMED_MISMATCH', 'stable schema missing Entry');
+eq(result($schemaObs, [11], [], $oneSource, $oneSource,
+    Check::stable_entries(9, $schemaObs))['classification'],
+    'CONFIRMED_MISMATCH', 'stable schema missing occurrence');
+$drift = [
+    'removed' => [],
+    'changed_type' => [(object)['id'=>1,'type'=>'text']],
+    'added_upload' => [(object)['id'=>1,'type'=>'fileupload'],
+        (object)['id'=>2,'type'=>'fileupload']],
+    'invalid_identity' => [(object)['id'=>1.5,'type'=>'fileupload']],
+    'duplicate_identity' => [(object)['id'=>1,'type'=>'fileupload'],
+        (object)['id'=>'1','type'=>'text']],
+    'missing_type' => [(object)['id'=>1]],
+];
+foreach ($drift as $case => $fields) {
+    GFAPI::$formFields = $fields;
+    // Preplan AND post-plan guards must be able to independently falsify the
+    // verdict. Removing/bypassing this check makes the assertion fail.
+    eq(Check::stable_upload_schema(9, $schemaObs), false, 'preplan drift ' . $case);
+    eq(Check::stable_entries(9, $schemaObs), false, 'postplan drift ' . $case);
+    $stable = Check::stable_upload_schema(9, $schemaObs) &&
+        Check::stable_entries(9, $schemaObs);
+    eq(result($schemaObs, [11], [], $oneSource, $oneSource, $stable)['classification'],
+        'INCONCLUSIVE', 'schema drift takes priority over apparent omission ' . $case);
+}
+GFAPI::$formFields = [(object)['id'=>2,'type'=>'text'],
+    (object)['id'=>1,'type'=>'fileupload']];
+eq(Check::stable_upload_schema(9, $schemaObs), true, 'non-upload field irrelevant');
+GFAPI::$formFields = [(object)['id'=>1,'type'=>'fileupload'],
+    (object)['id'=>2,'type'=>'fileupload']];
+$twoFields = Check::observe(9, [['id'=>'11','status'=>'active']], [], []);
+GFAPI::$formFields = [(object)['id'=>2,'type'=>'fileupload'],
+    (object)['id'=>1,'type'=>'fileupload']];
+eq(Check::stable_upload_schema(9, $twoFields), true, 'upload order irrelevant');
+GFAPI::$formFields = [(object)['id'=>3.5, 'type'=>'fileupload']];
+eq(Check::observe(9, [['id'=>'11','status'=>'active']], [], [])['complete'],
+    false, 'invalid schema at observation fails closed');
+GFAPI::$formFields = null;
 echo "PASS_NEW_IDENTITY_CROSSCHECK_ISOLATED_NEGATIVE_AND_POSITIVE_CONTROLS\n";
