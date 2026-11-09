@@ -21,6 +21,48 @@ const {chromium} = require('playwright-core');
     catch(e) { throw Error('GF oracle JSON unavailable: '+action+' output='+raw.slice(-600)); }
   }
   const spec = probe('setup');
+  // The lab records an independent GF eligibility population before each
+  // prepare. It is not derived from NEW's frozen pending IDs or ZIP plan.
+  const baselines={};
+  function beforePrepare(name) {
+    const raw=cp.execFileSync('php',[cli,'--path='+wp,'--user=bootstrap_admin',
+      'eval-file','tests/qualification/new-reconcile-snapshot.php'],{
+        encoding:'utf8',env:{...process.env,BRC_RECONCILE_FORM:name,
+          BRC_RECONCILE_PHASE:'before_prepare'},timeout:30000
+      });
+    const baseline=JSON.parse(raw.trim());
+    if(baseline.form_id!==spec[name].form || baseline.phase!=='before_prepare' ||
+       !baseline.scope.complete || !baseline.scope.consistent || baseline.pending_active)
+      throw Error('Stable independent pre-prepare GF population unavailable: '+name);
+    baselines[name]=baseline;
+  }
+  function bindPrepare(name, operationId) {
+    if(typeof operationId!=='string' || !/^[0-9a-f]{32}$/.test(operationId))
+      throw Error('Actual NEW prepare operation ID unavailable');
+    baselines[name].generation_sha256=crypto.createHash('sha256')
+      .update(operationId).digest('hex');
+  }
+  // Reuse PR #50's real submissions, ZIPs and synthetic-only coverage state.
+  // The expectation reader is independent GFAPI + local bytes, not NEW's plan.
+  function reconcile(name, archive, expected, omitOne=false, omitPending=false) {
+    const raw=cp.execFileSync('php',[cli,'--path='+wp,'--user=bootstrap_admin',
+      'eval-file','tests/qualification/new-reconcile-snapshot.php'],{
+        encoding:'utf8',env:{...process.env,BRC_RECONCILE_FORM:name},timeout:30000
+      });
+    const snapshot=JSON.parse(raw.trim());
+    if(snapshot.form_id!==spec[name].form)throw Error('Wrong independent GF scope');
+    if(baselines[name])snapshot.pre_prepare=baselines[name];
+    const file=path.join(lab,'new-reconcile-'+name+'.json');
+    fs.writeFileSync(file,JSON.stringify(snapshot),'utf8');
+    const args=['tests/qualification/new-reconcile.py',file,'--expect',expected];
+    if(archive)args.push('--zip',archive);
+    if(omitOne)args.push('--omit-one-selected');
+    if(omitPending)args.push('--omit-one-pending');
+    cp.execFileSync('python3',args,{stdio:'inherit',timeout:30000});
+    return snapshot;
+  }
+  cp.execFileSync('python3',['tests/qualification/test_new_reconcile.py'],
+    {stdio:'inherit',timeout:30000});
   const browser = await chromium.launch({executablePath:process.env.BRC_CHROME,
     headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
   try {
@@ -165,9 +207,15 @@ const {chromium} = require('playwright-core');
     await visitor2.close();
     const missing = probe('read').optional;
     if(!missing || missing.value!=='')throw Error('Optional no-file submit persisted unexpected data');
+    beforePrepare('optional');
     await open(spec.optional.form);
     const empty=await check(1,0,1);
     if(!empty.zero)throw Error('No-file real submit must use review-only ACK');
+    bindPrepare('optional',empty.op);
+    reconcile('optional',null,'NO_OBSERVED_MISMATCH');
+    // Diagnostic-only mutation: the real pending/covered database is untouched.
+    reconcile('optional',null,'CONFIRMED_MISMATCH',false,true);
+    console.log('PASS_TEMPORAL_QUALIFIED_ZERO_FILE_PENDING_OMISSION');
     await ack(true);
     const known=probe('state').optional;
     if(!included(known.known,missing.id)||!included(known.covered,missing.id))
@@ -178,6 +226,7 @@ const {chromium} = require('playwright-core');
     await open(spec.optional.form);
     const notNew=await check(0,0,0);
     if(notNew.op)throw Error('Creation-only contract unexpectedly changed');
+    reconcile('optional',null,'EXPECTED_EXCLUSION');
     console.log('PASS_P0_REAL_FORM_NO_FILE_ACK_THEN_FIXTURE_LATE_UPLOAD_EXCLUDED_BY_CONTRACT');
 
     // Independent source-derived expected set is never obtained from the NEW
@@ -199,10 +248,12 @@ const {chromium} = require('playwright-core');
         console.log('PASS_P0_INDEPENDENT_ORACLE_REJECTED_'+reason.replace(/[^a-z]+/gi,'_').toUpperCase());
       }
     }
+    beforePrepare('multi');
     await open(spec.multi.form);
     const multiPreview=await check(1,3,0);
     if(!multiPreview.op || probe('state').multi.rev!==0)
       throw Error('Real multifield NEW advanced before ACK');
+    bindPrepare('multi',multiPreview.op);
     const multiDownload=page.waitForEvent('download',{timeout:60000});
     await page.locator('#gfbrc-new-download').click();
     const received=await multiDownload;
@@ -210,6 +261,7 @@ const {chromium} = require('playwright-core');
     await received.saveAs(multiZip);
     await page.locator('#gfbrc-new-result').filter({hasText:'SHA-256 matched'}).waitFor();
     oracleVerify(multiZip,true,'');
+    reconcile('multi',multiZip,'NO_OBSERVED_MISMATCH');
 
     function mutate(mode,filename) {
       const dest=path.join(lab,filename);
@@ -229,6 +281,9 @@ const {chromium} = require('playwright-core');
        reduced.internally_verified!==true)
       throw Error('Fault-injected reduced planner did not verify against itself');
     oracleVerify(reduced.archive,false,'occurrence missing');
+    // The reduced production writer plan/ZIP agrees with itself; the separate
+    // full GF source snapshot still names the missing field/slot/reference.
+    reconcile('multi',reduced.archive,'CONFIRMED_MISMATCH',true);
     // Test the original again after fault injection; mutation never touched it.
     oracleVerify(multiZip,true,'');
     console.log('PASS_P0_VALID_ZIP_REAL_OMISSION_CORRUPTION_AND_REDUCED_PLAN_NEGATIVE_CONTROLS');
@@ -242,6 +297,45 @@ const {chromium} = require('playwright-core');
     await open(spec.multi.form);
     const afterMulti=await check(0,0,0);
     if(afterMulti.op)throw Error('Acknowledged multifield Entry appeared NEW again');
+    reconcile('multi',null,'EXPECTED_EXCLUSION');
     console.log('PASS_P0_REAL_MULTIFIELD_ZIP_EXPLICIT_ACK_AND_DURABLE_COVERAGE');
+
+    // Temporal control on the SAME genuine GF multifield form: a second
+    // Entry exists before prepare; a third arrives after IDs are frozen.
+    // Do not ACK this new generation: it is only a disposable observation.
+    const temporalVisitor=await browser.newContext();
+    try {
+      const temporalPage=await temporalVisitor.newPage();
+      async function submitTemporal(label) {
+        await temporalPage.goto(spec.multi.page,{waitUntil:'domcontentloaded',timeout:30000});
+        await temporalPage.locator('form#gform_'+spec.multi.form+' input[name="input_4"]')
+          .fill('Synthetic '+label);
+        for(const field of [1,2,3]) {
+          await temporalPage.locator('form#gform_'+spec.multi.form+
+            ' input[name="input_'+field+'"]').setInputFiles({
+              name:'temporal-'+field+'.txt',mimeType:'text/plain',
+              buffer:Buffer.from(label+'-field-'+field,'utf8')
+            });
+        }
+        await temporalPage.locator('#gform_submit_button_'+spec.multi.form).click();
+        await temporalPage.locator('#gform_confirmation_message_'+spec.multi.form+
+          ', #gform_confirmation_wrapper_'+spec.multi.form).first().waitFor({timeout:30000});
+      }
+      await submitTemporal('before-prepare');
+      beforePrepare('multi');
+      await open(spec.multi.form);
+      const temporalOp=await check(1,3,0);
+      if(!temporalOp.op)throw Error('Pre-existing synthetic file Entry not selected');
+      bindPrepare('multi',temporalOp.op);
+      reconcile('multi',null,'EXPECTED_EXCLUSION'); // original ACKed Entry is excluded
+      await submitTemporal('after-prepare');
+      const temporalResult=reconcile('multi',null,'INCONCLUSIVE');
+      const frozen=new Set(temporalResult.pending.ids);
+      const captured=new Set(baselines.multi.entries.map(e=>e.entry_id));
+      const later=temporalResult.entries.filter(e=>!captured.has(e.entry_id));
+      if(later.length!==1 || frozen.has(later[0].entry_id))
+        throw Error('Later genuine GF Entry was not isolated from frozen pending IDs');
+      console.log('PASS_TEMPORAL_REAL_POST_PREPARE_ENTRY_INCONCLUSIVE');
+    } finally {await temporalVisitor.close();}
   } finally {await browser.close();}
 })().catch(e=>{console.error('P0_REAL_FORM_FAILURE',e.stack||String(e));process.exit(1);});
