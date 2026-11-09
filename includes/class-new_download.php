@@ -434,10 +434,14 @@ final class New_Download {
             // If sources/status change, the independent verdict is inconclusive.
             try { $source_before = New_Identity_Crosscheck::sample_sources($form, $independent); }
             catch (Throwable $ignored) { $source_before = []; }
+            // A planner can read a different live form definition than the
+            // independent observer. Do not trust an omission across schema drift.
+            $schema_before_plan = New_Identity_Crosscheck::stable_upload_schema($form, $independent);
             $plan = self::plan($form, $new);
             try {
                 $source_after = New_Identity_Crosscheck::sample_sources($form, $independent);
-                $stable = New_Identity_Crosscheck::stable_entries($form, $independent);
+                $stable = $schema_before_plan &&
+                    New_Identity_Crosscheck::stable_entries($form, $independent);
                 $diagnostic = New_Identity_Crosscheck::evaluate($independent, $new, $plan,
                     $source_before, $source_after, $stable);
             } catch (Throwable $ignored) {
