@@ -364,8 +364,11 @@ jobs:
           test ! -e "$mu"
           mkdir -p "$(dirname "$mu")"
           cp tests/production-candidate/recent-mu.php "$mu"
-          trap 'rm -f "$mu"' EXIT
+          trap 'if test -e "$BRC_LAB_DIR/recent-zero-original.php"; then python3 tests/production-candidate/recent-zero-instrument.py restore; fi; rm -f "$mu"' EXIT
           BRC_CHROME="$chrome" node tests/production-candidate/recent-browser.cjs | tee "$BRC_LAB_DIR/reports/recent-browser.txt"
+          python3 -m py_compile tests/production-candidate/recent-zero-instrument.py
+          node --check tests/production-candidate/recent-zero-browser.cjs
+          BRC_CHROME="$chrome" node tests/production-candidate/recent-zero-browser.cjs | tee "$BRC_LAB_DIR/reports/recent-zero-browser.txt"
           python3 tests/production-candidate/recent-assert.py "$BRC_LAB_DIR" | tee "$BRC_LAB_DIR/reports/recent-zip.txt"
 
       - name: Falsify F-01 repaired ALL manifest against real GF file metadata and races
@@ -621,6 +624,8 @@ jobs:
             /tmp/brc-lab/reports/qf-status-ack-cutoff.json
             /tmp/brc-lab/reports/package-identities.txt
             /tmp/brc-lab/reports/recent-browser.txt
+            /tmp/brc-lab/reports/recent-zero-browser.txt
+            /tmp/brc-lab/recent-zero-cache.jsonl
             /tmp/brc-lab/reports/recent-zip.txt
             /tmp/brc-lab/reports/ui-polish/*.png
 
