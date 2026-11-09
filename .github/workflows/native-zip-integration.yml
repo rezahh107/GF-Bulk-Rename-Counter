@@ -386,7 +386,14 @@ jobs:
           python3 -m py_compile tests/qualification/all-race-instrument.py tests/qualification/all-race-repair-assert.py
           node --check tests/qualification/all-race-repair-browser.cjs
           python3 tests/qualification/all-race-instrument.py apply
-          trap 'python3 tests/qualification/all-race-instrument.py restore' EXIT
+          # Invalidate the HTTP worker's opcode cache for the *test-instrumented*
+          # ALL/ZIP sources; patching the on-disk files alone may leave stale code.
+          mu="$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-f01-opcache-lab.php"
+          test ! -e "$mu"
+          cp tests/production-candidate/recent-mu.php "$mu"
+          trap 'python3 tests/qualification/all-race-instrument.py restore; curl -fsS -H "X-BRC-Recent-Zero-Revalidate: all" "$BRC_BASE_URL/" -o /dev/null; rm -f "$mu"' EXIT
+          curl -fsS -D "$BRC_LAB_DIR/f01-opcache-headers" -H "X-BRC-Recent-Zero-Revalidate: all" "$BRC_BASE_URL/" -o /dev/null
+          grep -i '^X-GFBRC-Zero-Opcache: ' "$BRC_LAB_DIR/f01-opcache-headers"
           chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$chrome"
           BRC_CHROME="$chrome" node tests/qualification/all-race-repair-browser.cjs
