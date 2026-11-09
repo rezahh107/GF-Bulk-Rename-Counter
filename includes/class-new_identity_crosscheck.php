@@ -18,7 +18,10 @@ final class New_Identity_Crosscheck {
                 $id = self::identity($row['id'] ?? null);
                 if ($id === null) { throw new \RuntimeException('invalid_stored_identity'); }
                 $highest = $id;
-                if (($row['status'] ?? '') !== 'active' || self::in_ranges($known, $id)) {
+                if (!in_array($row['status'] ?? null, ['active', 'spam', 'trash'], true)) {
+                    throw new \RuntimeException('unknown_entry_status');
+                }
+                if ($row['status'] !== 'active' || self::in_ranges($known, $id)) {
                     ++$excluded;
                 } else {
                     $expected[] = $id;
@@ -42,6 +45,7 @@ final class New_Identity_Crosscheck {
                     throw new \RuntimeException('entry_temporally_unavailable');
                 }
                 $deleted = self::deleted_urls($id);
+                $seen_references = [];
                 $values[$id] = [];
                 foreach ($upload_fields as $field) {
                     $raw = $entry[$field] ?? '';
@@ -57,6 +61,7 @@ final class New_Identity_Crosscheck {
                         if (!is_string($url) || trim($url) === '') {
                             throw new \RuntimeException('invalid_upload_reference');
                         }
+                        $seen_references[$url] = true;
                         $occurrences[] = ['entry_id' => $id, 'field_id' => $field,
                             'slot' => $slot, 'url' => $url, 'deleted' => isset($deleted[$url])];
                         if (count($occurrences) > self::MAX_OCCURRENCES) {
@@ -65,8 +70,7 @@ final class New_Identity_Crosscheck {
                     }
                 }
                 foreach ($deleted as $url => $_) {
-                    if (!in_array($url, array_column(array_filter($occurrences,
-                        static fn($o) => $o['entry_id'] === $id), 'url'), true)) {
+                    if (!isset($seen_references[$url])) {
                         throw new \RuntimeException('deleted_reference_not_in_entry');
                     }
                 }
@@ -89,8 +93,14 @@ final class New_Identity_Crosscheck {
     }
 
     private static function in_ranges(array $ranges, int $id): bool {
-        foreach ($ranges as $range) {
-            if ($id >= $range[0] && $id <= $range[1]) { return true; }
+        // Coverage ranges may contain 50,000 isolated IDs: never rescan
+        // the entire history for each current Entry.
+        $low = 0; $high = count($ranges) - 1;
+        while ($low <= $high) {
+            $mid = intdiv($low + $high, 2);
+            if ($id < $ranges[$mid][0]) { $high = $mid - 1; }
+            elseif ($id > $ranges[$mid][1]) { $low = $mid + 1; }
+            else { return true; }
         }
         return false;
     }
