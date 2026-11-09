@@ -756,6 +756,8 @@ final class New_Download {
                 'diag_ids' => __('Highest Entry ID in this Form: %1$s; highest cumulatively ACK-covered Entry ID: %2$s (ID difference is not a NEW count).', 'gf-bulk-rename-counter'),
                 'diag_unknown' => __('Independent identity/file check INCONCLUSIVE; no complete receipt claim can be made.', 'gf-bulk-rename-counter'),
                 'diag_discrepancies' => __('Observed omissions: %d; details (up to 10): ', 'gf-bulk-rename-counter'),
+                'diag_entry' => __('Entry %1$d: eligible Entry missing from NEW selection', 'gf-bulk-rename-counter'),
+                'diag_file' => __('Entry %1$d, field %2$s, slot %3$d: eligible file occurrence missing from NEW plan', 'gf-bulk-rename-counter'),
                 'diag_notice' => __('Read-only, time-bounded diagnostic; not proof of saved ZIP or receipt. ACK remains a separate explicit decision.', 'gf-bulk-rename-counter'),
                 'summary' => __('%1$d Entries / %2$d eligible files / %3$d Entries with no files. ', 'gf-bulk-rename-counter'),
                 'first' => __('Initial batch; no automatic coverage update. ', 'gf-bulk-rename-counter'),
@@ -856,9 +858,9 @@ final class New_Download {
     if (data.classification === 'CONFIRMED_MISMATCH' && Array.isArray(data.discrepancies)) {
       parts.push(tr('diag_discrepancies', data.mismatch_count || data.discrepancies.length) +
         data.discrepancies.map(function (d) {
-          return 'Entry ' + d.entry_id +
-            (d.field_id ? ' / field ' + d.field_id + ' / slot ' + d.slot : '') +
-            ' (' + d.reason + ')';
+          return d.reason === 'eligible_file_occurrence_missing_from_NEW_plan'
+            ? tr('diag_file', d.entry_id, d.field_id, d.slot)
+            : tr('diag_entry', d.entry_id);
         }).join('; '));
     }
     parts.push(cfg.text.diag_notice);
