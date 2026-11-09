@@ -353,5 +353,35 @@ const {chromium} = require('playwright-core');
         throw Error('Later genuine GF Entry was not isolated from frozen pending IDs');
       console.log('PASS_TEMPORAL_REAL_POST_PREPARE_ENTRY_INCONCLUSIVE');
     } finally {await temporalVisitor.close();}
+
+    // UI-only control: a synthetic INCONCLUSIVE prepare response must be
+    // visible without a real server prepare/ACK or NEW state mutation.
+    await open(spec.multi.form);
+    const beforeUiState=JSON.stringify(probe('state').multi);
+    const beforeUiPending=JSON.stringify(probe('pending').multi);
+    let intercepted=0;
+    await page.route('**/admin-ajax.php',async route=>{
+      if((route.request().postData()||'').includes('action=gfbrc_new_prepare')) {
+        intercepted++;
+        await route.fulfill({status:200,contentType:'application/json',
+          body:JSON.stringify({success:true,data:{
+            op:null,entries:0,files:0,zero_entries:0,zero:true,
+            first:false,expires:0,diagnostic:{
+              classification:'INCONCLUSIVE',eligible_entries:1,eligible_files:null,
+              excluded_entries:0,current_highest:999,previous_covered_highest:null,
+              discrepancies:[],reason:'entry_or_status_changed'
+            }
+          }})});
+      } else await route.continue();
+    });
+    await page.locator('#gfbrc-new-prepare').click();
+    await page.locator('#gfbrc-new-diagnostic').filter({hasText:'INCONCLUSIVE'})
+      .waitFor({timeout:12000});
+    if(intercepted!==1 || JSON.stringify(probe('state').multi)!==beforeUiState ||
+       JSON.stringify(probe('pending').multi)!==beforeUiPending ||
+       await page.locator('#gfbrc-new-ack').isVisible())
+      throw Error('Synthetic UI-only inconclusive control mutated ACK or NEW state');
+    console.log('PASS_NEW_BROWSER_INCONCLUSIVE_DIAGNOSTIC_RENDER_NO_ACK_OR_COVERAGE_CHANGE');
+    await page.unroute('**/admin-ajax.php');
   } finally {await browser.close();}
 })().catch(e=>{console.error('P0_REAL_FORM_FAILURE',e.stack||String(e));process.exit(1);});
