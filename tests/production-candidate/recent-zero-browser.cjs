@@ -82,10 +82,20 @@ const {chromium} = require('playwright-core');
       assert.deepEqual([data.requested, data.entries, data.files, data.zero_entries], spec.counts);
       assert.equal(data.token, undefined, 'Unexpected download token');
       assert.equal(data.seal, undefined, 'Unexpected download seal');
-      const expected = 'Requested: ' + spec.counts[0] + '. Active Entries: ' + spec.counts[1] +
-        '. Eligible files: 0. Entries without files: ' + spec.counts[3] + '.';
-      await page.locator('#gfbrc-recent-result').filter({hasText: expected}).waitFor();
-      assert.match(await page.locator('#gfbrc-recent-result').innerText(), /No ZIP exists for this scope/);
+      // Derive expected presentation from the active locale and shipped UI template.
+      // Server-side numeric counts above are asserted independently of translations.
+      const expected = await page.evaluate(counts => {
+        const cfg = JSON.parse(document.getElementById('gfbrc-recent-config').textContent);
+        const number = new Intl.NumberFormat(document.documentElement.lang || undefined);
+        return {
+          summary: cfg.summary.replace(/%(\d+)\$d/g, (_, index) => number.format(counts[Number(index) - 1])),
+          empty: cfg.empty,
+        };
+      }, spec.counts);
+      const rendered = page.locator('#gfbrc-recent-result');
+      await rendered.filter({hasText: expected.summary}).waitFor({timeout: 6000});
+      assert.ok((await rendered.innerText()).includes(expected.empty),
+        'Localized zero-file message was not rendered');
       assert.equal(await page.locator('#gfbrc-recent-download').isVisible(), false);
       assert.equal(zipRequests, beforeZip, 'A ZIP endpoint was requested');
       assert.equal(downloads, beforeDownloads, 'A browser download was offered');
