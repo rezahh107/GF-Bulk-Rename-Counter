@@ -61,6 +61,12 @@ const {chromium} = require('playwright-core');
     cp.execFileSync('python3',args,{stdio:'inherit',timeout:30000});
     return snapshot;
   }
+  function runtimeCrosscheck(name) {
+    cp.execFileSync('php',[cli,'--path='+wp,'--user=bootstrap_admin',
+      'eval-file','tests/qualification/new-crosscheck-runtime.php'], {
+      stdio:'inherit',env:{...process.env,BRC_CROSSCHECK_CASE:name},timeout:30000
+    });
+  }
   cp.execFileSync('python3',['tests/qualification/test_new_reconcile.py'],
     {stdio:'inherit',timeout:30000});
   const browser = await chromium.launch({executablePath:process.env.BRC_CHROME,
@@ -150,6 +156,14 @@ const {chromium} = require('playwright-core');
         throw Error('Actual NEW check disagrees with independent GF Entry oracle '+
           JSON.stringify({status:r.status(),j,entries,files,zeros}));
       }
+      const d=j.data.diagnostic;
+      if(!d || !['NO_OBSERVED_MISMATCH','EXPECTED_EXCLUSION'].includes(d.classification) ||
+         d.eligible_entries!==entries || d.eligible_files!==files ||
+         !Number.isSafeInteger(d.excluded_entries)) {
+        throw Error('Independent operator diagnostic failed real GF normal check: '+JSON.stringify(d));
+      }
+      await page.locator('#gfbrc-new-diagnostic').filter({hasText:d.classification})
+        .waitFor({timeout:15000});
       return j.data;
     }
     async function ack(zero) {
@@ -213,6 +227,7 @@ const {chromium} = require('playwright-core');
     if(!empty.zero)throw Error('No-file real submit must use review-only ACK');
     bindPrepare('optional',empty.op);
     reconcile('optional',null,'NO_OBSERVED_MISMATCH');
+    runtimeCrosscheck('optional');
     // Diagnostic-only mutation: the real pending/covered database is untouched.
     reconcile('optional',null,'CONFIRMED_MISMATCH',false,true);
     console.log('PASS_TEMPORAL_QUALIFIED_ZERO_FILE_PENDING_OMISSION');
@@ -262,6 +277,7 @@ const {chromium} = require('playwright-core');
     await page.locator('#gfbrc-new-result').filter({hasText:'SHA-256 matched'}).waitFor();
     oracleVerify(multiZip,true,'');
     reconcile('multi',multiZip,'NO_OBSERVED_MISMATCH');
+    runtimeCrosscheck('multi');
 
     function mutate(mode,filename) {
       const dest=path.join(lab,filename);
@@ -337,5 +353,33 @@ const {chromium} = require('playwright-core');
         throw Error('Later genuine GF Entry was not isolated from frozen pending IDs');
       console.log('PASS_TEMPORAL_REAL_POST_PREPARE_ENTRY_INCONCLUSIVE');
     } finally {await temporalVisitor.close();}
+
+    // UI-only control: a synthetic INCONCLUSIVE prepare response must be
+    // visible without a real server prepare/ACK or NEW state mutation.
+    await open(spec.multi.form);
+    const beforeUiState=JSON.stringify(probe('state').multi);
+    let intercepted=0;
+    await page.route('**/admin-ajax.php',async route=>{
+      if((route.request().postData()||'').includes('action=gfbrc_new_prepare')) {
+        intercepted++;
+        await route.fulfill({status:200,contentType:'application/json',
+          body:JSON.stringify({success:true,data:{
+            op:null,entries:0,files:0,zero_entries:0,zero:true,
+            first:false,expires:0,diagnostic:{
+              classification:'INCONCLUSIVE',eligible_entries:1,eligible_files:null,
+              excluded_entries:0,current_highest:999,previous_covered_highest:null,
+              discrepancies:[],reason:'entry_or_status_changed'
+            }
+          }})});
+      } else await route.continue();
+    });
+    await page.locator('#gfbrc-new-prepare').click();
+    await page.locator('#gfbrc-new-diagnostic').filter({hasText:'INCONCLUSIVE'})
+      .waitFor({timeout:12000});
+    if(intercepted!==1 || JSON.stringify(probe('state').multi)!==beforeUiState ||
+       await page.locator('#gfbrc-new-ack').isVisible())
+      throw Error('Synthetic UI-only inconclusive control mutated ACK or NEW state');
+    console.log('PASS_NEW_BROWSER_INCONCLUSIVE_DIAGNOSTIC_RENDER_NO_ACK_OR_COVERAGE_CHANGE');
+    await page.unroute('**/admin-ajax.php');
   } finally {await browser.close();}
 })().catch(e=>{console.error('P0_REAL_FORM_FAILURE',e.stack||String(e));process.exit(1);});

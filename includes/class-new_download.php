@@ -383,6 +383,10 @@ final class New_Download {
                 array_values($gf_active) !== array_values($sql_active)) {
                 throw new RuntimeException(__('GFAPI and stored active Entry snapshot differ', 'gf-bulk-rename-counter'));
             }
+            // Independent GF Entry/field observation shares this same InnoDB read view.
+            // It is not derived from NEW's candidate list or ZIP plan.
+            $independent = New_Identity_Crosscheck::observe($form, $rows,
+                $state['known'], $state['covered']);
             if ($wpdb->query('COMMIT') === false) { throw new RuntimeException(__('Snapshot commit failed', 'gf-bulk-rename-counter')); }
             $committed = true;
             $new = [];
@@ -392,7 +396,7 @@ final class New_Download {
             if (count($new) > self::MAX_ENTRIES) {
                 throw new RuntimeException(__('NEW exceeds 500 eligible Entries; no partial coverage will be committed', 'gf-bulk-rename-counter'));
             }
-            return [array_values($all), $new];
+            return [array_values($all), $new, $independent];
         } finally {
             if (!$committed) { $wpdb->query('ROLLBACK'); }
         }
@@ -425,13 +429,36 @@ final class New_Download {
             $observed_pending = self::seed_pending($form);
             self::pending_decode($observed_pending);
             $state = self::state($old);
-            [$all, $new] = self::snapshot($form, $state);
-            // A second check with no NEW Entries is read-only.
-            if (!$new && $state['rev'] > 0) {
-                wp_send_json_success(['op' => null, 'entries' => 0, 'files' => 0,
-                    'zero_entries' => 0, 'zero' => true, 'first' => false, 'expires' => 0]);
-            }
+            [$all, $new, $independent] = self::snapshot($form, $state);
+            // These physical reads are intentionally outside the DB transaction.
+            // If sources/status change, the independent verdict is inconclusive.
+            try { $source_before = New_Identity_Crosscheck::sample_sources($form, $independent); }
+            catch (Throwable $ignored) { $source_before = []; }
+            // A planner can read a different live form definition than the
+            // independent observer. Do not trust an omission across schema drift.
+            $schema_before_plan = New_Identity_Crosscheck::stable_upload_schema($form, $independent);
             $plan = self::plan($form, $new);
+            try {
+                $source_after = New_Identity_Crosscheck::sample_sources($form, $independent);
+                $stable = $schema_before_plan &&
+                    New_Identity_Crosscheck::stable_entries($form, $independent);
+                $diagnostic = New_Identity_Crosscheck::evaluate($independent, $new, $plan,
+                    $source_before, $source_after, $stable);
+            } catch (Throwable $ignored) {
+                $diagnostic = ['classification' => 'INCONCLUSIVE',
+                    'reason' => 'independent_check_unavailable'];
+            }
+            // Preserve the original empty-result behavior and never create an
+            // operation or ACK just to display a diagnostic.
+            if (!$new && $state['rev'] > 0) {
+                if (!hash_equals($old, self::raw($form))) {
+                    $diagnostic = ['classification' => 'INCONCLUSIVE',
+                        'reason' => 'coverage_changed_during_check'];
+                }
+                wp_send_json_success(['op' => null, 'entries' => 0, 'files' => 0,
+                    'zero_entries' => 0, 'zero' => true, 'first' => false,
+                    'expires' => 0, 'diagnostic' => $diagnostic]);
+            }
             $with_files = [];
             foreach ($plan as $item) { $with_files[(int)$item['entry_id']] = true; }
             $zero_entries = count($new) - count($with_files);
@@ -452,6 +479,7 @@ final class New_Download {
                 'zero' => $op['zero'],
                 'first' => $state['rev'] === 0,
                 'expires' => self::TTL,
+                'diagnostic' => $diagnostic,
             ]);
         } catch (Throwable $e) { self::fail($e); }
     }
@@ -728,6 +756,13 @@ final class New_Download {
                 'rejected' => __('NEW request rejected', 'gf-bulk-rename-counter'),
                 'failure' => __('NEW failed: %s — coverage is unchanged unless receipt confirmation already succeeded.', 'gf-bulk-rename-counter'),
                 'checking' => __('Checking exact Entries and files…', 'gf-bulk-rename-counter'),
+                'diag_summary' => __('Independent NEW check: %1$s — Form %2$d / eligible Entries %3$d / file occurrences %4$s / expected excluded Entries %5$d.', 'gf-bulk-rename-counter'),
+                'diag_ids' => __('Highest Entry ID in this Form: %1$s; highest cumulatively ACK-covered Entry ID: %2$s (ID difference is not a NEW count).', 'gf-bulk-rename-counter'),
+                'diag_unknown' => __('Independent identity/file check INCONCLUSIVE; no complete receipt claim can be made.', 'gf-bulk-rename-counter'),
+                'diag_discrepancies' => __('Observed omissions: %d; details (up to 10): ', 'gf-bulk-rename-counter'),
+                'diag_entry' => __('Entry %1$d: eligible Entry missing from NEW selection', 'gf-bulk-rename-counter'),
+                'diag_file' => __('Entry %1$d, field %2$s, slot %3$d: eligible file occurrence missing from NEW plan', 'gf-bulk-rename-counter'),
+                'diag_notice' => __('Read-only, time-bounded diagnostic; not proof of saved ZIP or receipt. ACK remains a separate explicit decision.', 'gf-bulk-rename-counter'),
                 'summary' => __('%1$d Entries / %2$d eligible files / %3$d Entries with no files. ', 'gf-bulk-rename-counter'),
                 'first' => __('Initial batch; no automatic coverage update. ', 'gf-bulk-rename-counter'),
                 'nozip' => __('No ZIP exists for this batch; explicitly review the file-free Entries.', 'gf-bulk-rename-counter'),
@@ -769,6 +804,7 @@ final class New_Download {
     '<p class="gfbrc-panel-intro" id="gfbrc-new-intro"></p>' +
     '<p class="description" id="gfbrc-new-guide"></p>' +
     '<p class="gfbrc-panel-result" id="gfbrc-new-result" role="status" aria-live="polite"></p>' +
+    '<p class="description" id="gfbrc-new-diagnostic" role="status" aria-live="polite"></p>' +
     '<div class="gfbrc-panel-actions"><button type="button" class="button button-primary" id="gfbrc-new-download" hidden></button>' +
     '<label id="gfbrc-new-review-wrap" hidden><input type="checkbox" id="gfbrc-new-review"> ' +
     '<span id="gfbrc-new-review-text"></span></label>' +
@@ -803,11 +839,37 @@ final class New_Download {
       download = panel.querySelector('#gfbrc-new-download'),
       ack = panel.querySelector('#gfbrc-new-ack'),
       message = panel.querySelector('#gfbrc-new-result'),
+      diagnostic = panel.querySelector('#gfbrc-new-diagnostic'),
       reviewWrap = panel.querySelector('#gfbrc-new-review-wrap'),
       review = panel.querySelector('#gfbrc-new-review');
   var operation = null, checksum = '', zero = false, downloaded = false, busy = false;
   var zeroEntries = 0;
   function status(s) { message.textContent = s; }
+  function renderDiagnostic(data) {
+    var labels = ['NO_OBSERVED_MISMATCH','CONFIRMED_MISMATCH',
+      'EXPECTED_EXCLUSION','INCONCLUSIVE'];
+    if (!data || labels.indexOf(data.classification) < 0 ||
+        !Number.isSafeInteger(data.eligible_entries) ||
+        !Number.isSafeInteger(data.excluded_entries)) {
+      diagnostic.textContent = cfg.text.diag_unknown; return;
+    }
+    var parts = [tr('diag_summary', data.classification, cfg.form,
+      data.eligible_entries, data.eligible_files === null ? '?' : data.eligible_files,
+      data.excluded_entries)];
+    parts.push(tr('diag_ids',
+      data.current_highest === null ? '—' : data.current_highest,
+      data.previous_covered_highest === null ? '—' : data.previous_covered_highest));
+    if (data.classification === 'CONFIRMED_MISMATCH' && Array.isArray(data.discrepancies)) {
+      parts.push(tr('diag_discrepancies', data.mismatch_count || data.discrepancies.length) +
+        data.discrepancies.map(function (d) {
+          return d.reason === 'eligible_file_occurrence_missing_from_NEW_plan'
+            ? tr('diag_file', d.entry_id, d.field_id, d.slot)
+            : tr('diag_entry', d.entry_id);
+        }).join('; '));
+    }
+    parts.push(cfg.text.diag_notice);
+    diagnostic.textContent = parts.join(' ');
+  }
   // Only explicit application failures may supply operator-facing detail.
   function applicationError(text) {
     var error = new Error(text);
@@ -817,6 +879,7 @@ final class New_Download {
   function reset() {
     operation = null; checksum = ''; zero = false; zeroEntries = 0; downloaded = false;
     download.hidden = true; ack.hidden = true; reviewWrap.hidden = true; review.checked = false;
+    diagnostic.textContent = '';
   }
   async function api(action, extra, binary) {
     var body = new URLSearchParams(Object.assign({
@@ -856,6 +919,7 @@ final class New_Download {
     guarded(async function () {
       reset(); status(cfg.text.checking);
       var data = await api('prepare');
+      renderDiagnostic(data.diagnostic);
       operation = data.op; zero = data.zero; zeroEntries = data.zero_entries;
       status(tr('summary', data.entries, data.files, data.zero_entries)+
         (data.first?cfg.text.first:'')+(zero?cfg.text.nozip:''));
