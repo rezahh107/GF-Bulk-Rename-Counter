@@ -102,16 +102,28 @@ const {chromium} = require('playwright-core');
         }
       }
     }
+    async function revalidateRuntimeSource(stage) {
+      const response = await ctx.request.get(base + '/', {
+        headers: {'X-BRC-Recent-Zero-Revalidate': '1'},
+      });
+      const state = response.headers()['x-gfbrc-zero-opcache'];
+      console.log('GFBRC_ZERO_HTTP_OPCODE_REVALIDATION', stage, response.status(), state);
+      assert.equal(response.status(), 200);
+      assert.ok(['invalidated', 'not-cached-or-disabled'].includes(state),
+        'Test-only HTTP worker invalidation hook did not execute');
+    }
     await runPhase('baseline');
     fs.rmSync(cacheLog, {force: true});
     try {
       console.log(execFileSync('python3', [instrument, 'apply'], {encoding: 'utf8'}).trim());
       probeApplied = true;
+      await revalidateRuntimeSource('instrumented');
       await runPhase('diagnostic');
     } finally {
       if (probeApplied) {
         console.log(execFileSync('python3', [instrument, 'restore'], {encoding: 'utf8'}).trim());
         probeApplied = false;
+        await revalidateRuntimeSource('restored');
       }
     }
     const records = fs.existsSync(cacheLog) ? fs.readFileSync(cacheLog, 'utf8').trim().split('\n')
@@ -128,6 +140,7 @@ const {chromium} = require('playwright-core');
     if (probeApplied) {
       // Defensive restoration on unexpected interruptions; CI step should also restore.
       console.log(execFileSync('python3', [instrument, 'restore'], {encoding: 'utf8'}).trim());
+      await revalidateRuntimeSource('emergency-restored');
     }
     await browser.close();
   }
