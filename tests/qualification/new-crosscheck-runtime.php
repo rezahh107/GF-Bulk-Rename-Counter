@@ -104,9 +104,31 @@ if ($name === 'multi') {
     $target_id = max($original_uploads);
     $all_field_ids = array_map(static fn($field) => (int)$field->id, $original_form['fields']);
     $new_id = max($all_field_ids) + 1;
-    $baseline_entries = [];
+    // GFAPI::get_entry can project fields differently when form metadata
+    // changes, even without any stored Entry mutation. Prove storage fidelity
+    // against bounded raw GF Entry + Entry Meta rows, not that projection.
+    $entry_table = GFFormsModel::get_entry_table_name();
+    $entry_meta_table = GFFormsModel::get_entry_meta_table_name();
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $entry_table) ||
+        !preg_match('/^[A-Za-z0-9_]+$/', $entry_meta_table)) {
+        throw new RuntimeException('Synthetic GF Entry storage unavailable');
+    }
+    $entry_storage = static function (int $id) use ($wpdb, $form, $entry_table, $entry_meta_table): string {
+        $entry = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$entry_table} WHERE id=%d AND form_id=%d", $id, $form
+        ), ARRAY_A);
+        $metadata = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$entry_meta_table} WHERE entry_id=%d ORDER BY id ASC LIMIT 1001", $id
+        ), ARRAY_A);
+        if (!is_array($entry) || !is_array($metadata) || count($metadata) > 1000 ||
+            $wpdb->last_error !== '') {
+            throw new RuntimeException('Bounded synthetic Entry storage read unavailable');
+        }
+        return hash('sha256', wp_json_encode([$entry, $metadata]));
+    };
+    $baseline_storage = [];
     foreach ($pending['ids'] as $entry_id) {
-        $baseline_entries[$entry_id] = GFAPI::get_entry($entry_id);
+        $baseline_storage[$entry_id] = $entry_storage((int)$entry_id);
     }
     $assert_form_fields = static function (array $expected) use ($form): void {
         $actual = GFAPI::get_form($form);
@@ -202,9 +224,9 @@ if ($name === 'multi') {
                     throw new RuntimeException('Negative control cannot falsify the missing guard');
                 }
             }
-            foreach ($baseline_entries as $entry_id => $original_entry) {
-                if (GFAPI::get_entry($entry_id) !== $original_entry) {
-                    throw new RuntimeException('Synthetic form schema test changed an Entry');
+            foreach ($baseline_storage as $entry_id => $original_hash) {
+                if ($entry_storage((int)$entry_id) !== $original_hash) {
+                    throw new RuntimeException('Synthetic form schema test changed stored Entry rows');
                 }
             }
             echo 'PASS_REAL_GF_NEW_SCHEMA_' . strtoupper($case) .
