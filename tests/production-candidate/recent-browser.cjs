@@ -116,14 +116,23 @@ const {chromium} = require('playwright-core');
     assert.equal(await page.locator('input[type="checkbox"][name="entry[]"]').count(), 0);
     await check(50, 50, 50, 2);
 
-    await open(setup.form, '&field_id=5&s=group-a&operator=is&paged=2');
+    const filter = '&field_id=5&s=group-a&operator=is';
     const rows = page.locator('input[type="checkbox"][name="entry[]"]');
-    const visible = await rows.count();
-    assert.ok(visible > 0 && visible < 50, 'Expected native filtered pagination');
-    const groupA = new Set(setup.entries.slice(-250).map(entry => String(entry.id)));
-    assert.ok((await rows.evaluateAll(els => els.map(el => el.value))).every(id => groupA.has(id)),
-      'Native filter did not select group-a');
-    await rows.first().check();
+    // The shared integration lab otherwise overrides the native page size to 160.
+    const nativePaging = path.join(lab, 'ifz-native-page-size');
+    fs.writeFileSync(nativePaging, '', {flag: 'wx'});
+    try {
+      await open(setup.form, filter);
+      const pageOne = new Set(await rows.evaluateAll(els => els.map(el => el.value)));
+      await open(setup.form, filter + '&paged=2');
+      const pageTwo = await rows.evaluateAll(els => els.map(el => el.value));
+      assert.ok(pageOne.size > 0 && pageTwo.length > 0 && pageTwo.length < 50,
+        'Expected native filtered pagination');
+      assert.ok(pageTwo.every(id => !pageOne.has(id)), 'Page two repeated page one');
+      const groupA = new Set(setup.entries.slice(-250).map(entry => String(entry.id)));
+      assert.ok(pageTwo.every(id => groupA.has(id)), 'Native filter did not select group-a');
+      await rows.first().check();
+    } finally { fs.unlinkSync(nativePaging); }
     assert.deepEqual(await select.locator('option').evaluateAll(els => els.map(el => el.value)),
       ['50', '100', '200', '500']);
     for (const n of [50, 100, 200, 500]) {
