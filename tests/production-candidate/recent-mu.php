@@ -3,10 +3,17 @@
 if (!defined('ABSPATH') || !getenv('BRC_LAB_DIR')) { return; }
 // Isolated lab control request only: revalidate the temporarily patched PHP file
 // in the HTTP worker (a separate WP-CLI process cannot invalidate its OPcache).
-if (($_SERVER['HTTP_X_BRC_RECENT_ZERO_REVALIDATE'] ?? '') === '1') {
-    $source = WP_PLUGIN_DIR . '/gf-bulk-rename-counter/includes/class-recent_download.php';
-    if (!is_file($source)) { throw new RuntimeException('Missing installed Recent N source'); }
-    $invalidated = function_exists('opcache_invalidate') ? opcache_invalidate($source, true) : false;
+$revalidation = $_SERVER['HTTP_X_BRC_RECENT_ZERO_REVALIDATE'] ?? '';
+if ($revalidation === '1' || $revalidation === 'all') {
+    $files = $revalidation === '1' ? ['class-recent_download.php'] :
+        ['class-all_download.php', 'class-flat_zip_download.php'];
+    $invalidated = true;
+    foreach ($files as $file) {
+        $source = WP_PLUGIN_DIR . '/gf-bulk-rename-counter/includes/' . $file;
+        if (!is_file($source)) { throw new RuntimeException('Missing installed test target'); }
+        $invalidated = (function_exists('opcache_invalidate') && opcache_invalidate($source, true))
+            && $invalidated;
+    }
     header('X-GFBRC-Zero-Opcache: ' . ($invalidated ? 'invalidated' : 'not-cached-or-disabled'));
 }
 $fault = $_SERVER['HTTP_X_BRC_RECENT_FAULT'] ?? '';
