@@ -38,6 +38,7 @@ const {chromium} = require('playwright-core');
   const browser = await chromium.launch({executablePath: process.env.BRC_CHROME, headless: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage']});
   let probeApplied = false;
+  let revalidateRuntimeSource = null;
   const failures = [];
   try {
     const ctx = await browser.newContext({acceptDownloads: true});
@@ -102,7 +103,7 @@ const {chromium} = require('playwright-core');
         }
       }
     }
-    async function revalidateRuntimeSource(stage) {
+    revalidateRuntimeSource = async function (stage) {
       const response = await ctx.request.get(base + '/', {
         headers: {'X-BRC-Recent-Zero-Revalidate': '1'},
       });
@@ -111,7 +112,7 @@ const {chromium} = require('playwright-core');
       assert.equal(response.status(), 200);
       assert.ok(['invalidated', 'not-cached-or-disabled'].includes(state),
         'Test-only HTTP worker invalidation hook did not execute');
-    }
+    };
     await runPhase('baseline');
     fs.rmSync(cacheLog, {force: true});
     try {
@@ -140,7 +141,7 @@ const {chromium} = require('playwright-core');
     if (probeApplied) {
       // Defensive restoration on unexpected interruptions; CI step should also restore.
       console.log(execFileSync('python3', [instrument, 'restore'], {encoding: 'utf8'}).trim());
-      await revalidateRuntimeSource('emergency-restored');
+      if (revalidateRuntimeSource) await revalidateRuntimeSource('emergency-restored');
     }
     await browser.close();
   }
