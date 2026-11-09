@@ -89,6 +89,136 @@ if ($negative['classification'] !== 'CONFIRMED_MISMATCH' ||
     !in_array($reason, array_column($negative['discrepancies'], 'reason'), true)) {
     throw new RuntimeException('Real independent omission not detected: ' . wp_json_encode($negative));
 }
+// Synthetic-only form metadata mutations: the checked production diagnostic
+// itself never writes. Use the genuine GFAPI form read/update/read cycle, and
+// restore the isolated form in finally even when a discriminator fails.
+if ($name === 'multi') {
+    $original_form = GFAPI::get_form($form);
+    if (!is_array($original_form) || !is_array($original_form['fields'] ?? null)) {
+        throw new RuntimeException('Cannot capture synthetic form metadata');
+    }
+    $original_uploads = array_column($observed['upload_schema'], 'id');
+    if (count($original_uploads) !== 3) {
+        throw new RuntimeException('Multi fixture must contain three genuine upload fields');
+    }
+    $target_id = max($original_uploads);
+    $all_field_ids = array_map(static fn($field) => (int)$field->id, $original_form['fields']);
+    $new_id = max($all_field_ids) + 1;
+    $baseline_entries = [];
+    foreach ($pending['ids'] as $entry_id) {
+        $baseline_entries[$entry_id] = GFAPI::get_entry($entry_id);
+    }
+    $assert_form_fields = static function (array $expected) use ($form): void {
+        $actual = GFAPI::get_form($form);
+        if (!is_array($actual) || !is_array($actual['fields'] ?? null)) {
+            throw new RuntimeException('GF source form definition unreadable after synthetic change');
+        }
+        $ids = [];
+        foreach ($actual['fields'] as $field) {
+            if (($field->type ?? null) === 'fileupload') { $ids[] = (int)$field->id; }
+        }
+        sort($ids, SORT_NUMERIC);
+        sort($expected, SORT_NUMERIC);
+        if ($ids !== $expected) {
+            throw new RuntimeException('GF form schema change not visible through real GFAPI');
+        }
+    };
+    $restore_form = static function () use ($original_form, $assert_form_fields, $original_uploads): void {
+        if (GFAPI::update_form($original_form) !== true) {
+            throw new RuntimeException('Synthetic GF form schema could not be restored');
+        }
+        $assert_form_fields($original_uploads);
+    };
+    try {
+        foreach (['remove', 'change_type', 'add'] as $case) {
+            $candidate = $original_form;
+            $candidate['fields'] = array_map(static fn($field) => clone $field, $original_form['fields']);
+            if ($case === 'remove') {
+                $candidate['fields'] = array_values(array_filter($candidate['fields'],
+                    static fn($field) => (int)$field->id !== $target_id));
+                $expected_uploads = array_values(array_diff($original_uploads, [$target_id]));
+            } elseif ($case === 'change_type') {
+                foreach ($candidate['fields'] as $field) {
+                    if ((int)$field->id === $target_id) { $field->type = 'text'; }
+                }
+                $expected_uploads = array_values(array_diff($original_uploads, [$target_id]));
+            } else {
+                $copy = null;
+                foreach ($candidate['fields'] as $field) {
+                    if ((int)$field->id === $target_id) { $copy = clone $field; }
+                }
+                if (!is_object($copy)) { throw new RuntimeException('Cannot clone synthetic GF field'); }
+                $copy->id = $new_id;
+                $copy->label = 'Synthetic schema guard field';
+                $candidate['fields'][] = $copy;
+                $expected_uploads = array_merge($original_uploads, [$new_id]);
+            }
+
+            // First check is deliberately BEFORE the metadata changes.
+            $pre_plan_consistent = \GFBulkRename\New_Identity_Crosscheck::stable_upload_schema(
+                $form, $observed);
+            if (!$pre_plan_consistent) {
+                throw new RuntimeException('Normal form schema unexpectedly unstable');
+            }
+            if (GFAPI::update_form($candidate) !== true) {
+                throw new RuntimeException('Failed to mutate synthetic GF form schema');
+            }
+            $assert_form_fields($expected_uploads);
+            $schema_changed_before_plan = \GFBulkRename\New_Identity_Crosscheck::stable_upload_schema(
+                $form, $observed);
+            if ($schema_changed_before_plan) {
+                throw new RuntimeException('Pre-plan schema guard missed ' . $case);
+            }
+            try {
+                $changed_plan = \GFBulkRename\Flat_Zip_Download::plan($form, $pending['ids']);
+            } catch (\GFBulkRename\No_Eligible_Files_Exception $e) {
+                $changed_plan = [];
+            }
+            $source_after_schema = \GFBulkRename\New_Identity_Crosscheck::sample_sources(
+                $form, $observed);
+            $entry_schema_stable = \GFBulkRename\New_Identity_Crosscheck::stable_entries(
+                $form, $observed);
+            if ($entry_schema_stable || $source_after_schema !== $before) {
+                throw new RuntimeException('Expected independent source stability and changed schema: ' . $case);
+            }
+            $diagnosed = \GFBulkRename\New_Identity_Crosscheck::evaluate(
+                $observed, $pending['ids'], $changed_plan,
+                $before, $source_after_schema,
+                $schema_changed_before_plan && $entry_schema_stable
+            );
+            if ($diagnosed['classification'] !== 'INCONCLUSIVE') {
+                throw new RuntimeException('GF schema drift produced definitive diagnostic: ' .
+                    $case . ' ' . wp_json_encode($diagnosed));
+            }
+            if ($case !== 'add') {
+                // This negative control reproduces PRI-FND-001 on actual GF:
+                // the internally plausible reduced plan alone WOULD be called
+                // a confirmed omission if the schema check were bypassed.
+                $without_guard = \GFBulkRename\New_Identity_Crosscheck::evaluate(
+                    $observed, $pending['ids'], $changed_plan,
+                    $before, $source_after_schema, true
+                );
+                if ($without_guard['classification'] !== 'CONFIRMED_MISMATCH') {
+                    throw new RuntimeException('Negative control cannot falsify the missing guard');
+                }
+            }
+            foreach ($baseline_entries as $entry_id => $original_entry) {
+                if (GFAPI::get_entry($entry_id) !== $original_entry) {
+                    throw new RuntimeException('Synthetic form schema test changed an Entry');
+                }
+            }
+            echo 'PASS_REAL_GF_NEW_SCHEMA_' . strtoupper($case) .
+                '_INCONCLUSIVE_WITH_UNCHANGED_ENTRY_AND_SOURCE' . PHP_EOL;
+            $restore_form();
+            if (!\GFBulkRename\New_Identity_Crosscheck::stable_entries($form, $observed)) {
+                throw new RuntimeException('Schema restoration did not recover stable diagnosis');
+            }
+        }
+    } finally {
+        $restore_form();
+    }
+    echo 'PASS_REAL_GF_NEW_SCHEMA_NEGATIVE_CONTROL_AND_RESTORED_FORM' . PHP_EOL;
+}
 $coverage_after = $wpdb->get_var($wpdb->prepare(
     "SELECT option_value FROM {$wpdb->options} WHERE option_name=%s",
     'gfbrc_new_coverage_' . $form
