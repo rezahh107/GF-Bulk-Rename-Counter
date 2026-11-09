@@ -28,6 +28,7 @@ final class Flat_Zip_Download {
         add_action('admin_post_' . self::ENDPOINT, [__CLASS__, 'download']);
         New_Download::register();
         All_Download::register();
+        Recent_Download::register();
     }
 
 
@@ -436,7 +437,23 @@ final class Flat_Zip_Download {
         return $urls;
     }
 
-    public static function plan(int $form_id, array $ids): array {
+    /** Invalidate only the two in-request GF meta keys consumed by the planner. */
+    public static function clear_deletion_meta_cache(array $ids): void {
+        global $_gform_lead_meta;
+        if (!is_array($_gform_lead_meta)) {
+            throw new RuntimeException(__('Gravity Forms deletion metadata cache unavailable', 'gf-bulk-rename-counter'));
+        }
+        $prefix = get_current_blog_id() . '_';
+        foreach ($ids as $id) {
+            unset(
+                $_gform_lead_meta[$prefix . $id . '_bdfgf_deleted_file_urls'],
+                $_gform_lead_meta[$prefix . $id . '_bdfgf_files_deleted']
+            );
+        }
+    }
+
+    /** A bounded snapshot can supply a pre-hash resource check for every source. */
+    public static function plan(int $form_id, array $ids, ?callable $admit_source = null): array {
         $form = \GFAPI::get_form($form_id);
         if (!is_array($form)) { throw new RuntimeException(__('Form unavailable', 'gf-bulk-rename-counter')); }
         $fields = [];
@@ -450,13 +467,18 @@ final class Flat_Zip_Download {
         $plan = [];
         foreach ($ids as $entry_id) {
             $entry = \GFAPI::get_entry($entry_id);
-            if (!is_array($entry) || (int)($entry['form_id'] ?? 0) !== $form_id) {
+            if (!is_array($entry) || (int)($entry['form_id'] ?? 0) !== $form_id ||
+                ($admit_source !== null && ((string)($entry['id'] ?? '') !== (string)$entry_id ||
+                    ($entry['status'] ?? null) !== 'active'))) {
                 throw new RuntimeException(__('Selected entry missing or belongs to a different form', 'gf-bulk-rename-counter'));
             }
             $deleted_set = self::deleted_urls_for_entry((int)$entry_id);
             $seen_urls = [];
             foreach ($fields as $field_id) {
                 $raw = $entry[$field_id] ?? '';
+                if ($admit_source !== null && !is_string($raw)) {
+                    throw new RuntimeException(__('Invalid stored upload reference', 'gf-bulk-rename-counter'));
+                }
                 if (!is_string($raw) || $raw === '') { continue; }
                 $decoded = json_decode($raw, true);
                 if (json_last_error() !== JSON_ERROR_NONE) { $decoded = [$raw]; }
@@ -488,8 +510,15 @@ final class Flat_Zip_Download {
                         str_contains($base, '/') || str_contains($base, '\\')) {
                         throw new RuntimeException(__('Unsafe output filename', 'gf-bulk-rename-counter'));
                     }
-                    $sha = hash_file('sha256', $path);
-                    $size = filesize($path);
+                    if ($admit_source !== null) {
+                        $size = @filesize($path);
+                        if ($size === false) { throw new RuntimeException(__('Cannot read source', 'gf-bulk-rename-counter')); }
+                        $admit_source($size);
+                        $sha = @hash_file('sha256', $path);
+                    } else {
+                        $sha = hash_file('sha256', $path);
+                        $size = filesize($path);
+                    }
                     if (!is_string($sha) || $size === false) { throw new RuntimeException(__('Cannot read source', 'gf-bulk-rename-counter')); }
                     $plan[] = [
                         'entry_id' => $entry_id, 'field_id' => $field_id,
@@ -710,12 +739,21 @@ final class Flat_Zip_Download {
             self::fail(__('Invalid download request', 'gf-bulk-rename-counter'), 403);
         }
         $mode = $_POST['selection_mode'] ?? 'explicit';
-        if (!is_string($mode) || !in_array($mode, ['explicit', 'all_matching', 'all_form'], true)) {
+        if (!is_string($mode) || !in_array($mode, ['explicit', 'all_matching', 'all_form', 'recent_n'], true)) {
             self::fail(__('Invalid selection mode', 'gf-bulk-rename-counter'), 400);
+        }
+        if ($mode !== 'recent_n' && array_intersect(['recent_n', 'recent_token', 'recent_seal'], array_keys($_POST))) {
+            self::fail(__('Ambiguous Entry selection', 'gf-bulk-rename-counter'), 400);
         }
         $all_plan = null;
         $all_zero = null;
-        if ($mode === 'all_form') {
+        if ($mode === 'recent_n') {
+            try {
+                [$ids, $all_plan, $recent_n] = Recent_Download::validated_download();
+            } catch (Throwable $e) {
+                self::fail($e->getMessage(), 422);
+            }
+        } elseif ($mode === 'all_form') {
             try {
                 [$ids, $all_plan, $all_zero] = All_Download::validated_download($form_id);
             } catch (Throwable $e) {
@@ -758,6 +796,8 @@ final class Flat_Zip_Download {
             $temp = self::write_verified_zip($plan);
             if ($mode === 'all_form') {
                 All_Download::assert_manifest($form_id, $ids, $plan);
+            } elseif ($mode === 'recent_n') {
+                Recent_Download::assert_manifest($form_id, $recent_n, $ids, $plan);
             }
             $size = filesize($temp);
             if ($size === false || $size <= 0 || headers_sent()) {
@@ -782,7 +822,9 @@ final class Flat_Zip_Download {
                 header('X-GFBRC-ALL: 1');
                 header('X-GFBRC-Entries-Without-Files: ' . $all_zero);
             }
-            $prefix = $mode === 'all_form' ? 'gfbrc-all-' : 'gfbrc-flat-';
+            $prefix = [
+                'all_form' => 'gfbrc-all-', 'recent_n' => 'gfbrc-recent-' . ($recent_n ?? 0) . '-',
+            ][$mode] ?? 'gfbrc-flat-';
             header('Content-Disposition: attachment; filename="' . $prefix . $form_id .
                 '-' . count($ids) . '-entries-' . count($plan) . '-files.zip"');
             header('Content-Length: ' . $size);

@@ -20,6 +20,7 @@ FILES = (
     "includes/class-admin_experience.php",
     "includes/class-flat_zip_download.php",
     "includes/class-all_download.php",
+    "includes/class-recent_download.php",
     "includes/class-new_download.php",
     "includes/class-new_identity_crosscheck.php",
     "includes/class-form_naming_rules.php",

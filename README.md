@@ -44,6 +44,14 @@ PR #24 adds a separate **NEW — newly created Entries** panel on the Gravity Fo
 
 NEW uses exact per-form creation/observed/confirmed identity sets, bounded server-side operation generations, and guarded atomic updates. Previously known Entries that later receive files or change status do **not** become NEW. Backdated genuine new Entries and late-committed lower IDs remain discoverable. Existing Selected and all-matching actions **never silently advance** NEW. **Dedicated ALL** was merged via PR #28 and published in v2.2.0, as a separate whole-form download; it does not change NEW coverage or acknowledgments. NEW fails visibly (without silent coverage advancement) above 500 eligible Entries per batch, 50,000 enumerated current Entry identities, 1 MiB stored history or 128 MiB ZIP. Authentic WP/GF/MariaDB/Chromium CI passed on the v2.2.0 exact candidate Head, and the public v2.2.0 ZIP passed independent publication-download verification and fresh WordPress activation; the Owner's live site has **not** exercised NEW. See [NEW operator instructions and evidence boundary](docs/NEW_DOWNLOAD_SAFETY_BOUNDARY.md).
 
+## Recent N downloads
+
+In **Forms → Entries** for a form, choose 50, 100, 200 or 500 in **Recent N** and click **Check Recent N**. Review the requested and actual Entry counts, eligible file count and Entries without files. If files are available, click **Confirm and download Recent N ZIP**.
+
+The window contains the highest numeric IDs among this form's active Entries. A backdated Entry can rank ahead of a newer timestamp. An Entry that commits late is eligible only once visible and ranks by its existing ID. The entire form is in scope, independent of the current search, page, filters, checked rows and NEW receipts. A smaller set is reported as such, and file-free Entries still occupy their places in the window.
+
+The preview is valid for one download attempt, for up to ten minutes in the same signed-in session. A changed selection or file plan requires a fresh check. The server verifies ZIP members against the plan and checks the selection and files again before delivery. The database read uses an InnoDB snapshot, and file bytes are checked as they are read. The checks do not freeze the database, filesystem or network through streaming. An interruption after headers can leave an incomplete browser download. ZIP delivery does not confirm receipt or advance NEW.
+
 ## Per-form naming (EXT-001 first batch; included in v2.1.0)
 
 Settings → GF Bulk Rename now contains a separate **Per-form naming (independent flat ZIP only)** section. Choose a form, open its rule, then save **Legacy**, **Single Field**, or **Composite**. Composite fields use explicit consecutive order numbers and a configurable separator. Only ordinary single-value text, textarea and number fields are offered. **Use existing Legacy defaults** removes the per-form override. Saving one form does not replace another form's rule.
@@ -69,6 +77,7 @@ A Counter Field ID of `0` disables renaming. The plugin reads an existing entry 
 | `gf-bulk-rename-counter.php` | Plugin metadata, dependency checks, WordPress hooks and loader |
 | `includes/class-rename_handler.php` | Filename transformation and within-handler duplicate handling |
 | `includes/class-flat_zip_download.php` | Separate explicit-page / scoped all-matching ZIP download, source planner, deleted-state validator, archive writer/verifier |
+| `includes/class-recent_download.php` | Bounded active Entry selection and preview for Recent N |
 | `includes/class-form_naming_rules.php` | Independent per-form rule persistence and validation |
 | `includes/class-naming_strategy.php` | Strict Single Field / Composite filename candidates for independent ZIP only |
 | `includes/class-settings_page.php` | WordPress Settings API page and option sanitization |
