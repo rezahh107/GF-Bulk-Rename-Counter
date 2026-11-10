@@ -386,7 +386,14 @@ jobs:
           python3 -m py_compile tests/qualification/all-race-instrument.py tests/qualification/all-race-repair-assert.py
           node --check tests/qualification/all-race-repair-browser.cjs
           python3 tests/qualification/all-race-instrument.py apply
-          trap 'python3 tests/qualification/all-race-instrument.py restore' EXIT
+          # Invalidate the HTTP worker's opcode cache for the *test-instrumented*
+          # ALL/ZIP sources; patching the on-disk files alone may leave stale code.
+          mu="$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-f01-opcache-lab.php"
+          test ! -e "$mu"
+          cp tests/production-candidate/recent-mu.php "$mu"
+          trap 'python3 tests/qualification/all-race-instrument.py restore; curl -fsS -H "X-BRC-Recent-Zero-Revalidate: all" "$BRC_BASE_URL/" -o /dev/null; rm -f "$mu"' EXIT
+          curl -fsS -D "$BRC_LAB_DIR/f01-opcache-headers" -H "X-BRC-Recent-Zero-Revalidate: all" "$BRC_BASE_URL/" -o /dev/null
+          grep -i '^X-GFBRC-Zero-Opcache: ' "$BRC_LAB_DIR/f01-opcache-headers"
           chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           test -n "$chrome"
           BRC_CHROME="$chrome" node tests/qualification/all-race-repair-browser.cjs
@@ -565,6 +572,25 @@ jobs:
           python3 tests/qualification/qf-status-race.py
           echo 'PASS_REAL_PRODUCTION_ACK_STATUS_ROW_LOCK_BARRIER'
 
+      - name: Qualify zero-active Recent N and observe GF cache boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Run after existing runtime instrumented regressions to avoid affecting
+          # their OPcache revalidation timing. No product file is committed.
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$chrome"
+          mu="$BRC_WP_PATH/wp-content/mu-plugins/gfbrc-recent-lab.php"
+          test ! -e "$mu"
+          cp tests/production-candidate/recent-mu.php "$mu"
+          trap 'if test -e "$BRC_LAB_DIR/recent-zero-original.php"; then python3 tests/production-candidate/recent-zero-instrument.py restore; fi; rm -f "$mu"' EXIT
+          php -l tests/production-candidate/recent-mu.php
+          python3 -m py_compile tests/production-candidate/recent-zero-instrument.py
+          node --check tests/production-candidate/recent-zero-browser.cjs
+          BRC_CHROME="$chrome" node tests/production-candidate/recent-zero-browser.cjs | tee "$BRC_LAB_DIR/reports/recent-zero-browser.txt"
+          cmp includes/class-recent_download.php "$BRC_WP_PATH/wp-content/plugins/gf-bulk-rename-counter/includes/class-recent_download.php"
+          test ! -e "$BRC_LAB_DIR/recent-zero-original.php"
+
       - name: Verify both settings across deactivate, update, rollback and explicit uninstall
         shell: bash
         run: |
@@ -621,6 +647,8 @@ jobs:
             /tmp/brc-lab/reports/qf-status-ack-cutoff.json
             /tmp/brc-lab/reports/package-identities.txt
             /tmp/brc-lab/reports/recent-browser.txt
+            /tmp/brc-lab/reports/recent-zero-browser.txt
+            /tmp/brc-lab/recent-zero-cache.jsonl
             /tmp/brc-lab/reports/recent-zip.txt
             /tmp/brc-lab/reports/ui-polish/*.png
 

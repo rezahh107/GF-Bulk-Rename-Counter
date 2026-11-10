@@ -1,6 +1,21 @@
 <?php
 /** Disposable synthetic CI only. Never part of the product archive. */
 if (!defined('ABSPATH') || !getenv('BRC_LAB_DIR')) { return; }
+// Isolated lab control request only: revalidate the temporarily patched PHP file
+// in the HTTP worker (a separate WP-CLI process cannot invalidate its OPcache).
+$revalidation = $_SERVER['HTTP_X_BRC_RECENT_ZERO_REVALIDATE'] ?? '';
+if ($revalidation === '1' || $revalidation === 'all') {
+    $files = $revalidation === '1' ? ['class-recent_download.php'] :
+        ['class-all_download.php', 'class-flat_zip_download.php'];
+    $invalidated = true;
+    foreach ($files as $file) {
+        $source = WP_PLUGIN_DIR . '/gf-bulk-rename-counter/includes/' . $file;
+        if (!is_file($source)) { throw new RuntimeException('Missing installed test target'); }
+        $invalidated = (function_exists('opcache_invalidate') && opcache_invalidate($source, true))
+            && $invalidated;
+    }
+    header('X-GFBRC-Zero-Opcache: ' . ($invalidated ? 'invalidated' : 'not-cached-or-disabled'));
+}
 $fault = $_SERVER['HTTP_X_BRC_RECENT_FAULT'] ?? '';
 if ($fault === 'memory') {
     add_action('wp_ajax_gfbrc_recent_prepare', static function () {
