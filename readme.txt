@@ -2,7 +2,7 @@
 Tags: gravity forms, bulk download, rename files, counter
 Requires at least: 5.8
 Tested up to: 6.8
-Stable tag: 2.3.3
+Stable tag: 2.4.0
 Requires PHP: 8.0
 License: GPL-2.0-or-later
 
@@ -41,6 +41,12 @@ The original **Bulk Download for Gravity Forms** action keeps its existing `d[CO
 **Privacy:** Values selected for Single Field / Composite naming appear in ZIP filenames. Do not choose personal or sensitive fields unless sharing those values with recipients is intended. Invalid or missing naming values stop the independent ZIP with an error.
 
 == Changelog ==
+
+= 2.4.0 =
+* Add a bounded, read-only Check NEW cross-check of eligible Entry identities and file occurrences against the actual NEW selection and plan. Show localized mismatch, expected-exclusion and inconclusive diagnostics without changing NEW eligibility, ZIP planning, coverage or ACK.
+* Add Recent N verified flat ZIP downloads for the latest 50, 100, 200 or 500 active Entries by descending Entry ID, independent of search, filters, pagination, checked rows and NEW history.
+* Bind each Recent N preview to the form, operator session, selected Entries and file plan for a one-use download within ten minutes. Show Entry/file/file-free counts; reject stale or unsafe requests and do not create empty ZIPs.
+* Extend authentic WordPress, Gravity Forms and Chromium regression tests for NEW source-to-ZIP conservation and identity reconciliation, Recent N download integrity, zero-active or trashed-only forms, file-free Entries and reversible cache-boundary diagnostics.
 
 = 2.3.3 =
 * Fix NEW ZIP download filenames: use the operation's UTC creation timestamp and a short hash of its random operation ID so independent operations have distinct filenames even with the same Entry/file counts and timestamp, while retries of the same operation keep a stable filename.
